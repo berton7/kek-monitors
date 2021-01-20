@@ -1,0 +1,113 @@
+if __name__ == "__main__":
+	import os
+	import sys
+	sys.path.insert(0, os.path.abspath(
+		os.path.join(os.path.dirname(__file__), '..')))
+
+import asyncio
+from datetime import datetime
+from typing import Tuple, Union
+
+import tornado.httpclient
+from tornado.curl_httpclient import CurlError
+from typing import Dict
+import pycurl
+from utils.tools import get_logger
+
+
+class NetworkUtils(object):
+	def __init__(self, logger_name: str):
+		self.last_modified_datetimes = {}  # type: Dict[str, datetime]
+		# force a cache refresh after self.cache_timeout
+		self.cache_timeout = 10 * 60
+		# keep a copy of every page in memory, for when we receive 304
+		self.cached_pages = {}  # type: Dict[str, str]
+		# remember etags, sometimes some websites use them
+		self.etags = {}  # type: Dict[str, str]
+
+		for feature in pycurl.version.split(" "):
+			if feature.find("brotli") != -1:
+				self.has_brotli = True
+				break
+		else:
+			self.has_brotli = False
+
+		self.network_logger = get_logger(logger_name + ".NetworkUtils")
+		self.network_logger.debug(f"Has brotli: {self.has_brotli}")
+
+	async def fetch(self, client: tornado.httpclient.AsyncHTTPClient, url: str, use_cache=True, attempts=3, delay=2, *args, **kwargs) -> Tuple[Union[tornado.httpclient.HTTPResponse, None], str]:
+		'''Asynchronously fetch the url using a tornado client. If you want to fetch more urls at once use asyncio.gather(*tasks).\n
+		You can pass arguments to client.fetch() using *args and **kwargs (e.g. if you need proxies you can call self.fetch like this:\n
+		`self.fetch(url, headers=headers, proxy_host={your-proxy-host}, proxy_port={your-proxy-port})`'''
+		total_attempts = attempts
+		headers = kwargs.get("headers", {})
+		# keep retrying the connection until we run out of attempts
+		while attempts > 0:
+			try:
+				if_mod_since = None
+				# if using cache and it has expired/timed out
+				if use_cache and url in self.cached_pages and url in self.last_modified_datetimes:
+					if (datetime.utcnow() - self.last_modified_datetimes[url]).seconds < self.cache_timeout:
+						self.network_logger.debug(url + " is in cache, adding cache headers")
+						if_mod_since = self.last_modified_datetimes[url]
+						if url in self.etags:
+							headers["if-none-match"] = self.etags[url]
+					else:
+						self.network_logger.info(url + " is in cache from more than " +
+                                                    str(self.cache_timeout) + " seconds, refreshing the page.")
+						self.cached_pages.pop(url)
+						self.last_modified_datetimes.pop(url)
+
+				# fix some possibly set headers from fake-headers
+				headers["accept-encoding"] = "gzip, deflate"
+				if self.has_brotli:
+					headers["accept-encoding"] += ", br"
+				headers.pop("pragma", None)
+				headers.pop("Pragma", None)
+
+				self.network_logger.debug(f"Getting {url}...")
+				r = await client.fetch(url, if_modified_since=if_mod_since, raise_error=False, *args, **kwargs)
+				self.network_logger.info(f"Got {url} with code {r.code}")
+				if r.code == 599:
+					self.network_logger.warning(
+						f"Something happened while fetching {url}: {r.reason}")
+					attempts -= 1
+					if attempts:
+						# sleep delay before retrying
+						await asyncio.sleep(delay)
+						continue
+				elif r.code == 404:
+					# usually this is what we want to do
+					self.network_logger.debug("Not retrying on 404.")
+					return r, r.body.decode()
+				else:
+					if use_cache:
+						# if page was cached update it or just return it
+						if r.code < 400 and r.code != 304:
+							self.cached_pages[url] = r.body.decode()
+							self.last_modified_datetimes[url] = datetime.utcnow()
+							if "etag" in r.headers:
+								self.etags[url] = r.headers["etag"]
+						return r, self.cached_pages[url]
+					else:
+						return r, r.body.decode()
+
+			except CurlError:
+				self.network_logger.exception(f"Timed out while fetching {url}.")
+				attempts -= 1
+				if attempts:
+					await asyncio.sleep(delay)
+					continue
+
+			except:
+				self.network_logger.exception("Got exception:")
+				await asyncio.sleep(delay)
+				continue
+
+		self.network_logger.warning(
+			f"Tried {total_attempts} but couldn't fetch {url}.")
+
+		try:
+			return r, ""
+		except UnboundLocalError:
+			return None, ""
