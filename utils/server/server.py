@@ -21,6 +21,7 @@ class Server(object):
 		self.server_task = self.asyncio_loop.create_task(self.init_server())
 
 		self.cmd_to_callback = {}   # type: Dict[int, Callable]
+		self.server_stop_called = False
 
 	async def init_server(self):
 		'''Initialise the underlying socket server, to allow communication between monitor/scraper.'''
@@ -37,7 +38,7 @@ class Server(object):
 		await self.server.wait_closed()
 		os.remove(self.server_path)
 		self.server_logger.info("Server successfully closed.")
-		await self.on_server_stop()
+		self.server_stop_called = True
 		return okResponse()
 
 	async def on_server_stop(self):
@@ -64,6 +65,9 @@ class Server(object):
 
 		self.server_logger.debug(f"Closed connection from {print_addr}")
 		writer.close()
+
+		if self.server_stop_called:
+			await self.on_server_stop()
 
 	async def make_request(self, socket_path: str, cmd: Cmd, expect_response: bool = True) -> Optional[Response]:
 		if os.path.exists(socket_path):
