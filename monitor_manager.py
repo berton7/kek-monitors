@@ -9,62 +9,46 @@ from typing import List, Optional, Tuple, Union, Dict, Any
 
 import utils.tools
 from configs.config import *
+from utils.server.server import Server
+from utils.server.msg import *
 
 
-class Arguments(object):
-	'''Helper class to check validity of messages.'''
-
-	def __init__(self, *args: List[str]):
-		'''Initialize with a list of args that must appear in the payload of a message.'''
-		self.args = args
-
-	def check_msg(self, message) -> Tuple[bool, str]:
-		'''Check if message has a payload and if all args are present in it.'''
-		if "payload" not in message:
-			return False, "payload not provided"
-		for arg in self.args:
-			if arg not in message["payload"]:
-				return False, f"{arg} not provided"
-		return True, ""
-
-
-class MonitorManager(object):
+class MonitorManager(Server):
 	'''This can be used to manage monitors/scrapers with an external api.'''
 
 	def __init__(self):
+		logger_name = "Executable.MonitorManager"
+		super().__init__(logger_name, f"{SOCKET_PATH}/MonitorManager")
+		self.general_logger = utils.tools.get_logger(logger_name + ".General")
+		self.cmd_to_callback[ADD_MONITOR] = self.on_add_monitor
+		self.cmd_to_callback[ADD_SCRAPER] = self.on_add_scraper
+		self.cmd_to_callback[ADD_MONITOR_SCRAPER] = self.on_add_monitor_scraper
+		self.cmd_to_callback[STOP_MONITOR] = self.on_stop_monitor
+		self.cmd_to_callback[STOP_SCRAPER] = self.on_stop_scraper
+		self.cmd_to_callback[STOP_MONITOR_SCRAPER] = self.on_stop_monitor_scraper
+		self.cmd_to_callback[GET_MONITOR_STATUS] = self.on_get_monitor_status
+		self.cmd_to_callback[GET_SCRAPER_STATUS] = self.on_get_scraper_status
+		self.cmd_to_callback[GET_MONITOR_SCRAPER_STATUS] = self.on_get_status
+
+		# self.asyncio_loop.create_task(self.init_server())
+
 		self.monitor_processes = {}  # type: Dict[str, Dict[str, Any]]
 		self.scraper_processes = {}  # type: Dict[str, Dict[str, Any]]
-
-		self.add_scraper_args = self.add_monitor_args = self.add_monitor_scraper_args = Arguments(
-			"filename", "class_name")
-
-		self.stop_args = Arguments("class_name")
-
-		self.loop = asyncio.get_event_loop()
-		self.loop.create_task(self.init_server())
-		self.loop.create_task(self.check_status())
-
-		self.logger = utils.tools.get_logger("Executable.MonitorManager")
+		self.add_scraper_args = self.add_monitor_args = self.add_monitor_scraper_args = [
+			"filename", "class_name"]
+		self.stop_args = ["class_name"]
+		self.has_to_quit = False
 
 	def start(self):
-		self.loop.run_forever()
-
-	async def init_server(self):
-		self.server = await asyncio.start_unix_server(self.handle_msg, f"{SOCKET_PATH}/MonitorManager")
-
-		addr = self.server.sockets[0].getsockname()
-		self.logger.debug(f'Serving on {addr}')
-
-		async with self.server:
-			await self.server.serve_forever()
+		self.asyncio_loop.run_until_complete(self.check_status())
 
 	async def check_status(self):
-		while True:
+		while not self.has_to_quit:
 			new_monitor_processes = {}
 			for class_name in self.monitor_processes:
 				monitor = self.monitor_processes[class_name]["process"]
 				if monitor.poll() is not None:
-					self.logger.info(
+					self.general_logger.info(
 						f"Monitor {class_name} has stopped with code: {monitor.returncode}")
 				else:
 					new_monitor_processes[class_name] = self.monitor_processes[class_name]
@@ -74,107 +58,125 @@ class MonitorManager(object):
 			for class_name in self.scraper_processes:
 				scraper = self.scraper_processes[class_name]["process"]
 				if scraper.poll() is not None:
-					self.logger.info(
-						f"Scraper {class_name} has stopped: {scraper.returncode}")
+					self.general_logger.info(
+						f"Scraper {class_name} has stopped with code: {scraper.returncode}")
 				else:
 					new_scraper_processes[class_name] = self.scraper_processes[class_name]
 			self.scraper_processes = new_scraper_processes
 			await asyncio.sleep(1)
 
-	async def handle_msg(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-		data = await reader.read()
-		addr = writer.get_extra_info('peername')
-		self.logger.debug(f"Received from {addr!r}")
+		self.general_logger("Shutting down...")
 
-		message = pickle.loads(data)
-		# set
-		if message["cmd"] == ADD_MONITOR:
-			success, msg = self.add_monitor_args.check_msg(message)
+	async def on_add_monitor(self, cmd: Cmd) -> Response:
+		r = badResponse()
+		success, missing = cmd.has_valid_args(self.add_monitor_args)
+		if success:
+			payload = cmd.payload
+			success, reason = await self.add_monitor(
+				payload["filename"], payload["class_name"], payload.get("delay", None))
 			if success:
-				success, msg = self.add_monitor(
-					message["payload"]["filename"], message["payload"]["class_name"], message["payload"].get("delay", None))
-				if success:
-					response = pickle.dumps({"success": True})
-				else:
-					response = pickle.dumps({"success": False, "msg": msg})
+				r = okResponse()
 			else:
-				response = pickle.dumps({"success": False, "msg": msg})
-		elif message["cmd"] == ADD_SCRAPER:
-			success, msg = self.add_scraper_args.check_msg(message)
-			if success:
-				success, msg = self.add_scraper(
-					message["payload"]["filename"], message["payload"]["class_name"], message["payload"].get("delay", None))
-				if success:
-					response = pickle.dumps({"success": True})
-				else:
-					response = pickle.dumps({"success": False, "msg": msg})
-			else:
-				response = pickle.dumps({"success": False, "msg": msg})
-		elif message["cmd"] == ADD_MONITOR_SCRAPER:
-			success, msg = self.add_monitor_scraper_args.check_msg(message)
-			if success:
-				success, msg = self.add_monitor_scraper(message["payload"]["filename"], message["payload"]
-				                                        ["class_name"], message["payload"].get("monitor_delay", None), message["payload"].get("scraper_delay", None))
-				if success:
-					response = pickle.dumps({"success": True})
-				else:
-					response = pickle.dumps({"success": False, "msg": msg})
-			else:
-				response = pickle.dumps({"success": False, "msg": msg})
-
-		# stop
-		elif message["cmd"] == STOP_MONITOR:
-			success, msg = self.stop_args.check_msg(message)
-			if success:
-				success, msg = await self.stop_monitor(message["payload"]["class_name"])
-				if success:
-					response = pickle.dumps({"success": True})
-				else:
-					response = pickle.dumps({"success": False, "msg": msg})
-			else:
-				response = pickle.dumps({"success": False, "msg": msg})
-
-		elif message["cmd"] == STOP_SCRAPER:
-			success, msg = self.stop_args.check_msg(message)
-			if success:
-				success, msg = await self.stop_scraper(message["payload"]["class_name"])
-				if success:
-					response = pickle.dumps({"success": True})
-				else:
-					response = pickle.dumps({"success": False, "msg": msg})
-			else:
-				response = pickle.dumps({"success": False, "msg": msg})
-
-		elif message["cmd"] == STOP_MONITOR_SCRAPER:
-			success, msg = self.stop_args.check_msg(message)
-			if success:
-				success, msg = await self.stop_monitor_scraper(message["payload"]["class_name"])
-				if success:
-					response = pickle.dumps({"success": True})
-				else:
-					response = pickle.dumps({"success": False, "msg": msg})
-			else:
-				response = pickle.dumps({"success": False, "msg": msg})
-		# get
-		elif message["cmd"] == GET_MONITOR_STATUS:
-			response = pickle.dumps(self.get_monitor_status())
-		elif message["cmd"] == GET_SCRAPER_STATUS:
-			response = pickle.dumps(self.get_scraper_status())
-		elif message["cmd"] == GET_MONITOR_SCRAPER_STATUS:
-			response = pickle.dumps(self.get_monitor_scraper_status())
+				r.reason = reason
 		else:
-			response = pickle.dumps({"success": False, "msg": "cmd not recognized"})
+			r.reason = f"Missing arguments: {missing}"
+		return r
 
-		writer.write(response)
-		writer.write_eof()
-		await writer.drain()
+	async def on_add_scraper(self, cmd: Cmd) -> Response:
+		r = badResponse()
+		success, missing = cmd.has_valid_args(self.add_scraper_args)
+		if success:
+			payload = cmd.payload
+			success, reason = await self.add_scraper(
+				payload["filename"], payload["class_name"], payload.get("delay", None))
+			if success:
+				r = okResponse()
+			else:
+				r.reason = reason
+		else:
+			r.reason = f"Missing arguments: {missing}"
+		return r
 
-		self.logger.debug("Close the connection")
-		writer.close()
+	async def on_add_monitor_scraper(self, cmd: Cmd) -> Response:
+		r = badResponse()
+		success, missing = cmd.has_valid_args(self.add_monitor_scraper_args)
+		if success:
+			payload = cmd.payload
+			success, reason = await self.add_monitor_scraper(
+				payload["filename"], payload["class_name"], payload.get("monitor_delay", None), payload.get("scraper_delay", None))
+			if success:
+				r = okResponse()
+			else:
+				r.reason = reason
+		else:
+			r.reason = f"Missing arguments: {missing}"
+		return r
 
-	def add_monitor(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):
+	async def on_stop_monitor(self, cmd: Cmd) -> Response:
+		r = badResponse()
+		success, missing = cmd.has_valid_args(self.stop_args)
+		if success:
+			payload = cmd.payload
+			r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": STOP}))
+		else:
+			r.reason = f"Missing arguments: {missing}"
+		return r
+
+	async def on_stop_scraper(self, cmd: Cmd) -> Response:
+		r = badResponse()
+		success, missing = cmd.has_valid_args(self.stop_args)
+		if success:
+			payload = cmd.payload
+			r = await self.make_request(f"{SOCKET_PATH}/Scraper.{payload['class_name']}", Cmd({"cmd": STOP}))
+		else:
+			r.reason = f"Missing arguments: {missing}"
+		return r
+
+	async def on_stop_monitor_scraper(self, cmd: Cmd) -> Response:
+		r = badResponse()
+		success, missing = cmd.has_valid_args(self.stop_args)
+		if success:
+			r1, r2 = await asyncio.gather(self.on_stop_monitor(cmd), self.on_stop_scraper(cmd))
+			if r1.success and r2.success:
+				r = okResponse()
+			else:
+				r.reason = "" + (r1.reason + "; " if r1.reason else "") + \
+                                    (r2.reason if r2.reason else "")
+		else:
+			r.reason = f"Missing arguments: {missing}"
+		return r
+
+	async def on_get_monitor_status(self, cmd: Cmd) -> Response:
+		status = {}
+		for class_name in self.monitor_processes:
+			start = self.monitor_processes[class_name]["start"].strftime(
+				"%m/%d/%Y, %H:%M:%S")
+			status[class_name] = {"Started at": start}
+		response = okResponse()
+		response.payload = {"status": status}
+		return response
+
+	async def on_get_scraper_status(self, cmd: Cmd) -> Response:
+		status = {}
+		for class_name in self.scraper_processes:
+			start = self.scraper_processes[class_name]["start"].strftime(
+				"%m/%d/%Y, %H:%M:%S")
+			status[class_name] = {"Started at": start}
+		response = okResponse()
+		response.payload = {"status": status}
+		return response
+
+	async def on_get_status(self, cmd: Cmd) -> Response:
+		ms = await self.on_get_monitor_status(cmd)
+		ss = await self.on_get_scraper_status(cmd)
+		response = okResponse()
+		response.payload = {"status": {"monitors": ms.payload[
+                    "status"], "scrapers": ss.payload["status"]}}
+		return response
+
+	async def add_monitor(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):
 		if class_name in self.monitor_processes:
-			self.logger.debug(
+			self.general_logger.debug(
 				f"Tried to add an already existing monitor ({filename}.{class_name})")
 			return False, "Monitor already started."
 
@@ -182,18 +184,20 @@ class MonitorManager(object):
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
-		self.logger.debug(f"Starting {filename}.{class_name}...")
+		self.general_logger.debug(f"Starting {filename}.{class_name}...")
 		monitor = subprocess.Popen(shlex.split(
 			cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-		time.sleep(2)  # wait to check if process is still alive
+		await asyncio.sleep(2)  # wait to check if process is still alive
 
 		if monitor.poll() is not None:
 			success = False
 			msg = f"Failed to start monitor {filename}.{class_name}"
-			self.logger.warning(f"Tried to start {filename}.{class_name} but failed")
+			self.general_logger.warning(
+				f"Tried to start {filename}.{class_name} but failed")
 		else:
-			self.logger.info(f"Added monitor {class_name} with pid {monitor.pid}")
+			self.general_logger.info(
+				f"Added monitor {class_name} with pid {monitor.pid}")
 			self.monitor_processes[class_name] = {
 				"process": monitor,
 				"start": datetime.now()
@@ -202,9 +206,9 @@ class MonitorManager(object):
 			msg = ""
 		return success, msg
 
-	def add_scraper(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):
+	async def add_scraper(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):
 		if class_name in self.scraper_processes:
-			self.logger.debug(
+			self.general_logger.debug(
 				f"Tried to add an already existing scraper ({filename}.{class_name})")
 			return False, "Scraper already started."
 
@@ -212,18 +216,20 @@ class MonitorManager(object):
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
-		self.logger.debug(f"Starting {filename}.{class_name}...")
+		self.general_logger.debug(f"Starting {filename}.{class_name}...")
 		scraper = subprocess.Popen(shlex.split(
 			cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-		time.sleep(2)  # wait to check if process is still alive
+		await asyncio.sleep(2)  # wait to check if process is still alive
 
 		if scraper.poll() is not None:
 			success = False
 			msg = f"Failed to start scraper {filename}.{class_name}"
-			self.logger.warning(f"Tried to start {filename}.{class_name} but failed")
+			self.general_logger.warning(
+				f"Tried to start {filename}.{class_name} but failed")
 		else:
-			self.logger.info(f"Added scraper {class_name} with pid {scraper.pid}")
+			self.general_logger.info(
+				f"Added scraper {class_name} with pid {scraper.pid}")
 			self.scraper_processes[class_name] = {
 				"process": scraper,
 				"start": datetime.now()
@@ -232,83 +238,11 @@ class MonitorManager(object):
 			msg = ""
 		return success, msg
 
-	def add_monitor_scraper(self, filename: str, class_name: str, scraper_delay: Optional[Union[int, float]], monitor_delay: Optional[Union[int, float]]):
-		success, msg = self.add_monitor(filename, class_name, monitor_delay)
-		if success:
-			success, msg = self.add_scraper(filename, class_name, scraper_delay)
-		return success, msg
-
-	async def stop_monitor(self, class_name: str) -> Tuple[bool, str]:
-		success = False
-		msg = ""
-		monitor_sock = f"{SOCKET_PATH}/Monitor.{class_name}"
-		try:
-			reader, writer = await asyncio.open_unix_connection(monitor_sock)
-
-			writer.write(pickle.dumps({"cmd": STOP}))
-			writer.write_eof()
-
-			data = await reader.read()
-
-			writer.close()
-			success = True
-			msg = ""
-		except (ConnectionRefusedError, FileNotFoundError):
-			self.logger.exception(f"Couldn't connect to socket {monitor_sock}")
-			success = False
-			msg = f"Couldn't connect to socket {monitor_sock}"
-
-		return success, msg
-
-	async def stop_scraper(self, class_name: str) -> Tuple[bool, str]:
-		success = False
-		msg = ""
-		scraper_sock = f"{SOCKET_PATH}/Scraper.{class_name}"
-		try:
-			reader, writer = await asyncio.open_unix_connection(scraper_sock)
-
-			writer.write(pickle.dumps({"cmd": STOP}))
-			writer.write_eof()
-
-			data = await reader.read()
-
-			writer.close()
-			success = True
-			msg = ""
-		except (ConnectionRefusedError, FileNotFoundError):
-			self.logger.exception(f"Couldn't connect to socket {scraper_sock}")
-			success = False
-			msg = f"Couldn't connect to socket {scraper_sock}"
-
-		return success, msg
-
-	async def stop_monitor_scraper(self, class_name: str) -> Tuple[bool, str]:
-		success, msg = await self.stop_monitor(class_name)
-		newsuccess, newmsg = await self.stop_scraper(class_name)
-		rsuccess = success and newsuccess
-		rmsg = " ".join([msg, newmsg])
-		return rsuccess, rmsg
-
-	def get_monitor_status(self):
-		response = {}
-		for class_name in self.monitor_processes:
-			start = self.monitor_processes[class_name]["start"].strftime(
-				"%m/%d/%Y, %H:%M:%S")
-			response[class_name] = {"Started at": start}
-		return response
-
-	def get_scraper_status(self):
-		response = {}
-		for class_name in self.scraper_processes:
-			start = self.scraper_processes[class_name]["start"].strftime(
-				"%m/%d/%Y, %H:%M:%S")
-			response[class_name] = {"Started at": start}
-		return response
-
-	def get_monitor_scraper_status(self):
-		mr = self.get_monitor_status()
-		ms = self.get_scraper_status()
-		return {"monitors": mr, "scrapers": ms}
+	async def add_monitor_scraper(self, filename: str, class_name: str, scraper_delay: Optional[Union[int, float]], monitor_delay: Optional[Union[int, float]]):
+		(s1, msg1), (s2, msg2) = await asyncio.gather(self.add_monitor(filename, class_name, monitor_delay), self.add_scraper(filename, class_name, scraper_delay))
+		s = s1 and s2
+		msg = "" + (msg1 if s1 else "") + (msg2 if s2 else "")
+		return s, msg
 
 
 if __name__ == "__main__":

@@ -1,112 +1,88 @@
-import json
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import pickle
+import copy
 
 
 class Message(object):
-	def __init__(self, msg: Union[bytes, Dict[str, Any]] = None):
-		self.msg = None
-		self.msg_bytes = None
-
-		if msg is not None:
+	def __init__(self, msg):
+		if msg:
 			if isinstance(msg, bytes):
-				r = self.to_json(msg)
-				if r is not None:
-					self.msg = r
-					self.msg_bytes = msg
+				try:
+					j = pickle.loads(msg)
+					for key in j:
+						if key in self.__dict__:
+							self.__dict__[key] = j[key]
+				except:
+					pass
+			elif isinstance(msg, dict):
+				for key in msg:
+					if key in self.__dict__:
+						self.__dict__[key] = msg[key]
+
+	def sanitize(self, o) -> Optional[Any]:
+		if o is None:
+			return None
+		elif isinstance(o, dict):
+			return self.sanitize_dict(o)
+		elif isinstance(o, list):
+			return self.sanitize_list(o)
+		else:
+			return o
+
+
+	def sanitize_list(self, l: List[Any]) -> Optional[List[Any]]:
+		obj = []
+		for n, item in enumerate(l):
+			s = self.sanitize(item)
+			if s is None or (hasattr(s, "__len__") and not len(s)):
+				pass
 			else:
-				r = self.to_bytes(msg)
-				if r is not None:
-					self.msg = msg
-					self.msg_bytes = r
+				obj.append(s)
+		return obj if obj else None
 
-	def to_json(self, msg: bytes = None) -> Any:
-		m = msg
-		if msg is None:
-			m = self.msg_bytes
-		try:
-			r = pickle.loads(m)
-			json.dumps(r)
-			return r
-		except:
-			return None
 
-	def to_bytes(self, msg: Dict[str, Any] = None) -> Optional[bytes]:
-		m = msg
-		if msg is None:
-			m = self.msg
-		try:
-			json.dumps(m)
-			r = pickle.dumps(m)
-			return r
-		except:
-			return None
+	def sanitize_dict(self, d: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+		obj = copy.deepcopy(d)
+		for key in d:
+			s = self.sanitize(d[key])
+			if s is None or (hasattr(s, "__len__") and not len(s)):
+				obj.pop(key)
+			else:
+				obj[key] = s
+		return obj if obj else None
+
+	def get_json(self) -> Optional[Any]:
+		return self.sanitize(self.__dict__)
+
+	def get_bytes(self) -> bytes:
+		return pickle.dumps(self.sanitize(self.__dict__))
 
 
 class Cmd(Message):
 	def __init__(self, msg: Union[bytes, Dict[str, Any]] = None):
+		self.cmd = None
+		self.payload = None
 		super().__init__(msg)
-		self.cmd = self.get_cmd()
-		self.payload = self.get_payload()
 
-	def get_cmd(self):
-		if self.msg:
-			return self.msg.get("cmd", None)
-
-	def get_payload(self):
-		if self.msg:
-			return self.msg.get("payload", None)
-
-	def set_cmd(self, cmd: str):
-		if self.msg:
-			self.msg["cmd"] = cmd
-		else:
-			self.msg = {"cmd": cmd}
-
-	def set_payload(self, payload: str):
-		if self.msg:
-			self.msg["payload"] = payload
-		else:
-			self.msg = {"payload": payload}
+	def has_valid_args(self, args: List[str]) -> Tuple[bool, Optional[List[str]]]:
+		if self.payload:
+			missing = []
+			for needed_arg in args:
+				if needed_arg not in self.payload:
+					missing.append(needed_arg)
+			if missing:
+				return False, missing
+			else:
+				return True, None
+		return False, args
 
 
 class Response(Message):
 	def __init__(self, msg: Union[bytes, Dict[str, Any]] = None):
+		self.success = None
+		self.reason = None
+		self.payload = None
 		super().__init__(msg)
-		self.success = self.get_success()
-		self.reason = self.get_reason()
-
-	def get_success(self):
-		if self.msg:
-			return self.msg.get("success", None)
-
-	def get_reason(self):
-		if self.msg:
-			return self.msg.get("reason", None)
-
-	def get_payload(self):
-		if self.msg:
-			return self.msg.get("payload", None)
-
-	def set_success(self, success: bool):
-		if self.msg:
-			if success and self.get_reason():
-				self.msg.pop("reason")
-			self.msg["success"] = success
-		else:
-			self.msg = {"success": success}
-
-	def set_reason(self, reason: str):
-		if self.msg:
-			self.msg["reason"] = reason
-		else:
-			self.msg = {"reason": reason}
-
-	def set_payload(self, payload: str):
-		if self.msg:
-			self.msg["payload"] = payload
-		else:
-			self.msg = {"payload": payload}
 
 
 def badResponse():

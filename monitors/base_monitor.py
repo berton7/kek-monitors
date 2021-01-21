@@ -38,6 +38,7 @@ class BaseMonitor(Common, NetworkUtils, Server):
 		super(NetworkUtils, self).__init__(
 			logger_name, f"{SOCKET_PATH}/Monitor.{self.class_name}")
 
+		self.cmd_to_callback[STOP] = self.stop_serving
 		self.cmd_to_callback[SET_LINKS] = self.on_set_links
 		self.cmd_to_callback[ADD_LINKS] = self.on_add_links
 
@@ -86,7 +87,7 @@ class BaseMonitor(Common, NetworkUtils, Server):
 	async def on_set_links(self, msg: Cmd) -> Response:
 		self.server_logger.debug("Got cmd set_links")
 		response = badResponse()
-		p = msg.get_payload()
+		p = msg.payload
 		if p is not None:
 			if isinstance(p, list):
 				self.new_links = p
@@ -98,27 +99,27 @@ class BaseMonitor(Common, NetworkUtils, Server):
 
 		else:
 			self.general_logger.warning(
-				"Failed to decode payload; msg: ", msg.to_json())
+				"Failed to decode payload; msg: ", msg.get_json())
 			response.set_reason("Failed to decode payload")
 		return response
 
 	async def on_add_links(self, msg: Cmd) -> Response:
 		self.server_logger.debug("Got cmd add_links")
 		response = badResponse()
-		p = msg.get_payload()
+		p = msg.payload
 		if p is not None:
 			if isinstance(p, list):
 				self.buffer_links = p
-				response.set_success(True)
+				response.success = True
 			else:
 				self.general_logger.warning(
 					"Received new added links, but payload was not a list: ", p)
-				response.set_reason("Payload was not a list")
+				response.reason = "Payload was not a list"
 
 		else:
 			self.general_logger.warning(
-				"Failed to decode payload; msg: ", msg.to_json())
-			response.set_reason("Failed to decode payload")
+				"Failed to decode payload; msg: ", msg.get_json())
+			response.reason = "Failed to decode payload"
 		return response
 
 	async def on_server_stop(self):
@@ -130,10 +131,10 @@ class BaseMonitor(Common, NetworkUtils, Server):
 		self.general_logger.debug("Getting links...")
 
 		cmd = Cmd()
-		cmd.set_cmd(GET_LINKS)
+		cmd.cmd = GET_LINKS
 		response = await self.make_request(socket_path, cmd)
-		if response and response.get_success():
-			self.links = response.get_payload()
+		if response and response.success:
+			self.links = response.payload
 		else:
 			self.general_logger.warning("Failed to get links")
 

@@ -5,7 +5,7 @@ if __name__ == "__main__":
 		os.path.join(os.path.dirname(__file__), '..')))
 
 import asyncio
-from pickle import TRUE
+from typing import Callable
 from utils.tools import get_logger
 from utils.server.msg import *
 from configs.config import *
@@ -20,9 +20,7 @@ class Server(object):
 		self.asyncio_loop = asyncio.get_event_loop()
 		self.server_task = self.asyncio_loop.create_task(self.init_server())
 
-		self.cmd_to_callback = {
-			STOP: self.stop_serving
-		}
+		self.cmd_to_callback = {}   # type: Dict[int, Callable]
 
 	async def init_server(self):
 		'''Initialise the underlying socket server, to allow communication between monitor/scraper.'''
@@ -52,18 +50,36 @@ class Server(object):
 		print_addr = addr if addr else "localhost"
 		self.server_logger.debug(f"Received from {print_addr}")
 
-		msg_cmd = msg.get_cmd()
 		for cmd in self.cmd_to_callback:
-			if cmd == msg_cmd:
+			if cmd == msg.cmd:
 				response = await self.cmd_to_callback[cmd](msg)
 				break
 		else:
 			response = badResponse()
-			response.set_reason("Unrecognized cmd.")
+			response.reason = "Unrecognized cmd."
 
-		writer.write(response.to_bytes())
+		writer.write(response.get_bytes())
 		writer.write_eof()
 		await writer.drain()
 
 		self.server_logger.debug(f"Closed connection from {print_addr}")
 		writer.close()
+
+	async def make_request(self, socket_path: str, cmd: Cmd, expect_response: bool = True) -> Optional[Response]:
+		if os.path.exists(socket_path):
+			try:
+				reader, writer = await asyncio.open_unix_connection(socket_path)
+				writer.write(cmd.get_bytes())
+				writer.write_eof()
+
+				if expect_response:
+					response = Response(await reader.read())
+
+					writer.close()
+					return response
+				return okResponse()
+			except ConnectionRefusedError:
+				self.server_logger.exception(f"Couldn't connect to socket {socket_path}")
+		r = badResponse()
+		r.reason = f"Socket {socket_path} unavailable"
+		return r

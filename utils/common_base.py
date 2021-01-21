@@ -80,21 +80,6 @@ class Common(object):
 				old_var = var = json_file[self.filename]
 		return var, old_var, old_file_var
 
-	async def make_request(self, socket_path: str, cmd: Cmd) -> Optional[Response]:
-		if os.path.exists(socket_path):
-			try:
-				reader, writer = await asyncio.open_unix_connection(socket_path)
-				writer.write(cmd.to_bytes())
-				writer.write_eof()
-
-				msg = Response(await reader.read())
-
-				writer.close()
-				return msg
-			except ConnectionRefusedError:
-				self.client_logger.exception(f"Couldn't connect to socket {socket_path}")
-		return None
-
 	def start(self, delay):
 		'''Call this to start the scraper loop.'''
 		self.delay = delay

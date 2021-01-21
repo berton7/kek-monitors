@@ -6,22 +6,24 @@ import asyncio
 import pickle
 from configs.config import *
 import json
+from utils.server.msg import *
 
 
-async def send_to_moman(message):
+async def send_to_moman(cmd: Cmd):
 	'''Send a command to the monitor manager'''
 	try:
 		reader, writer = await asyncio.open_unix_connection(
 			f"{SOCKET_PATH}/MonitorManager")
 	except:
-		return {"success": False, "reason": "Monitor manager not available"}
+		r = badResponse()
+		r.reason = "Monitor manager not available"
+		return r
 
-	writer.write(message)
+	writer.write(cmd.get_bytes())
 	writer.write_eof()
 
 	data = await reader.read()
-	response = pickle.loads(data)
-	print(f"{response}")
+	response = Response(data)
 
 	writer.close()
 	return response
@@ -38,101 +40,98 @@ class RootHandler(tornado.web.RequestHandler):
 
 class AddMonitorHandler(tornado.web.RequestHandler):
 	async def post(self):
-		r = await send_to_moman(
-			pickle.dumps({"cmd": ADD_MONITOR,
-                            "payload": json.loads(self.request.body)})
-		)
+		cmd = Cmd()
+		cmd.cmd = ADD_MONITOR
+		cmd.payload = json.loads(self.request.body)
+		r = await send_to_moman(cmd)
 
-		if not r["success"]:
-			self.set_status(400, r["msg"])
-		self.write(r)
+		if not r.success:
+			self.set_status(400, r.reason)
+		self.write(r.get_json())
 
 
 class AddScraperHandler(tornado.web.RequestHandler):
 	async def post(self):
-		r = await send_to_moman(
-			pickle.dumps({"cmd": ADD_SCRAPER,
-                            "payload": json.loads(self.request.body)})
-		)
+		cmd = Cmd()
+		cmd.cmd = ADD_SCRAPER
+		cmd.payload = json.loads(self.request.body)
+		r = await send_to_moman(cmd)
 
-		if not r["success"]:
-			self.set_status(400, r["msg"])
-		self.write(r)
+		if not r.success:
+			self.set_status(400, r.reason)
+		self.write(r.get_json())
 
 
 class AddHandler(tornado.web.RequestHandler):
 	async def post(self):
-		r = await send_to_moman(
-			pickle.dumps({"cmd": ADD_MONITOR_SCRAPER,
-                            "payload": json.loads(self.request.body)})
-		)
+		cmd = Cmd()
+		cmd.cmd = ADD_MONITOR_SCRAPER
+		cmd.payload = json.loads(self.request.body)
+		r = await send_to_moman(cmd)
 
-		if not r["success"]:
-			self.set_status(400, r["msg"])
-		self.write(r)
+		if not r.success:
+			self.set_status(400, r.reason)
+		self.write(r.get_json())
 
 
 class StopMonitorHandler(tornado.web.RequestHandler):
 	async def delete(self):
-		r = await send_to_moman(
-			pickle.dumps({"cmd": STOP_MONITOR,
-                            "payload": json.loads(self.request.body)})
-		)
+		cmd = Cmd()
+		cmd.cmd = STOP_MONITOR
+		cmd.payload = json.loads(self.request.body)
+		r = await send_to_moman(cmd)
 
-		if not r["success"]:
-			self.set_status(400, r["msg"])
-		self.write(r)
+		if not r.success:
+			self.set_status(400, r.reason)
+		self.write(r.get_json())
 
 
 class StopScraperHandler(tornado.web.RequestHandler):
 	async def delete(self):
-		r = await send_to_moman(
-			pickle.dumps({"cmd": STOP_SCRAPER,
-                            "payload": json.loads(self.request.body)})
-		)
+		cmd = Cmd()
+		cmd.cmd = STOP_SCRAPER
+		cmd.payload = json.loads(self.request.body)
+		r = await send_to_moman(cmd)
 
-		if not r["success"]:
-			self.set_status(400, r["msg"])
-		self.write(r)
+		if not r.success:
+			self.set_status(400, r.reason)
+		self.write(r.get_json())
 
 
 class StopHandler(tornado.web.RequestHandler):
 	async def delete(self):
-		r = await send_to_moman(
-			pickle.dumps({"cmd": STOP_MONITOR_SCRAPER,
-                            "payload": json.loads(self.request.body)})
-		)
+		cmd = Cmd()
+		cmd.cmd = STOP_MONITOR_SCRAPER
+		cmd.payload = json.loads(self.request.body)
+		r = await send_to_moman(cmd)
 
-		if not r["success"]:
-			self.set_status(400, r["msg"])
-		self.write(r)
+		if not r.success:
+			self.set_status(400, r.reason)
+		self.write(r.get_json())
 
 
 class MonitorStatusHandler(tornado.web.RequestHandler):
 	async def get(self):
-		r = await send_to_moman(
-			pickle.dumps({"cmd": GET_MONITOR_STATUS})
-		)
-
-		self.write(r)
+		cmd = Cmd()
+		cmd.cmd = GET_MONITOR_STATUS
+		r = await send_to_moman(cmd)
+		self.write(r.get_json())
 
 
 class ScraperStatusHandler(tornado.web.RequestHandler):
 	async def get(self):
-		r = await send_to_moman(
-			pickle.dumps({"cmd": GET_SCRAPER_STATUS})
-		)
-
-		self.write(r)
+		cmd = Cmd()
+		cmd.cmd = GET_SCRAPER_STATUS
+		r = await send_to_moman(cmd)
+		self.write(r.get_json())
 
 
 class StatusHandler(tornado.web.RequestHandler):
 	async def get(self):
-		r = await send_to_moman(
-			pickle.dumps({"cmd": GET_MONITOR_SCRAPER_STATUS})
-		)
-
-		self.write(r)
+		cmd = Cmd()
+		cmd.cmd = GET_MONITOR_SCRAPER_STATUS
+		r = await send_to_moman(cmd)
+		self.write(r.get_json())
 
 
 # add endpoints here

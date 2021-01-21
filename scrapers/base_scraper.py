@@ -33,7 +33,8 @@ class BaseScraper(Common, NetworkUtils, Server):
 		super(Common, self).__init__(logger_name)
 		super(NetworkUtils, self).__init__(
 			logger_name, f"{SOCKET_PATH}/Scraper.{self.class_name}")
-
+		
+		self.cmd_to_callback[STOP] = self.stop_serving
 		self.cmd_to_callback[SET_LINKS] = self.on_get_links
 		self.links = []  # type: List[str]
 		self.previous_links = []  # type: List[str]
@@ -66,7 +67,7 @@ class BaseScraper(Common, NetworkUtils, Server):
 	async def on_get_links(self, cmd: Cmd) -> Message:
 		self.general_logger.debug("Got cmd get links")
 		response = okResponse()
-		response.set_payload(self.links)
+		response.payload = self.links
 		return response
 
 	async def on_server_stop(self):
@@ -111,25 +112,25 @@ class BaseScraper(Common, NetworkUtils, Server):
 		'''Connect to the corresponding monitor, if available, and tell it to set the new links.'''
 		socket_path = f"{SOCKET_PATH}/Monitor.{self.class_name}"
 		cmd = Cmd()
-		cmd.set_cmd(SET_LINKS)
-		cmd.set_payload(self.links)
+		cmd.cmd = SET_LINKS
+		cmd.payload = self.links
 		response = await self.make_request(socket_path, cmd)
 		if not response:
 			self.client_logger.warning("Could not decode response")
-		elif not response.get_success():
-			self.client_logger.warning("Got bad response: ", response.get_reason())
+		elif not response.success:
+			self.client_logger.warning("Got bad response: ", response.reason)
 
 	async def add_links(self):
 		'''Connect to the corresponding monitor, if available, and send it the new links.'''
 		socket_path = f"{SOCKET_PATH}/Monitor.{self.class_name}"
 		cmd = Cmd()
-		cmd.set_cmd(ADD_LINKS)
-		cmd.set_payload(self.links)
+		cmd.cmd = ADD_LINKS
+		cmd.payload = self.links
 		response = await self.make_request(socket_path, cmd)
 		if not response:
 			self.client_logger.warning("Could not decode response")
-		elif not response.get_success():
-			self.client_logger.warning("Got bad response: ", response.get_reason())
+		elif not response.success:
+			self.client_logger.warning("Got bad response: ", response.reason)
 
 
 if __name__ == "__main__":
