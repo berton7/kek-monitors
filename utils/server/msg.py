@@ -2,69 +2,91 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import pickle
 import copy
 
+# sanitize functions remove any unneeded data from an object (e.g. None, empty lists/dicts)
+
+def sanitize(o) -> Optional[Any]:
+	if o is None:
+		return None
+	elif isinstance(o, dict):
+		return sanitize_dict(o)
+	elif isinstance(o, list):
+		return sanitize_list(o)
+	else:
+		return o
+
+
+def sanitize_list(l: List[Any]) -> Optional[List[Any]]:
+	obj = []
+	for item in l:
+		# try to sanitize the item
+		s = sanitize(item)
+		# if the item is None or is empty:
+		if s is None or (hasattr(s, "__len__") and not len(s)):
+			# do nothing, else:
+			pass
+		else:
+			# keep it, it's important!
+			obj.append(s)
+	return obj if obj else None
+
+
+def sanitize_dict(d: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+	obj = {}
+	for key in d:
+		# try to sanitize the value
+		s = sanitize(d[key])
+		# if the item is None or is empty:
+		if s is None or (hasattr(s, "__len__") and not len(s)):
+			# do nothing, else:
+			pass
+		else:
+			# keep it, it's important!
+			obj[key] = s
+	return obj if obj else None
+
 
 class Message(object):
-	def __init__(self, msg):
-		if msg:
-			if isinstance(msg, bytes):
-				try:
-					j = pickle.loads(msg)
-					for key in j:
-						if key in self.__dict__:
-							self.__dict__[key] = j[key]
-				except:
-					pass
-			elif isinstance(msg, dict):
-				for key in msg:
+	'''Represents a message to be sent. It can be initialized with a json structure or bytes taken from a pickle.dumps of another message.\n
+	Once you set all the member variables you need you convert the message to bytes with to_bytes()
+	or access it as a json structure with to_json()'''
+
+	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
+		# update member variables by cycling through the first level of the json dict
+		if isinstance(msg, bytes):
+			try:
+				j = pickle.loads(msg)
+				for key in j:
 					if key in self.__dict__:
-						self.__dict__[key] = msg[key]
-
-	def sanitize(self, o) -> Optional[Any]:
-		if o is None:
-			return None
-		elif isinstance(o, dict):
-			return self.sanitize_dict(o)
-		elif isinstance(o, list):
-			return self.sanitize_list(o)
-		else:
-			return o
-
-
-	def sanitize_list(self, l: List[Any]) -> Optional[List[Any]]:
-		obj = []
-		for n, item in enumerate(l):
-			s = self.sanitize(item)
-			if s is None or (hasattr(s, "__len__") and not len(s)):
+						self.__dict__[key] = j[key]
+			except:
 				pass
-			else:
-				obj.append(s)
-		return obj if obj else None
-
-
-	def sanitize_dict(self, d: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-		obj = copy.deepcopy(d)
-		for key in d:
-			s = self.sanitize(d[key])
-			if s is None or (hasattr(s, "__len__") and not len(s)):
-				obj.pop(key)
-			else:
-				obj[key] = s
-		return obj if obj else None
+		elif isinstance(msg, dict):
+			for key in msg:
+				if key in self.__dict__:
+					self.__dict__[key] = msg[key]
+		else:
+			pass
 
 	def get_json(self) -> Optional[Any]:
-		return self.sanitize(self.__dict__)
+		'''Return a json representation of the message'''
+		return sanitize(self.__dict__)
 
 	def get_bytes(self) -> bytes:
-		return pickle.dumps(self.sanitize(self.__dict__))
+		'''Return a bytes representation of the message (using pickle)'''
+		return pickle.dumps(self.get_json())
 
 
 class Cmd(Message):
-	def __init__(self, msg: Union[bytes, Dict[str, Any]] = None):
+	'''Represents a command to be sent. It can be initialized with a json structure or bytes taken from a pickle.dumps of another message.\n'''
+
+	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
 		self.cmd = None
 		self.payload = None
 		super().__init__(msg)
 
 	def has_valid_args(self, args: List[str]) -> Tuple[bool, Optional[List[str]]]:
+		'''Checks if the payload in the cmd has all the required arguments.\n
+		Returns (success, missing_arguments)'''
 		if self.payload:
 			missing = []
 			for needed_arg in args:
@@ -78,7 +100,11 @@ class Cmd(Message):
 
 
 class Response(Message):
-	def __init__(self, msg: Union[bytes, Dict[str, Any]] = None):
+	'''Represents a response to a command. It can be initialized with a json structure or bytes taken from a pickle.dumps of another message.\n
+	Success always has to be set. If it is false, a reason must be provided, otherwise it's gonna be just ignored.\n
+	If you need to return data insert it into the payload'''
+
+	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
 		self.success = None
 		self.reason = None
 		self.payload = None
@@ -86,8 +112,10 @@ class Response(Message):
 
 
 def badResponse():
+	'''Quickly create an unsuccessful response with a default error.'''
 	return Response({"success": False, "reason": "Generic error"})
 
 
 def okResponse():
+	'''Quickly create a successful response'''
 	return Response({"success": True})
