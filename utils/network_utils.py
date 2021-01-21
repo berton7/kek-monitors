@@ -6,7 +6,7 @@ if __name__ == "__main__":
 
 import asyncio
 from datetime import datetime
-from typing import Tuple, Union
+from typing import Optional, Tuple
 
 import tornado.httpclient
 from tornado.curl_httpclient import CurlError
@@ -17,6 +17,10 @@ from utils.tools import get_logger
 
 class NetworkUtils(object):
 	def __init__(self, logger_name: str):
+		self.asyncio_loop = asyncio.get_event_loop()
+		tornado.httpclient.AsyncHTTPClient.configure(
+			"tornado.curl_httpclient.CurlAsyncHTTPClient")
+		self.client = tornado.httpclient.AsyncHTTPClient()
 		self.last_modified_datetimes = {}  # type: Dict[str, datetime]
 		# force a cache refresh after self.cache_timeout
 		self.cache_timeout = 10 * 60
@@ -35,7 +39,7 @@ class NetworkUtils(object):
 		self.network_logger = get_logger(logger_name + ".NetworkUtils")
 		self.network_logger.debug(f"Has brotli: {self.has_brotli}")
 
-	async def fetch(self, client: tornado.httpclient.AsyncHTTPClient, url: str, use_cache=True, attempts=3, delay=2, *args, **kwargs) -> Tuple[Union[tornado.httpclient.HTTPResponse, None], str]:
+	async def fetch(self, url: str, use_cache=True, attempts=3, delay=2, *args, **kwargs) -> Tuple[Optional[tornado.httpclient.HTTPResponse], str]:
 		'''Asynchronously fetch the url using a tornado client. If you want to fetch more urls at once use asyncio.gather(*tasks).\n
 		You can pass arguments to client.fetch() using *args and **kwargs (e.g. if you need proxies you can call self.fetch like this:\n
 		`self.fetch(url, headers=headers, proxy_host={your-proxy-host}, proxy_port={your-proxy-port})`'''
@@ -66,7 +70,7 @@ class NetworkUtils(object):
 				headers.pop("Pragma", None)
 
 				self.network_logger.debug(f"Getting {url}...")
-				r = await client.fetch(url, if_modified_since=if_mod_since, raise_error=False, *args, **kwargs)
+				r = await self.client.fetch(url, if_modified_since=if_mod_since, raise_error=False, *args, **kwargs)
 				self.network_logger.info(f"Got {url} with code {r.code}")
 				if r.code == 599:
 					self.network_logger.warning(

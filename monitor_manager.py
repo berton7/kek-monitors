@@ -1,46 +1,128 @@
 import asyncio
+from json.decoder import JSONDecodeError
 import os
-import pickle
 import shlex
 import subprocess
-import time
 from datetime import datetime
-from typing import List, Optional, Tuple, Union, Dict, Any
+from typing import Optional, Union, Dict, Any
 
 import utils.tools
-from configs.config import *
+from configs.config import COMMANDS, MOMAN_COMMANDS, SOCKET_PATH
 from utils.server.server import Server
 from utils.server.msg import *
+from watchdog import observers
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
+import json
 
 
-class MonitorManager(Server):
+class MonitorManager(Server, FileSystemEventHandler):
 	'''This can be used to manage monitors/scrapers with an external api.'''
 
 	def __init__(self):
 		logger_name = "Executable.MonitorManager"
 		super().__init__(logger_name, f"{SOCKET_PATH}/MonitorManager")
+		super(Server).__init__()
 		self.general_logger = utils.tools.get_logger(logger_name + ".General")
-		self.cmd_to_callback[ADD_MONITOR] = self.on_add_monitor
-		self.cmd_to_callback[ADD_SCRAPER] = self.on_add_scraper
-		self.cmd_to_callback[ADD_MONITOR_SCRAPER] = self.on_add_monitor_scraper
-		self.cmd_to_callback[STOP_MONITOR] = self.on_stop_monitor
-		self.cmd_to_callback[STOP_SCRAPER] = self.on_stop_scraper
-		self.cmd_to_callback[STOP_MONITOR_SCRAPER] = self.on_stop_monitor_scraper
-		self.cmd_to_callback[GET_MONITOR_STATUS] = self.on_get_monitor_status
-		self.cmd_to_callback[GET_SCRAPER_STATUS] = self.on_get_scraper_status
-		self.cmd_to_callback[GET_MONITOR_SCRAPER_STATUS] = self.on_get_status
-
-		# self.asyncio_loop.create_task(self.init_server())
+		self.cmd_to_callback[MOMAN_COMMANDS.STOP_MONITOR_MANAGER] = self.stop_serving
+		self.cmd_to_callback[MOMAN_COMMANDS.ADD_MONITOR] = self.on_add_monitor
+		self.cmd_to_callback[MOMAN_COMMANDS.ADD_SCRAPER] = self.on_add_scraper
+		self.cmd_to_callback[MOMAN_COMMANDS.ADD_MONITOR_SCRAPER] = self.on_add_monitor_scraper
+		self.cmd_to_callback[MOMAN_COMMANDS.STOP_MONITOR] = self.on_stop_monitor
+		self.cmd_to_callback[MOMAN_COMMANDS.STOP_SCRAPER] = self.on_stop_scraper
+		self.cmd_to_callback[MOMAN_COMMANDS.STOP_MONITOR_SCRAPER] = self.on_stop_monitor_scraper
+		self.cmd_to_callback[MOMAN_COMMANDS.GET_MONITOR_STATUS] = self.on_get_monitor_status
+		self.cmd_to_callback[MOMAN_COMMANDS.GET_SCRAPER_STATUS] = self.on_get_scraper_status
+		self.cmd_to_callback[MOMAN_COMMANDS.GET_MONITOR_SCRAPER_STATUS] = self.on_get_status
+		self.cmd_to_callback[MOMAN_COMMANDS.GET_CONFIG] = self.on_get_config
+		self.cmd_to_callback[MOMAN_COMMANDS.SET_CONFIG] = self.on_set_config
+		self.cmd_to_callback[MOMAN_COMMANDS.GET_WHITELIST] = self.on_get_whitelist
+		self.cmd_to_callback[MOMAN_COMMANDS.SET_WHITELIST] = self.on_set_whitelist
+		self.cmd_to_callback[MOMAN_COMMANDS.GET_WEBHOOKS] = self.on_get_webhooks
+		self.cmd_to_callback[MOMAN_COMMANDS.SET_WEBHOOKS] = self.on_set_webhooks
 
 		self.monitor_processes = {}  # type: Dict[str, Dict[str, Any]]
 		self.scraper_processes = {}  # type: Dict[str, Dict[str, Any]]
 		self.add_scraper_args = self.add_monitor_args = self.add_monitor_scraper_args = [
 			"filename", "class_name"]
 		self.stop_args = ["class_name"]
+
+		self.config_watcher = observers.Observer()
+		self.config_watcher.schedule(self, "./configs", True)
 		self.has_to_quit = False
 
 	def start(self):
+		self.config_watcher.start()
 		self.asyncio_loop.run_until_complete(self.check_status())
+
+	def on_modified(self, event: FileSystemEvent):
+		filename = event.key[1]  # type: str
+		if len(filename.split(os.path.sep)) > 3:
+			asyncio.run_coroutine_threadsafe(
+				self.update_configs(filename), self.asyncio_loop)
+
+	async def update_configs(self, filename: str):
+		self.general_logger.debug(f"File {filename} has changed!")
+		if filename.endswith(".json"):
+			try:
+				with open(filename, "r") as f:
+					j = json.load(f)
+			except JSONDecodeError:
+				self.general_logger.warning(
+					
+					f"File {filename} was changed but constains invalid json data: {j}")
+				return
+			splits = filename.split(os.path.sep)
+			cmd = Cmd()
+			sock_paths = []   # type: List[str]
+			if splits[2] == "monitors":
+				# we are interested in configs, whitelist, blacklist, webhooks
+				if splits[3] == "whitelists.json":
+					cmd.cmd = COMMANDS.SET_WHITELIST
+				elif splits[3] == "configs.json":
+					cmd.cmd = COMMANDS.SET_CONFIGS
+				elif splits[3] == "blacklists.json":
+					cmd.cmd = COMMANDS.SET_BLACKLIST
+				elif splits[3] == "webhooks.json":
+					cmd.cmd = COMMANDS.SET_WEBHOOKS
+				else:
+					cmd = None
+				if cmd:
+					for sockname in os.listdir(SOCKET_PATH):
+						if sockname.startswith("Monitor."):
+							sock_paths.append(os.path.sep.join([SOCKET_PATH,  sockname]))
+
+			elif splits[2] == "scrapers":
+				# we are interested in configs, whitelist, blacklist
+				if splits[3] == "whitelists.json":
+					cmd.cmd = COMMANDS.SET_WHITELIST
+				elif splits[3] == "configs.json":
+					cmd.cmd = COMMANDS.SET_CONFIGS
+				elif splits[3] == "blacklists.json":
+					cmd.cmd = COMMANDS.SET_BLACKLIST
+				else:
+					cmd.cmd = None
+				if cmd:
+					for sockname in os.listdir(SOCKET_PATH):
+						if sockname.startswith("Scraper."):
+							sock_paths.append(os.path.sep.join([SOCKET_PATH,  sockname]))
+			else:
+				self.general_logger.debug("File not useful.")
+				return
+
+			tasks = []
+			for sock_path in sock_paths:
+				tasks.append(self.make_request(sock_path, cmd))
+
+			responses = await asyncio.gather(*tasks)   # List[Response]
+
+			for response in responses:
+				if not response.success:
+					self.general_logger.warning(f"Failed to update config: {response.reason}")
+
+	async def on_server_stop(self):
+		self.config_watcher.stop()
+		self.config_watcher.join()
+		self.has_to_quit = True
 
 	async def check_status(self):
 		while not self.has_to_quit:
@@ -65,7 +147,7 @@ class MonitorManager(Server):
 			self.scraper_processes = new_scraper_processes
 			await asyncio.sleep(1)
 
-		self.general_logger("Shutting down...")
+		self.general_logger.info("Shutting down...")
 
 	async def on_add_monitor(self, cmd: Cmd) -> Response:
 		r = badResponse()
@@ -117,7 +199,7 @@ class MonitorManager(Server):
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
 			payload = cmd.payload
-			r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": STOP}))
+			r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.STOP}))
 		else:
 			r.reason = f"Missing arguments: {missing}"
 		return r
@@ -127,7 +209,7 @@ class MonitorManager(Server):
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
 			payload = cmd.payload
-			r = await self.make_request(f"{SOCKET_PATH}/Scraper.{payload['class_name']}", Cmd({"cmd": STOP}))
+			r = await self.make_request(f"{SOCKET_PATH}/Scraper.{payload['class_name']}", Cmd({"cmd": COMMANDS.STOP}))
 		else:
 			r.reason = f"Missing arguments: {missing}"
 		return r
@@ -244,6 +326,37 @@ class MonitorManager(Server):
 		msg = "" + (msg1 if not s1 else "") + (msg2 if not s2 else "")
 		return s, msg
 
+	async def on_get_config(self, cmd:Cmd) -> Response:
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.GET_CONFIG}))
+		return r
+
+	async def on_set_config(self, cmd: Cmd) -> Response:
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.SET_CONFIG, "payload": cmd.payload}))
+		return r
+
+	async def on_get_whitelist(self, cmd: Cmd) -> Response:
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.GET_WHITELIST}))
+		return r
+
+	async def on_set_whitelist(self, cmd: Cmd) -> Response:
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.SET_WHITELIST, "payload": cmd.payload}))
+		return r
+
+	async def on_get_blacklist(self, cmd: Cmd) -> Response:
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.GET_BLACKLIST}))
+		return r
+
+	async def on_set_blacklist(self, cmd: Cmd) -> Response:
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.SET_CONFIG, "payload": cmd.payload}))
+		return r
+
+	async def on_get_webhooks(self, cmd: Cmd) -> Response:
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.GET_WEBHOOKS}))
+		return r
+
+	async def on_set_webhooks(self, cmd: Cmd) -> Response:
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.SET_WEBHOOKS, "payload": cmd.payload}))
+		return r
 
 if __name__ == "__main__":
 	MonitorManager().start()

@@ -4,29 +4,34 @@ if __name__ == "__main__":
 	sys.path.insert(0, os.path.abspath(
 		os.path.join(os.path.dirname(__file__), '..')))
 
-import asyncio
+from configs.config import *
 import os
-import json
-import tornado.httpclient
-from typing import Tuple, Any
+from typing import Any
+from utils.server.server import Server
 from utils.tools import get_logger
 from utils.server.msg import *
 
 
-class Common(object):
-	def __init__(self, logger_name: str):
+class Common(Server):
+	def __init__(self, logger_name: str, socket_path: str):
 		self.general_logger = get_logger(logger_name + ".General")
 		self.client_logger = get_logger(logger_name + ".Client")
+
+		super().__init__(logger_name, socket_path)
+
+		self.cmd_to_callback[COMMANDS.SET_WHITELIST] = self.on_set_whitelist
+		self.cmd_to_callback[COMMANDS.SET_BLACKLIST] = self.on_set_blacklist
+		self.cmd_to_callback[COMMANDS.SET_WEBHOOKS] = self.on_set_webhooks
+		self.cmd_to_callback[COMMANDS.SET_CONFIG] = self.on_set_config
+
+		self.new_whitelist = None  # type: Optional[List[str]]
+		self.new_blacklist = None  # type: Optional[List[str]]
+		self.new_webhooks = None  # type: Optional[Dict[str, Dict[str, Any]]]
+		self.new_config = None  # type: Optional[Dict[str, Any]]
 
 		self.has_to_quit = False
 		self.class_name = self.get_class_name()
 		self.filename = self.get_filename()
-
-		self.asyncio_loop = asyncio.get_event_loop()
-		tornado.httpclient.AsyncHTTPClient.configure(
-			"tornado.curl_httpclient.CurlAsyncHTTPClient")
-		self.t_async_client = tornado.httpclient.AsyncHTTPClient()
-		self.t_sync_client = tornado.httpclient.HTTPClient()
 
 	def init(self):
 		'''Override this in your website-specific monitor, if needed.'''
@@ -42,48 +47,63 @@ class Common(object):
 		'''Not necessary, but sometimes you might want to override this.'''
 		return type(self).__name__
 
-	def update_vars_from_file(self, old_var, old_file_var, default_value, should_create_entry=True, *args) -> Tuple[Any, Any, Any]:
-		'''Weird function to update the configs from the files, checking if the configs are correct json and keeping backups.'''
-		# TODO: make this more readable, simplify it, possibly remove it
-		should_create_entry = True
-		var = None
-		with open(os.path.sep.join(args), "r") as rf:
-			try:
-				json_file = json.load(rf)
-			except json.JSONDecodeError:
-				self.general_logger.warning(f"Failed to decode {args[-1]}.")
-				if old_file_var:
-					self.general_logger.warning(f"Falling back to old {args[-1]}")
-					if old_var:
-						var = old_var
-					elif self.filename in old_file_var:
-						var = old_file_var[self.filename]
-					else:
-						self.general_logger.warning(f"Falling back to empty {args[-1]}.")
-						var = default_value
-					return var, old_var, old_file_var
-				else:
-					self.general_logger.warning(f"Falling back to empty {args[-1]}.")
-					var = default_value
-					return var, old_var, old_file_var
-			old_file_var = json_file
-			if self.filename not in json_file:
-				if should_create_entry:
-					self.general_logger.warning(
-						f"{self.filename} not present in {args[-1]}. Creating empty entry.")
-					with open(os.path.sep.join(args), "w") as wf:
-						var = old_var = old_file_var[self.filename] = default_value
-						wf.write(json.dumps(old_file_var))
-				else:
-					self.general_logger.warning(f"{self.filename} not present in {args[-1]}.")
-			else:
-				old_var = var = json_file[self.filename]
-		return var, old_var, old_file_var
+	async def on_set_whitelist(self, cmd: Cmd) -> Response:
+		r = badResponse()
+		whitelist = cmd.payload
+		if isinstance(whitelist, list):
+			self.new_whitelist = whitelist
+			self.client_logger.debug("Got new whitelist")
+			r = okResponse()
+		else:
+			self.client_logger.warning(
 
-	def start(self, delay):
-		'''Call this to start the scraper loop.'''
-		self.delay = delay
-		self.asyncio_loop.run_until_complete(self.main())
+				f"Got new whitelist but it was invalid: {whitelist}")
+			r.reason = "Invalid whitelist"
+		return r
+
+	async def on_set_blacklist(self, cmd: Cmd) -> Response:
+		r = badResponse()
+		blacklist = cmd.payload
+		if isinstance(blacklist, list):
+			self.new_blacklist = blacklist
+			self.client_logger.debug("Got new blacklist")
+			r = okResponse()
+		else:
+			self.client_logger.warning(
+				f"Got new blacklist but it was invalid: {blacklist}")
+			r.reason = "Invalid blacklist"
+		return r
+
+	async def on_set_webhooks(self, cmd: Cmd) -> Response:
+		r = badResponse()
+		webhooks = cmd.payload
+		if isinstance(webhooks, dict):
+			self.new_webhooks = webhooks
+			self.client_logger.debug("Got new webhooks")
+			r = okResponse()
+		else:
+			self.client_logger.warning(
+				f"Got new webhooks but it was invalid: {webhooks}")
+			r.reason = "Invalid webhooks"
+		return r
+
+	async def on_set_config(self, cmd: Cmd) -> Response:
+		r = badResponse()
+		config = cmd.payload
+		if isinstance(config, dict):
+			self.new_config = config
+			self.client_logger.debug("Got new config")
+			r = okResponse()
+		else:
+			self.client_logger.warning(
+				f"Got new config but it was invalid: {config}")
+			r.reason = "Invalid config"
+		return r
 
 	async def main(self):
-		return
+		pass
+
+	def start(self, delay):
+		'''Call this to start the loop.'''
+		self.delay = delay
+		self.asyncio_loop.run_until_complete(self.main())

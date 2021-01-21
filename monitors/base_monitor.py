@@ -15,7 +15,7 @@ import traceback
 from typing import Any, Dict, List, Optional
 
 import utils.tools
-from configs.config import *
+from configs.config import COMMANDS, SOCKET_PATH, CRASH_WEBHOOK
 from utils import discord_embeds, shoe_stuff
 from utils.common_base import Common
 from utils.network_utils import NetworkUtils
@@ -26,21 +26,20 @@ from utils.shoe_stuff import Shoe
 from utils.webhook_manager import WebhookManager
 
 
-class BaseMonitor(Common, NetworkUtils, Server):
+class BaseMonitor(Common, NetworkUtils):
 	def __init__(self, add_stream_handler: bool = True):
 		# init some internal variables (logger, links)
 		logger_name = f"Monitor.{self.get_class_name()}"
 		self.general_logger = utils.tools.get_logger(
 			logger_name, add_stream_handler=add_stream_handler)
 
-		super().__init__(logger_name)
-		super(Common, self).__init__(logger_name)
-		super(NetworkUtils, self).__init__(
-			logger_name, f"{SOCKET_PATH}/Monitor.{self.class_name}")
+		super().__init__(
+			logger_name, f"{SOCKET_PATH}/Monitor.{self.get_class_name()}")
+		super(Server, self).__init__(logger_name)
 
-		self.cmd_to_callback[STOP] = self.stop_serving
-		self.cmd_to_callback[SET_LINKS] = self.on_set_links
-		self.cmd_to_callback[ADD_LINKS] = self.on_add_links
+		self.cmd_to_callback[COMMANDS.STOP] = self.stop_serving
+		self.cmd_to_callback[COMMANDS.SET_LINKS] = self.on_set_links
+		self.cmd_to_callback[COMMANDS.ADD_LINKS] = self.on_add_links
 
 		self.buffer_links = []  # type: List[str]
 		self.new_links = []  # type: List[str]
@@ -55,18 +54,11 @@ class BaseMonitor(Common, NetworkUtils, Server):
 			"configs", "monitors", "whitelists.json"]
 		self.default_blacklists_file_path = [
 			"configs", "monitors", "blacklists.json"]
-		self.whitelist = None  # type: Optional[List[str]]
-		self.old_whitelist = None  # type: Optional[List[str]]
-		self.old_whitelists = None  # type: Optional[Dict[str, List[str]]]
-		self.blacklist = None  # type: Optional[List[str]]
-		self.old_blacklist = None  # type: Optional[List[str]]
-		self.old_blacklists = None  # type: Optional[Dict[str, List[str]]]
+
+		self.whitelist = []  # type: List[str]
+		self.blacklist = []  # type: List[str]
 		self.webhooks = None  # type: Optional[Dict[str, Dict[str, Any]]]
-		self.old_webhooks = None  # type: Optional[Dict[str, Dict[str, Any]]]
-		self.old_webhooks_file = None
-		self.config = None  # type: Optional[Dict[str, Any]]
-		self.old_config = None  # type: Optional[Dict[str, Any]]
-		self.old_configs_file = None  # type: Optional[Dict[str, Dict[str, Any]]]
+		self.config = {}  # type: Dict[str, Any]
 
 		self.shoe_manager = ShoeManager(self.filename, logger=self.general_logger)
 		self.webhook_manager = WebhookManager(
@@ -79,10 +71,6 @@ class BaseMonitor(Common, NetworkUtils, Server):
 		'''YOU MUST OVERRIDE ME! Needed to get the correct filename.'''
 		# take current path, split, get last element (=filename), remove ".py"
 		return __file__.split(os.path.sep)[-1][:-3]
-
-	def init(self):
-		'''Override this in your website-specific monitor, if needed.'''
-		pass
 
 	async def on_set_links(self, msg: Cmd) -> Response:
 		self.server_logger.debug("Got cmd set_links")
@@ -131,7 +119,7 @@ class BaseMonitor(Common, NetworkUtils, Server):
 		self.general_logger.debug("Getting links...")
 
 		cmd = Cmd()
-		cmd.cmd = GET_LINKS
+		cmd.cmd = COMMANDS.GET_LINKS
 		response = await self.make_request(socket_path, cmd)
 		if response and response.success:
 			self.links = response.payload
@@ -143,14 +131,18 @@ class BaseMonitor(Common, NetworkUtils, Server):
 		# Try to get a set of links as soon as the monitor starts.
 		await self.get_links()
 		while not self.has_to_quit:
-			self.whitelist, self.old_whitelist, self.old_whitelists = self.update_vars_from_file(
-				self.old_whitelist, self.old_whitelists, [], True, *self.default_whitelists_file_path)
-			self.blacklist, self.old_blacklist, self.old_blacklists = self.update_vars_from_file(
-				self.old_blacklist, self.old_blacklists, [], True, *self.default_blacklists_file_path)
-			self.webhooks, self.old_webhooks, self.old_webhooks_file = self.update_vars_from_file(
-				self.old_webhooks, self.old_webhooks_file, {}, True, *self.default_webhooks_file_path)
-			self.config, self.old_config, self.old_configs_file = self.update_vars_from_file(
-				self.old_config, self.old_configs_file, {}, True, *self.default_configs_file_path)
+			if self.new_blacklist:
+				self.blacklist = self.new_blacklist
+				self.new_blacklist = []
+			if self.new_whitelist:
+				self.whitelist = self.new_whitelist
+				self.new_whitelist = []
+			if self.new_webhooks:
+				self.webhooks = self.webhooks
+				self.new_webhooks = {}
+			if self.new_config:
+				self.config = self.new_config
+				self.new_config = {}
 			if self.new_links:
 				self.general_logger.debug(f"Received new set of links: {self.new_links}")
 				self.links = self.new_links
@@ -166,9 +158,10 @@ class BaseMonitor(Common, NetworkUtils, Server):
 			except:
 				self.general_logger.exception("")
 				data = {"content": f"{self.general_logger.name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."}
-				await self.t_async_client.fetch(CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"})
+				await self.client.fetch(CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"})
 			self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
+		self.general_logger.info("Shutting down")
 
 	async def loop(self):
 		'''User-defined loop. Replace this with a function that will be run every `delay` seconds'''

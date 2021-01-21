@@ -69,7 +69,7 @@ class Server(object):
 		if self.server_stop_called:
 			await self.on_server_stop()
 
-	async def make_request(self, socket_path: str, cmd: Cmd, expect_response: bool = True) -> Optional[Response]:
+	async def make_request(self, socket_path: str, cmd: Cmd, expect_response: bool = True) -> Response:
 		if os.path.exists(socket_path):
 			try:
 				reader, writer = await asyncio.open_unix_connection(socket_path)
