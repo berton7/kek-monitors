@@ -241,7 +241,7 @@ class MonitorManager(Server):
 	async def add_monitor_scraper(self, filename: str, class_name: str, scraper_delay: Optional[Union[int, float]], monitor_delay: Optional[Union[int, float]]):
 		(s1, msg1), (s2, msg2) = await asyncio.gather(self.add_monitor(filename, class_name, monitor_delay), self.add_scraper(filename, class_name, scraper_delay))
 		s = s1 and s2
-		msg = "" + (msg1 if s1 else "") + (msg2 if s2 else "")
+		msg = "" + (msg1 if not s1 else "") + (msg2 if not s2 else "")
 		return s, msg
 
 
