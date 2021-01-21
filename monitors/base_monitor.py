@@ -169,8 +169,6 @@ class BaseMonitor(Common, NetworkUtils, Server):
 			self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
 
-		await self.stop_serving()
-
 	async def loop(self):
 		'''User-defined loop. Replace this with a function that will be run every `delay` seconds'''
 		await asyncio.sleep(1)
