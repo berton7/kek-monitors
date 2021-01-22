@@ -7,3 +7,4 @@ mypy
 tornado
 pycurl
 requests
+watchdog
