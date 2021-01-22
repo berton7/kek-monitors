@@ -86,15 +86,15 @@ class Common(Server):
 			self.blacklist = self.new_blacklist
 			self.new_blacklist = None
 		if self.new_whitelist is not None:
-			self.general_logger.info(f"New blacklist: {self.new_whitelist}")
+			self.general_logger.info(f"New whitelist: {self.new_whitelist}")
 			self.whitelist = self.new_whitelist
 			self.new_whitelist = None
 		if self.new_webhooks is not None:
-			self.general_logger.info(f"New blacklist: {self.new_webhooks}")
+			self.general_logger.info(f"New webhooks: {self.new_webhooks}")
 			self.webhooks = self.webhooks
 			self.new_webhooks = None
 		if self.new_config is not None:
-			self.general_logger.info(f"New blacklist: {self.new_config}")
+			self.general_logger.info(f"New config: {self.new_config}")
 			self.config = self.new_config
 			self.new_config = None
 
