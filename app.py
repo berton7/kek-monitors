@@ -41,7 +41,7 @@ class RootHandler(tornado.web.RequestHandler):
 class AddMonitorHandler(tornado.web.RequestHandler):
 	async def post(self):
 		cmd = Cmd()
-		cmd.cmd = ADD_MONITOR
+		cmd.cmd = COMMANDS.MM_ADD_MONITOR
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
@@ -53,7 +53,7 @@ class AddMonitorHandler(tornado.web.RequestHandler):
 class AddScraperHandler(tornado.web.RequestHandler):
 	async def post(self):
 		cmd = Cmd()
-		cmd.cmd = ADD_SCRAPER
+		cmd.cmd = COMMANDS.MM_ADD_SCRAPER
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
@@ -65,7 +65,7 @@ class AddScraperHandler(tornado.web.RequestHandler):
 class AddHandler(tornado.web.RequestHandler):
 	async def post(self):
 		cmd = Cmd()
-		cmd.cmd = ADD_MONITOR_SCRAPER
+		cmd.cmd = COMMANDS.MM_ADD_MONITOR_SCRAPER
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
@@ -77,7 +77,7 @@ class AddHandler(tornado.web.RequestHandler):
 class StopMonitorHandler(tornado.web.RequestHandler):
 	async def delete(self):
 		cmd = Cmd()
-		cmd.cmd = STOP_MONITOR
+		cmd.cmd = COMMANDS.MM_STOP_MONITOR
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
@@ -89,7 +89,7 @@ class StopMonitorHandler(tornado.web.RequestHandler):
 class StopScraperHandler(tornado.web.RequestHandler):
 	async def delete(self):
 		cmd = Cmd()
-		cmd.cmd = STOP_SCRAPER
+		cmd.cmd = COMMANDS.MM_STOP_SCRAPER
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
@@ -101,7 +101,7 @@ class StopScraperHandler(tornado.web.RequestHandler):
 class StopHandler(tornado.web.RequestHandler):
 	async def delete(self):
 		cmd = Cmd()
-		cmd.cmd = STOP_MONITOR_SCRAPER
+		cmd.cmd = COMMANDS.MM_STOP_MONITOR_SCRAPER
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
@@ -113,7 +113,7 @@ class StopHandler(tornado.web.RequestHandler):
 class MonitorStatusHandler(tornado.web.RequestHandler):
 	async def get(self):
 		cmd = Cmd()
-		cmd.cmd = GET_MONITOR_STATUS
+		cmd.cmd = COMMANDS.MM_GET_MONITOR_STATUS
 		r = await send_to_moman(cmd)
 		self.write(r.get_json())
 
@@ -121,7 +121,7 @@ class MonitorStatusHandler(tornado.web.RequestHandler):
 class ScraperStatusHandler(tornado.web.RequestHandler):
 	async def get(self):
 		cmd = Cmd()
-		cmd.cmd = GET_SCRAPER_STATUS
+		cmd.cmd = COMMANDS.MM_GET_SCRAPER_STATUS
 		r = await send_to_moman(cmd)
 		self.write(r.get_json())
 
@@ -129,7 +129,7 @@ class ScraperStatusHandler(tornado.web.RequestHandler):
 class StatusHandler(tornado.web.RequestHandler):
 	async def get(self):
 		cmd = Cmd()
-		cmd.cmd = GET_MONITOR_SCRAPER_STATUS
+		cmd.cmd = COMMANDS.MM_GET_MONITOR_SCRAPER_STATUS
 		r = await send_to_moman(cmd)
 		self.write(r.get_json())
 
