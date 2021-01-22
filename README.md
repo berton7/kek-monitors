@@ -5,7 +5,7 @@ Here scrapers and actual monitors are separated and working asynchronously, comm
 
 
 ## Pre-requisites
-* `Python 3` > 3.5
+* `Python 3` > 3.6
 * `linux`: the monitors have been tested on an Arch Linux installation for only a short amount of time unfortunately, but they should be able to run well and on any linux distribution. Windows is not officially supported, but if you really cannot/don't want to use linux, you should change the communication between monitors from Unix sockets to normal sockets, change, if needed, the default asyncio loop (I know sometimes it can give problems), and have a working dev-version of `libcurl`.
 * `libcurl` compiled with async and possibly brotli support (look for `brotli` and `AsynchDNS` in `curl --version` features). Brotli support is recommended but often not shipped with packaged versions of curl; if you want to add support to it you can compile and install curl yourself with brotli, making sure with ```curl --version``` that you are getting the output from your compiled version, and reinstall `pycurl` with ```pip install pycurl --no-binary :all: --force-reinstall```
 
