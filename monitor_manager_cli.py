@@ -29,7 +29,7 @@ async def make_request(socket_path, cmd, expect_response):
 if __name__ == "__main__":
 	args = sys.argv
 	if len(args) < 2:
-		print("Usage: python monitor_manager_cli <cmd> [payload]")
+		print("Usage: python monitor_manager_cli.py <cmd> [payload]")
 		exit(1)
 	cmd = COMMANDS.__dict__.get(args[1], None)
 	if not cmd:
