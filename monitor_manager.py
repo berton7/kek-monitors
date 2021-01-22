@@ -136,12 +136,20 @@ class MonitorManager(Server, FileSystemEventHandler):
 		self.config_watcher.stop()
 		self.config_watcher.join()
 		for sockname in os.listdir(SOCKET_PATH):
-			if sockname.startswith("Scraper.") or sockname.startswith("Scraper."):
+			if sockname.startswith("Scraper.") or sockname.startswith("Monitor."):
 				cmd = Cmd()
 				cmd.cmd = COMMANDS.STOP
-				r = await self.make_request(sockname, cmd)
-				if not r.success and r.reason == f"Socket {sockname} unavailable":
-					os.remove(os.path.sep.join([SOCKET_PATH, sockname]))
+				r = await self.make_request(f"{SOCKET_PATH}{os.path.sep}{sockname}", cmd)
+				if not r.success:
+					if r.reason == f"Socket {sockname} unavailable":
+						self.general_logger.info(
+							f"{SOCKET_PATH}{os.path.sep}{sockname} was removed because unavailable")
+						os.remove(os.path.sep.join([SOCKET_PATH, sockname]))
+					else:
+						self.general_logger.warning(
+							f"Error occurred while attempting to stop {sockname}: {r.reason}")
+				else:
+					self.general_logger.warning(f"{sockname} was successfully stopped")
 
 		self.has_to_quit = True
 
@@ -287,13 +295,13 @@ class MonitorManager(Server, FileSystemEventHandler):
 				f"Tried to add an already existing monitor ({filename}.{class_name})")
 			return False, "Monitor already started."
 
-		cmd = f"python monitors{os.path.sep}{filename}.py --no-output"
+		cmd = f"nohup python monitors{os.path.sep}{filename}.py --no-output"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
 		self.general_logger.debug(f"Starting {filename}.{class_name}...")
 		monitor = subprocess.Popen(shlex.split(
-			cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			cmd), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 		await asyncio.sleep(2)  # wait to check if process is still alive
 
@@ -319,13 +327,13 @@ class MonitorManager(Server, FileSystemEventHandler):
 				f"Tried to add an already existing scraper ({filename}.{class_name})")
 			return False, "Scraper already started."
 
-		cmd = f"python scrapers{os.path.sep}{filename}.py --no-output"
+		cmd = f"nohup python scrapers{os.path.sep}{filename}.py --no-output"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
 		self.general_logger.debug(f"Starting {filename}.{class_name}...")
 		scraper = subprocess.Popen(shlex.split(
-			cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			cmd), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 		await asyncio.sleep(2)  # wait to check if process is still alive
 
