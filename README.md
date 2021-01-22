@@ -23,38 +23,37 @@ python3 -m pip install -r requirements.txt
 ```
 
 ## Usage
-If you write your monitors like the my_website.py examples you can run them like this:
+The recommended way to start and control monitors is via ```monitor_manager.py```.
+Assuming you are remotely working on a server via SSH and you want to start both a scraper and a monitor:
 ```bash
-# in a ssh screen session, start the scraper
-python3 scrapers/my_website.py --delay n
-# in another ssh screen session, start the monitor
-python3 monitors/my_website.py --delay n
-```
-It doesn't really matter which one you start first; as soon as it starts the monitor tries to fetch links from the scraper, and any time the scraper finds new links it sends them to the monitor.
+# in a SSH screen session:
+python monitor_manager.py
 
-You can also remotely start them using the api and the monitor manager:
+# in another SSH screen session:
+python monitor_manager_cli MM_ADD_MONITOR_SCRAPER --filename <filename> --class_name <class_name>
+```
+The monitor manager will automatically keep track of which monitors/scrapers are available and can notify if and when they crash; it also manages the config updates (as soon as you change a file in ```configs/``` it notifies the interested monitors/scrapers).
+
+There is also an ```app.py``` that "bridges" between http and the monitor manager, which allows you to use a REST api to control the monitor manager:
 ```bash
-# in a ssh screen session, start the monitor manager
-python3 monitor_manager.py
-# in another ssh screen session, start the api
-python3 app.py
-
-# to start the my_website monitor and scraper:
-curl http://{your-server-ip}:{api-port}/add -d '{"filename":"my_website", "class_name":"MyWebsite"}'
+# in a SSH screen session:
+python app.py
 ```
-The provided api is only used as an example, and you should not use it in "production" since it doesn't currently use any sort of authentication, so anyone who finds your server's ip address can very easily control your monitors.
+You can see the available endpoints by navigating to the root endpoint (by default: `http://localhost:8888/`).
+
+```app.py``` is only used as an example, and you should not use it in "production" since it doesn't use any sort of authentication, so anyone who finds your server's ip address can very easily control your monitors.
 
 ## Configuration
-The configuration files can be found in the configs folder. Python related stuff, like commands and global variables (socket_path), is contained in `config.py`; every scraper and monitor has a `blacklist.json`, `whitelist.json`, and a general unused `configs.json` that are customized per-website. Every monitor/scraper, unless configured otherwise, generates a new empty entry when it doesn't find one, so it's pretty easy to understand how the config files generally work; anyway, here's an example blacklists.json:
+The configuration files can be found in the configs folder. Python related stuff, like commands and global variables (socket_path), is contained in `config.py`; every scraper and monitor looks for its corresponding entry in `blacklist.json`, `whitelist.json`, and a general unused `configs.json`. Here's an example blacklists.json:
 
 ```json
 {
-	"my_website": 
+	"MyWebsite": 
 	[
 		"some term",
 		"another, term"
 	],
-	"another_website":
+	"AnotherWebsite":
 	[
 		"one more, term",
 		"so many terms"
@@ -68,7 +67,7 @@ Monitors also have a `webhooks.json` file to add webhooks, with support to optio
 
 ```json
 {
-	"my_website": 
+	"MyWebsite": 
 	{
 		"https://discordapp.com/api/webhooks/your-webhook-here": {
                         "name": "Human readable name, not used at all in the code",
@@ -87,11 +86,13 @@ Monitors also have a `webhooks.json` file to add webhooks, with support to optio
 ## How does it all work?
 The project can be thought of as being divided into several big parts: scrapers, monitors, database manager, webhook manager, discord embeds, monitor manager+api. Obviously you can, and should, customize everything to suite your needs, but you probably want to start by writing the first scraper/monitor combo.
 
-There are only **two requirements**, needed to allow simple communication between the two and make everything work, that is they need to have the **same filename and class name**; what I would generally do is name the file after the website it should work with, and same thing for the class name (filename and class name don't necessarily need to be different).
+I've tried to write everything so that you can easily customize your own monitor/scraper without modifying the source code too much: if for you example you want to add custom commands to your monitor you can just add it to ```configs/config.py```, then write a callback function which will handle the received command and that's it!
 
-You can get started by looking at the sample code `my_website.py` in [scrapers]() and [monitors]()
+There are only **two requirements**, needed to allow simple communication between monitor/scraper and make everything work, that is they need to have the **same filename and class name**; what I would generally do is name the file after the website it should work with, and same thing for the class name (filename and class name don't necessarily need to be different).
 
-## About NetworkUtils.fetch()
+You can get started by looking at the sample code `my_website.py` in [scrapers](https://github.com/berton7/monitors/blob/master/scrapers/my_website.py) and [monitors](https://github.com/berton7/monitors/blob/master/monitors/my_website.py)
+
+## Important: about NetworkUtils.fetch()
 By default fetch has the option `use_cache` set to True. The cache in question is not the typical CDN cache (the hit/miss cache from cloudflare for example), which you typically try to avoid (you look for the miss) to have the most up to date page possible; it's HTTP cache, which is "activated" by the [if-modified-since](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since) and [etag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) headers: when *this* cache is hit, the return code is 304 and the body is empty, which saves a huge amount of bandwidth; from what I tested this seems like a really good option since the response is almost entirely empty, saving up on proxy bandwidth and general costs, and it doesn't seem to impact performance (remember it's not CDN related, but purely HTTP related). NetworkUtils automatically manages the internal pages cache.
 
 Anyway you can turn off this behavior with `use_cache=False` on each request, retrieving a full response each time.
