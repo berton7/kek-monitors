@@ -15,14 +15,14 @@ from utils.server.msg import *
 
 
 class Common(Server):
-	def __init__(self, logger_name: str, socket_path: str):
+	def __init__(self, logger_name: str, add_stream_handler, socket_path: str):
 		self.general_logger = get_logger(logger_name + ".General")
 		self.client_logger = get_logger(logger_name + ".Client")
 
 		self.class_name = self.get_class_name()
 		self.filename = self.get_filename()
 
-		super().__init__(logger_name, socket_path)
+		super().__init__(logger_name, add_stream_handler, socket_path)
 
 		self.cmd_to_callback[COMMANDS.SET_WHITELIST] = self.on_set_whitelist
 		self.cmd_to_callback[COMMANDS.SET_BLACKLIST] = self.on_set_blacklist
@@ -45,12 +45,12 @@ class Common(Server):
 		self.config = self.load_config(os.path.sep.join(
 			self.default_configs_file_path))  # type: Dict[str, Any]
 
-		self.new_whitelist = None  # type: Optional[List[str]]
-		self.new_blacklist = None  # type: Optional[List[str]]
-		self.new_webhooks = None  # type: Optional[Dict[str, Dict[str, Any]]]
-		self.new_config = None  # type: Optional[Dict[str, Any]]
+		self._new_whitelist = None  # type: Optional[List[str]]
+		self._new_blacklist = None  # type: Optional[List[str]]
+		self._new_webhooks = None  # type: Optional[Dict[str, Dict[str, Any]]]
+		self._new_config = None  # type: Optional[Dict[str, Any]]
 
-		self.has_to_quit = False
+		self._has_to_quit = False
 
 	def init(self):
 		'''Override this in your website-specific monitor, if needed.'''
@@ -81,28 +81,28 @@ class Common(Server):
 				return j[self.class_name]
 
 	def update_local_config(self):
-		if self.new_blacklist is not None:
-			self.general_logger.info(f"New blacklist: {self.new_blacklist}")
-			self.blacklist = self.new_blacklist
-			self.new_blacklist = None
-		if self.new_whitelist is not None:
-			self.general_logger.info(f"New whitelist: {self.new_whitelist}")
-			self.whitelist = self.new_whitelist
-			self.new_whitelist = None
-		if self.new_webhooks is not None:
-			self.general_logger.info(f"New webhooks: {self.new_webhooks}")
+		if self._new_blacklist is not None:
+			self.general_logger.info(f"New blacklist: {self._new_blacklist}")
+			self.blacklist = self._new_blacklist
+			self._new_blacklist = None
+		if self._new_whitelist is not None:
+			self.general_logger.info(f"New whitelist: {self._new_whitelist}")
+			self.whitelist = self._new_whitelist
+			self._new_whitelist = None
+		if self._new_webhooks is not None:
+			self.general_logger.info(f"New webhooks: {self._new_webhooks}")
 			self.webhooks = self.webhooks
-			self.new_webhooks = None
-		if self.new_config is not None:
-			self.general_logger.info(f"New config: {self.new_config}")
-			self.config = self.new_config
-			self.new_config = None
+			self._new_webhooks = None
+		if self._new_config is not None:
+			self.general_logger.info(f"New config: {self._new_config}")
+			self.config = self._new_config
+			self._new_config = None
 
 	async def on_set_whitelist(self, cmd: Cmd) -> Response:
 		r = badResponse()
 		whitelist = cmd.payload
 		if isinstance(whitelist, list):
-			self.new_whitelist = whitelist
+			self._new_whitelist = whitelist
 			self.client_logger.debug("Got new whitelist")
 			r = okResponse()
 		else:
@@ -115,7 +115,7 @@ class Common(Server):
 		r = badResponse()
 		blacklist = cmd.payload
 		if isinstance(blacklist, list):
-			self.new_blacklist = blacklist
+			self._new_blacklist = blacklist
 			self.client_logger.debug("Got new blacklist")
 			r = okResponse()
 		else:
@@ -128,7 +128,7 @@ class Common(Server):
 		r = badResponse()
 		webhooks = cmd.payload
 		if isinstance(webhooks, dict):
-			self.new_webhooks = webhooks
+			self._new_webhooks = webhooks
 			self.client_logger.debug("Got new webhooks")
 			r = okResponse()
 		else:
@@ -141,7 +141,7 @@ class Common(Server):
 		r = badResponse()
 		config = cmd.payload
 		if isinstance(config, dict):
-			self.new_config = config
+			self._new_config = config
 			self.client_logger.debug("Got new config")
 			r = okResponse()
 		else:

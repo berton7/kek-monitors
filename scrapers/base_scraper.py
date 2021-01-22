@@ -27,17 +27,15 @@ from utils.common_base import Common
 class BaseScraper(Common, NetworkUtils):
 	def __init__(self, add_stream_handler: Optional[bool] = True):
 		logger_name = f"Scraper.{self.get_class_name()}"
-		self.general_logger = utils.tools.get_logger(
-			logger_name, add_stream_handler=add_stream_handler)
 
 		super().__init__(
-			logger_name, f"{SOCKET_PATH}/Scraper.{self.get_class_name()}")
+			logger_name, add_stream_handler, f"{SOCKET_PATH}/Scraper.{self.get_class_name()}")
 		super(Server, self).__init__(logger_name)
 
-		self.cmd_to_callback[COMMANDS.STOP] = self.stop_serving
+		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
 		self.cmd_to_callback[COMMANDS.SET_LINKS] = self.on_get_links
 		self.links = []  # type: List[str]
-		self.previous_links = []  # type: List[str]
+		self._previous_links = []  # type: List[str]
 
 		# website-specific variables should be declared here
 		self.init()
@@ -48,18 +46,17 @@ class BaseScraper(Common, NetworkUtils):
 		return __file__.split(os.path.sep)[-1][:-3]
 
 	async def on_get_links(self, cmd: Cmd) -> Message:
-		self.general_logger.debug("Got cmd get links")
 		response = okResponse()
 		response.payload = self.links
 		return response
 
 	async def on_server_stop(self):
-		self.has_to_quit = True
+		self._has_to_quit = True
 		return okResponse()
 
 	async def main(self):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
-		while not self.has_to_quit:
+		while not self._has_to_quit:
 			self.update_local_config()
 			try:
 				await self.loop()
@@ -78,11 +75,11 @@ class BaseScraper(Common, NetworkUtils):
 
 	async def update_links(self):
 		'''This is called just after self.loop. Checks if any of the links have been modified and sends them to the corresponding monitor.'''
-		if self.links != self.previous_links:
-			await self.set_links()
-			self.previous_links = copy.deepcopy(self.links)
+		if self.links != self._previous_links:
+			await self._set_links()
+			self._previous_links = copy.deepcopy(self.links)
 
-	async def set_links(self):
+	async def _set_links(self):
 		'''Connect to the corresponding monitor, if available, and tell it to set the new links.'''
 		socket_path = f"{SOCKET_PATH}/Monitor.{self.class_name}"
 		cmd = Cmd()
@@ -94,7 +91,7 @@ class BaseScraper(Common, NetworkUtils):
 		elif not response.success:
 			self.client_logger.warning(f"Got bad response: {response.reason}")
 
-	async def add_links(self):
+	async def _add_links(self):
 		'''Connect to the corresponding monitor, if available, and send it the new links.'''
 		socket_path = f"{SOCKET_PATH}/Monitor.{self.class_name}"
 		cmd = Cmd()

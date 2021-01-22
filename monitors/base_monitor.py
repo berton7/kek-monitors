@@ -30,14 +30,12 @@ class BaseMonitor(Common, NetworkUtils):
 	def __init__(self, add_stream_handler: bool = True):
 		# init some internal variables (logger, links)
 		logger_name = f"Monitor.{self.get_class_name()}"
-		self.general_logger = utils.tools.get_logger(
-			logger_name, add_stream_handler=add_stream_handler)
 
 		super().__init__(
-			logger_name, f"{SOCKET_PATH}/Monitor.{self.get_class_name()}")
+			logger_name, add_stream_handler, f"{SOCKET_PATH}/Monitor.{self.get_class_name()}")
 		super(Server, self).__init__(logger_name)
 
-		self.cmd_to_callback[COMMANDS.STOP] = self.stop_serving
+		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
 		self.cmd_to_callback[COMMANDS.SET_LINKS] = self.on_set_links
 		self.cmd_to_callback[COMMANDS.ADD_LINKS] = self.on_add_links
 
@@ -59,7 +57,6 @@ class BaseMonitor(Common, NetworkUtils):
 		return __file__.split(os.path.sep)[-1][:-3]
 
 	async def on_set_links(self, msg: Cmd) -> Response:
-		self.server_logger.debug("Got cmd set_links")
 		response = badResponse()
 		p = msg.payload
 		if p is not None:
@@ -67,18 +64,17 @@ class BaseMonitor(Common, NetworkUtils):
 				self.new_links = p
 				response.set_success(True)
 			else:
-				self.general_logger.warning(
+				self.client_logger.warning(
 					"Received new set of links, but payload was not a list: ", p)
 				response.set_reason("Payload was not a list")
 
 		else:
-			self.general_logger.warning(
+			self.client_logger.warning(
 				"Failed to decode payload; msg: ", msg.get_json())
 			response.set_reason("Failed to decode payload")
 		return response
 
 	async def on_add_links(self, msg: Cmd) -> Response:
-		self.server_logger.debug("Got cmd add_links")
 		response = badResponse()
 		p = msg.payload
 		if p is not None:
@@ -96,13 +92,13 @@ class BaseMonitor(Common, NetworkUtils):
 			response.reason = "Failed to decode payload"
 		return response
 
-	async def on_server_stop(self):
-		self.has_to_quit = True
+	async def on_server_stop(self) -> Response:
+		self._has_to_quit = True
 		return okResponse()
 
-	async def get_links(self):
+	async def _get_links(self):
 		socket_path = f"{SOCKET_PATH}/Scraper.{self.class_name}"
-		self.general_logger.debug("Getting links...")
+		self.client_logger.debug("Getting links...")
 
 		cmd = Cmd()
 		cmd.cmd = COMMANDS.GET_LINKS
@@ -110,20 +106,20 @@ class BaseMonitor(Common, NetworkUtils):
 		if response and response.success:
 			self.links = response.payload
 		else:
-			self.general_logger.warning("Failed to get links")
+			self.client_logger.warning(f"Failed to get links: {response.reason}")
 
 	async def main(self):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
 		# Try to get a set of links as soon as the monitor starts.
-		await self.get_links()
-		while not self.has_to_quit:
+		await self._get_links()
+		while not self._has_to_quit:
 			self.update_local_config()
 			if self.new_links:
-				self.general_logger.debug(f"Received new set of links: {self.new_links}")
+				self.general_logger.info(f"Received new set of links: {self.new_links}")
 				self.links = self.new_links
 				self.new_links = []
 			if self.buffer_links:
-				self.general_logger.debug(f"Adding new set of links: {self.buffer_links}")
+				self.general_logger.info(f"Adding new set of links: {self.buffer_links}")
 				self.links += self.buffer_links
 				self.buffer_links = []
 			try:
@@ -136,7 +132,8 @@ class BaseMonitor(Common, NetworkUtils):
 				await self.client.fetch(CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"})
 			self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
-		self.general_logger.info("Shutting down")
+
+		self.general_logger.info("Shutting down...")
 
 	async def loop(self):
 		'''User-defined loop. Replace this with a function that will be run every `delay` seconds'''

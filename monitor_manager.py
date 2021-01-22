@@ -20,10 +20,10 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 	def __init__(self):
 		logger_name = "Executable.MonitorManager"
-		super().__init__(logger_name, f"{SOCKET_PATH}/MonitorManager")
+		super().__init__(logger_name, True, f"{SOCKET_PATH}/MonitorManager")
 		super(Server).__init__()
 		self.general_logger = utils.tools.get_logger(logger_name + ".General")
-		self.cmd_to_callback[COMMANDS.MM_STOP_MONITOR_MANAGER] = self.stop_serving
+		self.cmd_to_callback[COMMANDS.MM_STOP_MONITOR_MANAGER] = self._stop_serving
 		self.cmd_to_callback[COMMANDS.MM_ADD_MONITOR] = self.on_add_monitor
 		self.cmd_to_callback[COMMANDS.MM_ADD_SCRAPER] = self.on_add_scraper
 		self.cmd_to_callback[COMMANDS.MM_ADD_MONITOR_SCRAPER] = self.on_add_monitor_scraper

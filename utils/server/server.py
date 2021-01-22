@@ -13,26 +13,26 @@ import os
 
 
 class Server(object):
-	def __init__(self, logger_name: str, server_path: str):
-		self.server_logger = get_logger(logger_name + ".Server")
+	def __init__(self, logger_name: str, add_stream_handler, server_path: str):
+		self.server_logger = get_logger(logger_name + ".Server", add_stream_handler)
 		self.server_path = server_path
 		# init asyncio stuff
 		self.asyncio_loop = asyncio.get_event_loop()
-		self.server_task = self.asyncio_loop.create_task(self.init_server())
+		self.server_task = self.asyncio_loop.create_task(self._init_server())
 
 		self.cmd_to_callback = {}   # type: Dict[int, Callable]
 		self.server_stop_called = False
 
-	async def init_server(self):
+	async def _init_server(self):
 		'''Initialise the underlying socket server, to allow communication between monitor/scraper.'''
-		self.server = await asyncio.start_unix_server(self.handle_msg, self.server_path)
+		self.server = await asyncio.start_unix_server(self._handle_msg, self.server_path)
 
 		addr = self.server.sockets[0].getsockname()
 		self.server_logger.debug(f'Serving on {addr}')
 
 		await self.server.start_serving()
 
-	async def stop_serving(self, msg: Cmd):
+	async def _stop_serving(self, msg: Cmd):
 		self.server_logger.info("Closing server...")
 		self.server.close()
 		await self.server.wait_closed()
@@ -44,7 +44,7 @@ class Server(object):
 	async def on_server_stop(self):
 		pass
 
-	async def handle_msg(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+	async def _handle_msg(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
 		'''Handle incoming messages.'''
 		msg = Cmd(await reader.read())
 		addr = writer.get_extra_info('peername')

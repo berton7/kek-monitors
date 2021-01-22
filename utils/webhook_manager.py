@@ -98,12 +98,8 @@ class WebhookSender(Thread):
 
 
 class WebhookManager():
-	def __init__(self, logger_name: str = None, add_stream_handler: bool = True):
-		if not logger_name:
-			self.logger = get_logger("WebhookManager", add_stream_handler)
-		else:
-			self.logger = get_logger(
-				logger_name + " - WebhookManager", add_stream_handler)
+	def __init__(self, logger_name: str, add_stream_handler: bool):
+		self.logger = get_logger(logger_name + ".WebhookManager", add_stream_handler)
 		self.webhook_senders = {}  # type: Dict[str, WebhookSender]
 		self.add_event = Event()
 		self.logger.debug("Started webhook manager")

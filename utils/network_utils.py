@@ -21,23 +21,23 @@ class NetworkUtils(object):
 		tornado.httpclient.AsyncHTTPClient.configure(
 			"tornado.curl_httpclient.CurlAsyncHTTPClient")
 		self.client = tornado.httpclient.AsyncHTTPClient()
-		self.last_modified_datetimes = {}  # type: Dict[str, datetime]
+		self._last_modified_datetimes = {}  # type: Dict[str, datetime]
 		# force a cache refresh after self.cache_timeout
 		self.cache_timeout = 10 * 60
 		# keep a copy of every page in memory, for when we receive 304
-		self.cached_pages = {}  # type: Dict[str, str]
+		self._cached_pages = {}  # type: Dict[str, str]
 		# remember etags, sometimes some websites use them
-		self.etags = {}  # type: Dict[str, str]
+		self._etags = {}  # type: Dict[str, str]
 
 		for feature in pycurl.version.split(" "):
 			if feature.find("brotli") != -1:
-				self.has_brotli = True
+				self._has_brotli = True
 				break
 		else:
-			self.has_brotli = False
+			self._has_brotli = False
 
 		self.network_logger = get_logger(logger_name + ".NetworkUtils")
-		self.network_logger.debug(f"Has brotli: {self.has_brotli}")
+		self.network_logger.debug(f"Has brotli: {self._has_brotli}")
 
 	async def fetch(self, url: str, use_cache=True, attempts=3, delay=2, *args, **kwargs) -> Tuple[Optional[tornado.httpclient.HTTPResponse], str]:
 		'''Asynchronously fetch the url using a tornado client. If you want to fetch more urls at once use asyncio.gather(*tasks).\n
@@ -50,21 +50,21 @@ class NetworkUtils(object):
 			try:
 				if_mod_since = None
 				# if using cache and it has expired/timed out
-				if use_cache and url in self.cached_pages and url in self.last_modified_datetimes:
-					if (datetime.utcnow() - self.last_modified_datetimes[url]).seconds < self.cache_timeout:
+				if use_cache and url in self._cached_pages and url in self._last_modified_datetimes:
+					if (datetime.utcnow() - self._last_modified_datetimes[url]).seconds < self.cache_timeout:
 						self.network_logger.debug(url + " is in cache, adding cache headers")
-						if_mod_since = self.last_modified_datetimes[url]
-						if url in self.etags:
-							headers["if-none-match"] = self.etags[url]
+						if_mod_since = self._last_modified_datetimes[url]
+						if url in self._etags:
+							headers["if-none-match"] = self._etags[url]
 					else:
 						self.network_logger.info(url + " is in cache from more than " +
                                                     str(self.cache_timeout) + " seconds, refreshing the page.")
-						self.cached_pages.pop(url)
-						self.last_modified_datetimes.pop(url)
+						self._cached_pages.pop(url)
+						self._last_modified_datetimes.pop(url)
 
 				# fix some possibly set headers from fake-headers
 				headers["accept-encoding"] = "gzip, deflate"
-				if self.has_brotli:
+				if self._has_brotli:
 					headers["accept-encoding"] += ", br"
 				headers.pop("pragma", None)
 				headers.pop("Pragma", None)
@@ -88,11 +88,11 @@ class NetworkUtils(object):
 					if use_cache:
 						# if page was cached update it or just return it
 						if r.code < 400 and r.code != 304:
-							self.cached_pages[url] = r.body.decode()
-							self.last_modified_datetimes[url] = datetime.utcnow()
+							self._cached_pages[url] = r.body.decode()
+							self._last_modified_datetimes[url] = datetime.utcnow()
 							if "etag" in r.headers:
-								self.etags[url] = r.headers["etag"]
-						return r, self.cached_pages[url]
+								self._etags[url] = r.headers["etag"]
+						return r, self._cached_pages[url]
 					else:
 						return r, r.body.decode()
 
