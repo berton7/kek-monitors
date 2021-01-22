@@ -87,7 +87,10 @@ class Cmd(Message):
 
 	@property
 	def cmd(self):
-		return COMMANDS(self.__cmd)
+		try:
+			return COMMANDS(self.__cmd)
+		except ValueError:
+			return self.__cmd
 
 	@cmd.setter
 	def cmd(self, cmd):
