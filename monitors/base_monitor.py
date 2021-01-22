@@ -46,20 +46,6 @@ class BaseMonitor(Common, NetworkUtils):
 		self.links = []  # type: List[str]
 		self.shoes = []  # type: List[Shoe]
 
-		# init config related variables
-		# you can change the path for the config files here
-		self.default_configs_file_path = ["configs", "monitors", "configs.json"]
-		self.default_webhooks_file_path = ["configs", "monitors", "webhooks.json"]
-		self.default_whitelists_file_path = [
-			"configs", "monitors", "whitelists.json"]
-		self.default_blacklists_file_path = [
-			"configs", "monitors", "blacklists.json"]
-
-		self.whitelist = []  # type: List[str]
-		self.blacklist = []  # type: List[str]
-		self.webhooks = None  # type: Optional[Dict[str, Dict[str, Any]]]
-		self.config = {}  # type: Dict[str, Any]
-
 		self.shoe_manager = ShoeManager(self.filename, logger=self.general_logger)
 		self.webhook_manager = WebhookManager(
 			self.general_logger.name, add_stream_handler)
@@ -131,18 +117,7 @@ class BaseMonitor(Common, NetworkUtils):
 		# Try to get a set of links as soon as the monitor starts.
 		await self.get_links()
 		while not self.has_to_quit:
-			if self.new_blacklist:
-				self.blacklist = self.new_blacklist
-				self.new_blacklist = []
-			if self.new_whitelist:
-				self.whitelist = self.new_whitelist
-				self.new_whitelist = []
-			if self.new_webhooks:
-				self.webhooks = self.webhooks
-				self.new_webhooks = {}
-			if self.new_config:
-				self.config = self.new_config
-				self.new_config = {}
+			self.update_local_config()
 			if self.new_links:
 				self.general_logger.debug(f"Received new set of links: {self.new_links}")
 				self.links = self.new_links

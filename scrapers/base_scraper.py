@@ -8,6 +8,7 @@ if __name__ == "__main__":
 import argparse
 import asyncio
 import json
+from json.decoder import JSONDecodeError
 import os
 import pickle
 import sys
@@ -32,28 +33,11 @@ class BaseScraper(Common, NetworkUtils):
 		super().__init__(
 			logger_name, f"{SOCKET_PATH}/Scraper.{self.get_class_name()}")
 		super(Server, self).__init__(logger_name)
-		
+
 		self.cmd_to_callback[COMMANDS.STOP] = self.stop_serving
 		self.cmd_to_callback[COMMANDS.SET_LINKS] = self.on_get_links
 		self.links = []  # type: List[str]
 		self.previous_links = []  # type: List[str]
-
-		# init config related variables
-		# you can change the path for the config files here
-		self.default_whitelists_file_path = [
-			"configs", "scrapers", "whitelists.json"]
-		self.default_blacklists_file_path = [
-			"configs", "scrapers", "blacklists.json"]
-		self.default_configs_file_path = ["configs", "scrapers", "configs.json"]
-		self.whitelist = None  # type: Optional[List[str]]
-		self.old_whitelist = None  # type: Optional[List[str]]
-		self.old_whitelists = None  # type: Optional[Dict[str, List[str]]]
-		self.blacklist = None  # type: Optional[List[str]]
-		self.old_blacklist = None  # type: Optional[List[str]]
-		self.old_blacklists = None  # type: Optional[Dict[str, List[str]]]
-		self.config = None  # type: Optional[Dict[str, Any]]
-		self.old_config = None  # type: Optional[Dict[str, Any]]
-		self.old_configs = None  # type: Optional[Dict[str, Dict[str, Any]]]
 
 		# website-specific variables should be declared here
 		self.init()
@@ -76,18 +60,7 @@ class BaseScraper(Common, NetworkUtils):
 	async def main(self):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
 		while not self.has_to_quit:
-			if self.new_blacklist:
-				self.blacklist = self.new_blacklist
-				self.new_blacklist = []
-			if self.new_whitelist:
-				self.whitelist = self.new_whitelist
-				self.new_whitelist = []
-			if self.new_webhooks:
-				self.webhooks = self.webhooks
-				self.new_webhooks = {}
-			if self.new_config:
-				self.config = self.new_config
-				self.new_config = {}
+			self.update_local_config()
 			try:
 				await self.loop()
 				await self.update_links()

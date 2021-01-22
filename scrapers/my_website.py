@@ -41,7 +41,7 @@ class MyWebsite(BaseScraper):
 		tasks = []  # List[Coroutine]
 		# create a task for each endpoint
 		for ep in self.endpoints:
-			tasks.append(self.fetch(self.client, self.base_url +
+			tasks.append(self.fetch(self.base_url +
                            ep, headers=self.headers_gen.generate()))
 
 		# gather, execute all tasks

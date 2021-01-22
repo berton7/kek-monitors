@@ -106,7 +106,10 @@ class NetworkUtils(object):
 			except:
 				self.network_logger.exception("Got exception:")
 				await asyncio.sleep(delay)
-				continue
+				attempts -= 1
+				if attempts:
+					await asyncio.sleep(delay)
+					continue
 
 		self.network_logger.warning(
 			f"Tried {total_attempts} but couldn't fetch {url}.")

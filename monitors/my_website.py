@@ -33,7 +33,7 @@ class MyWebsite(BaseMonitor):
 		# in this case, they will contain the requests to the links
 		tasks = []
 		for link in self.links:
-			tasks.append(self.fetch(self.client, link,
+			tasks.append(self.fetch(link,
                            headers=self.headers_gen.generate()))
 
 		# gather, execute all tasks

@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 import pickle
-import copy
+from configs.config import COMMANDS
+import enum
 
 # sanitize functions remove any unneeded data from an object (e.g. None, empty lists/dicts)
 
@@ -21,13 +22,13 @@ def sanitize_list(l: List[Any]) -> Optional[List[Any]]:
 		# try to sanitize the item
 		s = sanitize(item)
 		# if the item is None or is empty:
-		if s is None or (hasattr(s, "__len__") and not len(s)):
+		if s is None:
 			# do nothing, else:
 			pass
 		else:
 			# keep it, it's important!
 			obj.append(s)
-	return obj if obj else None
+	return obj
 
 
 def sanitize_dict(d: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -36,13 +37,13 @@ def sanitize_dict(d: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 		# try to sanitize the value
 		s = sanitize(d[key])
 		# if the item is None or is empty:
-		if s is None or (hasattr(s, "__len__") and not len(s)):
+		if s is None:
 			# do nothing, else:
 			pass
 		else:
 			# keep it, it's important!
 			obj[key] = s
-	return obj if obj else None
+	return obj
 
 
 class Message(object):
@@ -83,6 +84,17 @@ class Cmd(Message):
 		self.cmd = None
 		self.payload = None
 		super().__init__(msg)
+
+	@property
+	def cmd(self):
+		return COMMANDS(self.__cmd)
+
+	@cmd.setter
+	def cmd(self, cmd):
+		if isinstance(cmd, enum.Enum):
+			self.__cmd = cmd.value
+		else:
+			self.__cmd = cmd
 
 	def has_valid_args(self, args: List[str]) -> Tuple[bool, Optional[List[str]]]:
 		'''Checks if the payload in the cmd has all the required arguments.\n

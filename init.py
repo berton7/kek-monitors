@@ -16,7 +16,8 @@ def create_mc(p):
 
 
 def create_sc(p):
-	create_files(p, ["whitelists.json", "blacklists.json", "configs.json"])
+	create_files(p, ["whitelists.json", "blacklists.json",
+                  "configs.json", "webhooks.json"])
 
 
 if __name__ == "__main__":

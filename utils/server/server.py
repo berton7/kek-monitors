@@ -53,6 +53,7 @@ class Server(object):
 
 		for cmd in self.cmd_to_callback:
 			if cmd == msg.cmd:
+				self.server_logger.debug(f"Got cmd: {cmd}")
 				response = await self.cmd_to_callback[cmd](msg)
 				break
 		else:
