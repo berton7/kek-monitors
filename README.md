@@ -29,7 +29,7 @@ Assuming you are remotely working on a server via SSH and you want to start both
 # in a SSH screen session:
 python monitor_manager.py
 
-# in another SSH screen session:
+# in another SSH session:
 python monitor_manager_cli MM_ADD_MONITOR_SCRAPER --filename <filename> --class_name <class_name>
 ```
 The monitor manager will automatically keep track of which monitors/scrapers are available and can notify if and when they crash; it also manages the config updates (as soon as you change a file in ```configs/``` it notifies the interested monitors/scrapers).
@@ -43,6 +43,12 @@ You can see the available endpoints by navigating to the root endpoint (by defau
 
 ```app.py``` is only used as an example, and you should not use it in "production" since it doesn't use any sort of authentication, so anyone who finds your server's ip address can very easily control your monitors.
 
+You can also manually start the monitor/scraper:
+```bash
+# in a SSH screen session:
+python monitors/my_website.py [--delay n] --[[no-]output]
+```
+However in this way they will only read the configs at start and will not refresh them.
 ## Configuration
 The configuration files can be found in the configs folder. Python related stuff, like commands and global variables (socket_path), is contained in `config.py`; every scraper and monitor looks for its corresponding entry in `blacklist.json`, `whitelist.json`, and a general unused `configs.json`. Here's an example blacklists.json:
 
