@@ -44,7 +44,7 @@ class BaseMonitor(Common, NetworkUtils):
 		self.links = []  # type: List[str]
 		self.shoes = []  # type: List[Shoe]
 
-		self.shoe_manager = ShoeManager(self.filename, logger=self.general_logger)
+		self.shoe_manager = ShoeManager(self.class_name, logger=self.general_logger)
 		self.webhook_manager = WebhookManager(
 			self.general_logger.name, add_stream_handler)
 
