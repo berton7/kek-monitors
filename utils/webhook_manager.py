@@ -68,7 +68,7 @@ class WebhookSender(Thread):
 				else:
 					ts = now.strftime(WebhookConfig.DEFAULT_TIMESTAMP_FORMAT)
 
-					embed.set_footer(text=f"{WebhookConfig.DEFAULT_PROVIDER} | {WebhookConfig.DEFAULT_TIMESTAMP_FORMAT}",
+					embed.set_footer(text=f"{WebhookConfig.DEFAULT_PROVIDER} | {ts}",
 					                 icon_url=WebhookConfig.DEFAULT_PROVIDER_ICON)
 					embed.color = WebhookConfig.DEFAULT_EMBED_COLOR
 
