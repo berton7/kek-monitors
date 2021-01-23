@@ -1,18 +1,20 @@
 import asyncio
-from json.decoder import JSONDecodeError
+import json
 import os
 import shlex
 import subprocess
 from datetime import datetime
-from typing import Optional, Union, Dict, Any
+from json.decoder import JSONDecodeError
+from typing import Any, Dict, Optional, Union, cast
 
-import utils.tools
-from configs.config import COMMANDS, SOCKET_PATH
-from utils.server.server import Server
-from utils.server.msg import *
+import tornado.httpclient
 from watchdog import observers
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
-import json
+
+import utils.tools
+from configs.config import COMMANDS, SOCKET_PATH, WebhookConfig
+from utils.server.msg import *
+from utils.server.server import Server
 
 
 class MonitorManager(Server, FileSystemEventHandler):
@@ -42,9 +44,14 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		self.monitor_processes = {}  # type: Dict[str, Dict[str, Any]]
 		self.scraper_processes = {}  # type: Dict[str, Dict[str, Any]]
+
 		self.add_scraper_args = self.add_monitor_args = self.add_monitor_scraper_args = [
 			"filename", "class_name"]
 		self.stop_args = ["class_name"]
+
+		tornado.httpclient.AsyncHTTPClient.configure(
+			"tornado.curl_httpclient.CurlAsyncHTTPClient")
+		self.client = tornado.httpclient.AsyncHTTPClient()
 
 		self.config_watcher = observers.Observer()
 		self.config_watcher.schedule(self, "./configs", True)
@@ -68,8 +75,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 					j = json.load(f)
 			except JSONDecodeError:
 				self.general_logger.warning(
-					
-					f"File {filename} was changed but constains invalid json data: {j}")
+					f"File {filename} was changed but constains invalid json data")
 				return
 			splits = filename.split(os.path.sep)
 			commands = []  # List[Cmd]
@@ -96,7 +102,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 								c.cmd = cmd
 								c.payload = j[name]
 								commands.append(c)
-								sock_paths.append(os.path.sep.join([SOCKET_PATH,  sockname]))
+								sock_paths.append(os.path.sep.join([SOCKET_PATH, sockname]))
 
 			elif splits[2] == "scrapers":
 				# we are interested in configs, whitelist, blacklist
@@ -117,7 +123,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 								c.cmd = cmd
 								c.payload = j[name]
 								commands.append(c)
-								sock_paths.append(os.path.sep.join([SOCKET_PATH,  sockname]))
+								sock_paths.append(os.path.sep.join([SOCKET_PATH, sockname]))
 			else:
 				self.general_logger.debug("File not useful.")
 				return
@@ -159,8 +165,14 @@ class MonitorManager(Server, FileSystemEventHandler):
 			for class_name in self.monitor_processes:
 				monitor = self.monitor_processes[class_name]["process"]
 				if monitor.poll() is not None:
-					self.general_logger.info(
-						f"Monitor {class_name} has stopped with code: {monitor.returncode}")
+					log = f"Monitor {class_name} has stopped with code: {monitor.returncode}"
+					if monitor.returncode:
+						self.general_logger.warning(log)
+						if WebhookConfig.CRASH_WEBHOOK:
+							data = {"content": log}
+							await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+					else:
+						self.general_logger.info(log)
 				else:
 					new_monitor_processes[class_name] = self.monitor_processes[class_name]
 			self.monitor_processes = new_monitor_processes
@@ -169,8 +181,14 @@ class MonitorManager(Server, FileSystemEventHandler):
 			for class_name in self.scraper_processes:
 				scraper = self.scraper_processes[class_name]["process"]
 				if scraper.poll() is not None:
-					self.general_logger.info(
-						f"Scraper {class_name} has stopped with code: {scraper.returncode}")
+					log = f"Monitor {class_name} has stopped with code: {scraper.returncode}"
+					if scraper.returncode:
+						self.general_logger.warning(log)
+						if WebhookConfig.CRASH_WEBHOOK:
+							data = {"content": log}
+							await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+					else:
+						self.general_logger.info(log)
 				else:
 					new_scraper_processes[class_name] = self.scraper_processes[class_name]
 			self.scraper_processes = new_scraper_processes
@@ -182,7 +200,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		r = badResponse()
 		success, missing = cmd.has_valid_args(self.add_monitor_args)
 		if success:
-			payload = cmd.payload
+			payload = cast(Dict[str, Any], cmd.payload)
 			success, reason = await self.add_monitor(
 				payload["filename"], payload["class_name"], payload.get("delay", None))
 			if success:
@@ -197,7 +215,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		r = badResponse()
 		success, missing = cmd.has_valid_args(self.add_scraper_args)
 		if success:
-			payload = cmd.payload
+			payload = cast(Dict[str, Any], cmd.payload)
 			success, reason = await self.add_scraper(
 				payload["filename"], payload["class_name"], payload.get("delay", None))
 			if success:
@@ -212,7 +230,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		r = badResponse()
 		success, missing = cmd.has_valid_args(self.add_monitor_scraper_args)
 		if success:
-			payload = cmd.payload
+			payload = cast(Dict[str, Any], cmd.payload)
 			success, reason = await self.add_monitor_scraper(
 				payload["filename"], payload["class_name"], payload.get("monitor_delay", None), payload.get("scraper_delay", None))
 			if success:
@@ -227,7 +245,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		r = badResponse()
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
-			payload = cmd.payload
+			payload = cast(Dict[str, Any], cmd.payload)
 			command = Cmd()
 			command.cmd = COMMANDS.STOP
 			r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", command)
@@ -239,7 +257,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		r = badResponse()
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
-			payload = cmd.payload
+			payload = cast(Dict[str, Any], cmd.payload)
 			command = Cmd()
 			command.cmd = COMMANDS.STOP
 			r = await self.make_request(f"{SOCKET_PATH}/Scraper.{payload['class_name']}", command)
@@ -255,6 +273,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 			if r1.success and r2.success:
 				r = okResponse()
 			else:
+				r1.reason = cast(str, r1.reason)
 				r.reason = "" + (r1.reason + "; " if r1.reason else "") + \
                                     (r2.reason if r2.reason else "")
 		else:
@@ -285,8 +304,10 @@ class MonitorManager(Server, FileSystemEventHandler):
 		ms = await self.on_get_monitor_status(cmd)
 		ss = await self.on_get_scraper_status(cmd)
 		response = okResponse()
-		response.payload = {"status": {"monitors": ms.payload[
-                    "status"], "scrapers": ss.payload["status"]}}
+		msp = cast(Dict[str, Any], ms.payload)  # type: Dict[str, Any]
+		ssp = cast(Dict[str, Any], ss.payload)  # type: Dict[str, Any]
+		response.payload = {"status": {
+			"monitors": msp["status"], "scrapers": ssp["status"]}}
 		return response
 
 	async def add_monitor(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):
@@ -359,37 +380,46 @@ class MonitorManager(Server, FileSystemEventHandler):
 		msg = "" + (msg1 if not s1 else "") + (msg2 if not s2 else "")
 		return s, msg
 
-	async def on_get_config(self, cmd:Cmd) -> Response:
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.GET_CONFIG}))
+	async def on_get_config(self, cmd: Cmd) -> Response:
+		payload = cast(Dict[str, Any], cmd.payload)
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.GET_CONFIG}))
 		return r
 
 	async def on_set_config(self, cmd: Cmd) -> Response:
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.SET_CONFIG, "payload": cmd.payload}))
+		payload = cast(Dict[str, Any], cmd.payload)
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.SET_CONFIG, "payload": payload}))
 		return r
 
 	async def on_get_whitelist(self, cmd: Cmd) -> Response:
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.GET_WHITELIST}))
+		payload = cast(Dict[str, Any], cmd.payload)
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.GET_WHITELIST}))
 		return r
 
 	async def on_set_whitelist(self, cmd: Cmd) -> Response:
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.SET_WHITELIST, "payload": cmd.payload}))
+		payload = cast(Dict[str, Any], cmd.payload)
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.SET_WHITELIST, "payload": payload}))
 		return r
 
 	async def on_get_blacklist(self, cmd: Cmd) -> Response:
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.GET_BLACKLIST}))
+		payload = cast(Dict[str, Any], cmd.payload)
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.GET_BLACKLIST}))
 		return r
 
 	async def on_set_blacklist(self, cmd: Cmd) -> Response:
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.SET_CONFIG, "payload": cmd.payload}))
+		payload = cast(Dict[str, Any], cmd.payload)
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.SET_CONFIG, "payload": payload}))
 		return r
 
 	async def on_get_webhooks(self, cmd: Cmd) -> Response:
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.GET_WEBHOOKS}))
+		payload = cast(Dict[str, Any], cmd.payload)
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.GET_WEBHOOKS}))
 		return r
 
 	async def on_set_webhooks(self, cmd: Cmd) -> Response:
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{cmd.payload['class_name']}", Cmd({"cmd": COMMANDS.SET_WEBHOOKS, "payload": cmd.payload}))
+		payload = cast(Dict[str, Any], cmd.payload)
+		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.SET_WEBHOOKS, "payload": payload}))
 		return r
+
 
 if __name__ == "__main__":
 	MonitorManager().start()

@@ -81,8 +81,8 @@ class Cmd(Message):
 	'''Represents a command to be sent. It can be initialized with a json structure or bytes taken from a pickle.dumps of another message.\n'''
 
 	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
-		self.cmd = None
-		self.payload = None
+		self.cmd = None  # type: Optional[int]
+		self.payload = None  # type: Optional[Dict[str, Any]]
 		super().__init__(msg)
 
 	@property
@@ -120,9 +120,9 @@ class Response(Message):
 	If you need to return data insert it into the payload'''
 
 	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
-		self.success = None
-		self.reason = None
-		self.payload = None
+		self.success = None  # type: Optional[bool]
+		self.reason = None  # type: Optional[str]
+		self.payload = None  # type: Optional[Dict[str, Any]]
 		super().__init__(msg)
 
 

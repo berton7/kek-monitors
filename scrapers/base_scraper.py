@@ -63,7 +63,7 @@ class BaseScraper(Common, NetworkUtils):
 			except:
 				self.general_logger.exception("")
 				if WebhookConfig.CRASH_WEBHOOK:
-					data = {"content": f"{self.general_logger.name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."}
+					data = {"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."}
 					await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 			self.general_logger.info(f"Loop ended, waiting {self.delay} secs")
 			await asyncio.sleep(self.delay)
