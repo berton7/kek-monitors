@@ -42,7 +42,8 @@ class MyWebsite(BaseMonitor):
 		# gather, execute all tasks
 		r = await asyncio.gather(*tasks)
 
-		for response, text in r:
+		for link, pack in zip(self.links, r):
+			response, text = pack
 			if not response:
 				# error is already reported by NetworkUtils
 				continue
@@ -58,6 +59,8 @@ class MyWebsite(BaseMonitor):
 			s = Shoe()
 			# parse all the page. for simplicity here we only get the name
 			s.name = soup.find("div", {"id": "product_text"}).h1.get_text()
+			s.link = link
+			s.img_link = soup.find("a", {"id": "zoom1"}).find("img", {"cloudzoom"}).get("src")
 			min_size = 35
 			max_size = 42
 			for size in range(min_size, max_size + 1):
