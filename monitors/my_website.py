@@ -73,8 +73,10 @@ class MyWebsite(BaseMonitor):
 			for size in spConfig["attributes"]["134"]["options"]:
 				sizename = size["label"]
 				index = sizename.find(" * Not available")
-				sizename = sizename[:index]
-				s.sizes[sizename] = {"available": index  ==  -1}
+				available = index == -1
+				if not available:
+					sizename = sizename[:index]
+				s.sizes[sizename] = {"available": available}
 
 			# append the shoe to self.shoes. ShoeManager will check for restocked sizes or new products just after this loop, in self.shoe_check()
 			self.shoes.append(s)
