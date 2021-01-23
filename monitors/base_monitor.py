@@ -127,9 +127,10 @@ class BaseMonitor(Common, NetworkUtils):
 				self.shoe_check()
 			except:
 				self.general_logger.exception("")
-				data = json.dumps(
-					{"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."[:2000]})
-				await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"})
+				if WebhookConfig.CRASH_WEBHOOK:
+					data = json.dumps(
+						{"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."[:2000]})
+					await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"}, raise_error=False)
 			self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
 
