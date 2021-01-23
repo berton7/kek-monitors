@@ -19,8 +19,7 @@ from utils.server.msg import Cmd, Message, Response, badResponse, okResponse
 from utils.server.server import Server
 from utils.network_utils import NetworkUtils
 
-import utils.tools
-from configs.config import COMMANDS, SOCKET_PATH, CRASH_WEBHOOK
+from configs.config import COMMANDS, SOCKET_PATH, WebhookConfig
 from utils.common_base import Common
 
 
@@ -64,7 +63,7 @@ class BaseScraper(Common, NetworkUtils):
 			except:
 				self.general_logger.exception("")
 				data = {"content": f"{self.general_logger.name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."}
-				await self.client.fetch(CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"})
+				await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"})
 			self.general_logger.info(f"Loop ended, waiting {self.delay} secs")
 			await asyncio.sleep(self.delay)
 

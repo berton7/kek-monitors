@@ -14,8 +14,7 @@ import sys
 import traceback
 from typing import Any, Dict, List, Optional
 
-import utils.tools
-from configs.config import COMMANDS, SOCKET_PATH, CRASH_WEBHOOK
+from configs.config import COMMANDS, SOCKET_PATH, WebhookConfig
 from utils import discord_embeds, shoe_stuff
 from utils.common_base import Common
 from utils.network_utils import NetworkUtils
@@ -130,7 +129,7 @@ class BaseMonitor(Common, NetworkUtils):
 				self.general_logger.exception("")
 				data = json.dumps(
 					{"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."[:2000]})
-				await self.client.fetch(CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"})
+				await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"})
 			self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
 

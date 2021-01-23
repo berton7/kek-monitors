@@ -17,6 +17,7 @@ import requests
 from discord import Embed
 
 from utils.tools import get_logger
+from configs.config import WebhookConfig
 
 
 class WebhookSender(Thread):
@@ -52,22 +53,24 @@ class WebhookSender(Thread):
 			while not self.queue.empty():
 				webhook_values, embed, now = self.queue.get()
 				if "custom" in webhook_values:
-					provider = webhook_values["custom"].get("provider", "BertonMonitors")
+					provider = webhook_values["custom"].get(
+						"provider", WebhookConfig.DEFAULT_PROVIDER)
 					timestamp_format = webhook_values["custom"].get(
-						"timestamp_format", "%d %b %Y, %H:%M:%S.%f")
+						"timestamp_format", WebhookConfig.DEFAULT_TIMESTAMP_FORMAT)
 					ts = now.strftime(timestamp_format)
 					icon_url = webhook_values["custom"].get(
-						"icon_url", "https://avatars0.githubusercontent.com/u/11823129?s=400&u=3e617374871087e64b5fde0df668260f2671b076&v=4")
-					color = webhook_values["custom"].get("color", 255)
+						"icon_url", WebhookConfig.DEFAULT_PROVIDER_ICON)
+					color = webhook_values["custom"].get(
+						"color", WebhookConfig.DEFAULT_EMBED_COLOR)
 
 					embed.set_footer(text=" | ".join([provider, ts]), icon_url=icon_url)
 					embed.color = color
 				else:
-					ts = now.strftime("%d %b %Y, %H:%M:%S.%f")
+					ts = now.strftime(WebhookConfig.DEFAULT_TIMESTAMP_FORMAT)
 
-					embed.set_footer(text="BertonMonitors | " + ts,
-					                 icon_url="https://avatars0.githubusercontent.com/u/11823129?s=400&u=3e617374871087e64b5fde0df668260f2671b076&v=4")
-					embed.color = 255
+					embed.set_footer(text=f"{WebhookConfig.DEFAULT_PROVIDER} | {WebhookConfig.DEFAULT_TIMESTAMP_FORMAT}",
+					                 icon_url=WebhookConfig.DEFAULT_PROVIDER_ICON)
+					embed.color = WebhookConfig.DEFAULT_EMBED_COLOR
 
 				embed.timestamp = Embed.Empty
 				data = {"embeds": [embed.to_dict()]}
