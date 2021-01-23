@@ -1,26 +1,16 @@
-# path hack
-if __name__ == "__main__":
-	import os
-	import sys
-	sys.path.insert(0, os.path.abspath(
-		os.path.join(os.path.dirname(__file__), '..')))
-
 import argparse
 import asyncio
-import json
-from json.decoder import JSONDecodeError
-import os
-import pickle
-import sys
-import traceback
-from typing import Any, Dict, List, Optional, Tuple
 import copy
-from utils.server.msg import Cmd, Message, Response, badResponse, okResponse
-from utils.server.server import Server
-from utils.network_utils import NetworkUtils
+import json
+import os
+import traceback
+from typing import List, Optional
 
 from configs.config import COMMANDS, SOCKET_PATH, WebhookConfig
 from utils.common_base import Common
+from utils.network_utils import NetworkUtils
+from utils.server.msg import Cmd, Message, okResponse
+from utils.server.server import Server
 
 
 class BaseScraper(Common, NetworkUtils):
@@ -67,6 +57,8 @@ class BaseScraper(Common, NetworkUtils):
 					await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 			self.general_logger.info(f"Loop ended, waiting {self.delay} secs")
 			await asyncio.sleep(self.delay)
+
+		self.general_logger.info("Shutting down...")
 
 	async def loop(self):
 		'''User-defined loop. Replace this with a function that will be run every `delay` seconds'''

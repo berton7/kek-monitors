@@ -1,9 +1,9 @@
 import asyncio
-from configs.config import COMMANDS, SOCKET_PATH
 import os
-from utils.server.msg import *
-import sys
 from pprint import pprint
+
+from configs.config import COMMANDS, SOCKET_PATH
+from utils.server.msg import *
 
 
 async def make_request(socket_path, cmd, expect_response=True):
@@ -20,7 +20,6 @@ async def make_request(socket_path, cmd, expect_response=True):
 				return response
 			return okResponse()
 		except ConnectionRefusedError:
-			#self.server_logger.exception(f"Couldn't connect to socket {socket_path}")
 			pass
 	r = badResponse()
 	r.reason = f"Socket {socket_path} unavailable"

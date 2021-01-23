@@ -1,11 +1,6 @@
-if __name__ == "__main__":
-	import os
-	import sys
-	sys.path.insert(0, os.path.abspath(
-		os.path.join(os.path.dirname(__file__), '..')))
-
 import argparse
 import asyncio
+import os
 
 from bs4 import BeautifulSoup
 from fake_headers import Headers
@@ -29,13 +24,8 @@ class MyWebsite(BaseScraper):
 
 		# max links to be monitored
 		self.max_links = 5
-		self.current_index = 0
 
 	async def loop(self):
-		# only execute max_links times, to avoid having too many links monitored
-		if self.current_index >= self.max_links:
-			return
-
 		# tasks will contain asynchronous tasks to be executed at once, asynchronously
 		# in this case, they will contain the requests to the endpoints
 		tasks = []  # List[Coroutine]
@@ -57,23 +47,21 @@ class MyWebsite(BaseScraper):
 
 			# parsing example. in this case we simply iterate through all the products, adding one each time up to self.max_links
 			grid = soup.find("div", {"class": "category-products"})
+			count = 0
 			for row in grid.find_all("ul", {"class": "products-grid"}):
 				for prod in row.find_all("li"):
-					link = prod.a.get("href")
-					if link not in self.links:
-						self.links.append(link)
-						self.general_logger.info(f"Found {link}")
-						self.current_index += 1
-						# if you want to send every link immediately:
-						# self.links = [link]
-						# await self.add_links()
-						break
-				else:
-					# executes when the for loop exits normally => didn't find a link to add
-					continue
+					count += 1
+					if count <= self.max_links:
+						link = prod.a.get("href")
+						if link not in self.links:
+							self.links.append(link)
+							self.general_logger.info(f"Found {link}")
+							# if you want to send every link immediately:
+							# self.links = [link]
+							# await self.add_links()
 				break
 
-		# at the end of each self.loop(), self.update_links() is called to send the links to the monitor if they have changed since the previous loop
+		# at the end of each self.loop(), self.update_links() is called to send the links to the monitor, if they have changed since the previous loop
 
 
 if __name__ == "__main__":

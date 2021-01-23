@@ -1,6 +1,4 @@
-import math
 from datetime import datetime
-from typing import Dict, List
 
 from discord import Embed
 

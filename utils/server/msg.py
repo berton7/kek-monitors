@@ -1,9 +1,11 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
-import pickle
-from configs.config import COMMANDS
 import enum
+import pickle
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from configs.config import COMMANDS
 
 # sanitize functions remove any unneeded data from an object (e.g. None, empty lists/dicts)
+
 
 def sanitize(o) -> Optional[Any]:
 	if o is None:

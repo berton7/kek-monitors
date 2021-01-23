@@ -1,12 +1,5 @@
-if __name__ == "__main__":
-	import os
-	import sys
-	sys.path.insert(0, os.path.abspath(
-		os.path.join(os.path.dirname(__file__), '..')))
-
 from utils.shoe_manager import ShoeManager
 from utils.tools import get_logger
-
 
 if __name__ == "__main__":
 	l = get_logger("Lister")

@@ -1,12 +1,10 @@
-import os
-import pickle
+import logging
+from typing import Any, Dict, List
+
+import pymongo
 
 from utils.shoe_stuff import Shoe
 from utils.tools import get_logger
-
-from typing import Any, Dict, List, Optional, Union
-import logging
-import pymongo
 
 
 class ShoeManager(object):

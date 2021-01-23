@@ -1,9 +1,3 @@
-if __name__ == "__main__":
-	import os
-	import sys
-	sys.path.insert(0, os.path.abspath(
-		os.path.join(os.path.dirname(__file__), '..')))
-
 import asyncio
 from datetime import datetime
 from typing import Optional, Tuple
@@ -114,7 +108,4 @@ class NetworkUtils(object):
 		self.network_logger.warning(
 			f"Tried {total_attempts} but couldn't fetch {url}.")
 
-		try:
-			return r, ""
-		except UnboundLocalError:
-			return None, ""
+		return self.__dict__.get("r", None), ""

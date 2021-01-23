@@ -1,24 +1,19 @@
-if __name__ == "__main__":
-	import os
-	import sys
-	sys.path.insert(0, os.path.abspath(
-		os.path.join(os.path.dirname(__file__), '..')))
-
 import argparse
 import asyncio
+import os
 
 from bs4 import BeautifulSoup
 from fake_headers import Headers
 from utils.shoe_stuff import Shoe
 
 from monitors.base_monitor import BaseMonitor
-import random
+import json
 
 
 class MyWebsite(BaseMonitor):
 
 	def get_filename(self):
-		'''YOU MUST OVERRIDE ME!!! Needed to get the correct filename.'''
+		'''YOU MUST OVERRIDE ME!!! Copy and paste me. Needed to get the correct filename.'''
 		# take current path, split, get last element (=filename), remove ".py"
 		return __file__.split(os.path.sep)[-1][:-3]
 
@@ -29,15 +24,15 @@ class MyWebsite(BaseMonitor):
 	async def loop(self):
 		# current links are contained in self.links
 		if not self.links:
-			self.links = ["https://footdistrict.com/adidas-ultra-boost-ltd-af5836.html"]
+			self.links = [
+				"https://footdistrict.com/en/adidas-rivalry-hi-x-star-wars-chewbacca-fx9290.html"]
 		self.general_logger.debug(f"Links are: {self.links}")
 
 		# tasks will contain asynchronous tasks to be executed at once asynchronously
 		# in this case, they will contain the requests to the links
 		tasks = []
 		for link in self.links:
-			tasks.append(self.fetch(link,
-                           headers=self.headers_gen.generate()))
+			tasks.append(self.fetch(link, headers=self.headers_gen.generate()))
 
 		# gather, execute all tasks
 		r = await asyncio.gather(*tasks)
@@ -60,13 +55,26 @@ class MyWebsite(BaseMonitor):
 			# parse all the page. for simplicity here we only get the name
 			s.name = soup.find("div", {"id": "product_text"}).h1.get_text()
 			s.link = link
-			s.img_link = soup.find("a", {"id": "zoom1"}).find("img", {"cloudzoom"}).get("src")
-			min_size = 35
-			max_size = 42
-			for size in range(min_size, max_size + 1):
-				available = random.random() > 0.5
-				s.sizes[str(size)] = {"available": available}
-			self.general_logger.debug(f"{s.name} has random sizes: {s.sizes}")
+			s.img_link = soup.find("a", {"id": "zoom1"}).find(
+				"img", {"cloudzoom"}).get("src")
+			for script in soup.find_all("script", {"type": "text/javascript"}):
+				if script.string:
+					if script.string.find("var spConfig") != -1:
+						break
+			else:
+				continue
+
+			firststr = ".Config("
+			script_t = script.string
+			fi = script_t.find(firststr) + len(firststr)
+			li = script_t.find(");")
+			spConfig = script_t[fi:li]
+			spConfig = json.loads(spConfig)
+			for size in spConfig["attributes"]["134"]["options"]:
+				sizename = size["label"]
+				index = sizename.find(" * Not available")
+				sizename = sizename[:index]
+				s.sizes[sizename] = {"available": index  ==  -1}
 
 			# append the shoe to self.shoes. ShoeManager will check for restocked sizes or new products just after this loop, in self.shoe_check()
 			self.shoes.append(s)

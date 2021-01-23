@@ -1,12 +1,5 @@
-if __name__ == "__main__":
-	import os
-	import sys
-	sys.path.insert(0, os.path.abspath(
-		os.path.join(os.path.dirname(__file__), '..')))
-
 import json
 import logging
-import os
 import time
 from datetime import datetime
 from queue import Queue

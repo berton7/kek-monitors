@@ -1,17 +1,13 @@
-if __name__ == "__main__":
-	import os
-	import sys
-	sys.path.insert(0, os.path.abspath(
-		os.path.join(os.path.dirname(__file__), '..')))
-
 import json
-from json.decoder import JSONDecodeError
-from configs.config import *
 import os
+from json.decoder import JSONDecodeError
 from typing import Any
+
+from configs.config import *
+
+from utils.server.msg import *
 from utils.server.server import Server
 from utils.tools import get_logger
-from utils.server.msg import *
 
 
 class Common(Server):

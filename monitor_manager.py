@@ -181,7 +181,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 			for class_name in self.scraper_processes:
 				scraper = self.scraper_processes[class_name]["process"]
 				if scraper.poll() is not None:
-					log = f"Monitor {class_name} has stopped with code: {scraper.returncode}"
+					log = f"Scraper {class_name} has stopped with code: {scraper.returncode}"
 					if scraper.returncode:
 						self.general_logger.warning(log)
 						if WebhookConfig.CRASH_WEBHOOK:
@@ -316,7 +316,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 				f"Tried to add an already existing monitor ({filename}.{class_name})")
 			return False, "Monitor already started."
 
-		cmd = f"nohup python monitors{os.path.sep}{filename}.py --no-output"
+		cmd = f"nohup python -m monitors.{filename} --no-output"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
@@ -348,7 +348,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 				f"Tried to add an already existing scraper ({filename}.{class_name})")
 			return False, "Scraper already started."
 
-		cmd = f"nohup python scrapers{os.path.sep}{filename}.py --no-output"
+		cmd = f"nohup python -m scrapers.{filename} --no-output"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 

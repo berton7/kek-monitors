@@ -1,18 +1,10 @@
-# path hack
-if __name__ == "__main__":
-	import os
-	import sys
-	sys.path.insert(0, os.path.abspath(
-		os.path.join(os.path.dirname(__file__), '..')))
-
 import argparse
 import asyncio
 import copy
 import json
 import os
-import sys
 import traceback
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from configs.config import COMMANDS, SOCKET_PATH, WebhookConfig
 from utils import discord_embeds, shoe_stuff
