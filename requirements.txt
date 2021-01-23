@@ -8,4 +8,4 @@ tornado
 pycurl
 requests
 watchdog
-sqlite3
+pymongo
