@@ -4,93 +4,67 @@ import pickle
 from utils.shoe_stuff import Shoe
 from utils.tools import get_logger
 
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+import logging
+import pymongo
 
 
 class ShoeManager(object):
-	'''As the name implies this manages the shoe database. Currently it does so by storing the current shoes list for the website
-	in a *.pickle file. This is insecure, but easy to implement and manage. You could probably replace it with a fully-fledged database
-	like MongoDB etc.'''
+	'''Manages the database. Mostly a MongoDB wrapper.'''
 
-	def __init__(self, filename: str, logger=None):
-		filename += ".pickle"
-		# create variables for the current db name, path, etc.
-		splits = filename.split(os.path.sep)
-		splits.insert(0, "db")
-		self.db_name = splits[-1]
-		self.db_path = os.path.sep.join(splits[:-1])
-		self.full_db_path = os.path.sep.join([self.db_path, self.db_name])
+	def __init__(self, logger: logging.Logger):
 		# get a new logger if not provided
 		if not logger:
-			self.logger = get_logger("ShoeManager")
+			self._logger = get_logger("ShoeManager")
 		else:
-			self.logger = logger
+			self._logger = logger
 
-		# generate db if it doesn't exist
-		self.logger.debug("Reading all shoes from " + self.db_name + "...")
-		if not os.path.exists(self.full_db_path):
-			self.logger.debug("File does not exist, creating it now...")
-			os.makedirs(self.db_path, exist_ok=True)
-			with open(self.full_db_path, "w") as wf:
-				pass
-			self.shoes = []  # type: List[Shoe]
-		else:
-			try:
-				with open(self.full_db_path, "rb") as rf:
-					self.shoes = pickle.load(rf)
-			except EOFError:
-				self.shoes = []
-		self.logger.debug("Read " + str(len(self.shoes)) +
-                    " shoes from " + self.db_name)
+		self.db_name = "kekmonitors"
+		self.db_path = "mongodb://localhost:27017/"
+
+		self._client = pymongo.MongoClient(self.db_path)
+		self._db = self._client[self.db_name]["items"]
+		self._logger.debug("Database initialized.")
 
 	def add_shoe(self, shoe: Shoe):
-		# the key in shoe.sizes can only be a string
-		for size in shoe.sizes:
-			if not isinstance(size, str):
-				raise Exception("Cannot insert non-strings sizes (" +
-                                    shoe.link + " - " + str(size) + ")")
-		self.shoes.insert(0, shoe)
+		self._db.insert_one(shoe.__dict__)
 
-	def find_shoe_by_link(self, link: str) -> Union[Shoe, None]:
-		if not isinstance(link, str):
-			raise Exception("Cannot search non-string links (" + str(link) + ")")
+	def add_shoes(self, shoes: List[Shoe]):
+		l = []
+		for shoe in shoes:
+			l.append(shoe.__dict__)
+		self._db.insert_many(l)
 
-		# get the first shoe matching the link
-		for shoe in self.shoes:
-			if shoe.link == link:
-				return shoe
-		return None
+	def find_shoe(self, query: Dict[str, Any]):
+		q = {}
+		for k in query:
+			if not k.startswith("_Shoe__"):
+				q[f"_Shoe__{k}"] = query[k]
+			else:
+				q[k] = query[k]
+		item = self._db.find_one(q, {"_id": 0})
+		if item:
+			shoe = Shoe()
+			shoe.__dict__ = item
+			return shoe
+		else:
+			return None
 
-	def find_shoe(self, shoe: Shoe) -> Union[Shoe, None]:
-		if not isinstance(shoe, Shoe):
-			raise Exception("Argument was not a shoe but a " + type(shoe))
-		if not isinstance(shoe.name, str):
-			raise Exception("Name is not a string.")
-		if not isinstance(shoe.link, str):
-			raise Exception("Link is not a string.")
-		for current_shoe in self.shoes:
-			if shoe.name == current_shoe.name and shoe.link == current_shoe.link:
-				return current_shoe
-		return None
+	def find_shoes(self, query: Dict[str, Any]):
+		q = {}
+		for k in query:
+			if not k.startswith("_Shoe__"):
+				q[f"_Shoe__{k}"] = query[k]
+			else:
+				q[k] = query[k]
+		items = self._db.find(q, {"_id": 0})
+		shoes = []
+		for item in items:
+			if item:
+				shoe = Shoe()
+				shoe.__dict__ = item
+				shoes.append(shoe)
+		return shoes
 
-	def update_shoe(self, shoe: Shoe, move_to_top: bool = True):
-		if not isinstance(shoe, Shoe):
-			raise Exception("Argument was not a shoe but a " + type(shoe))
-		if not isinstance(shoe.name, str):
-			raise Exception("Name is not a string.")
-		if not isinstance(shoe.link, str):
-			raise Exception("Link is not a string.")
-		for index, current_shoe in enumerate(self.shoes):
-			if shoe.name == current_shoe.name and shoe.link == current_shoe.link:
-				self.shoes.remove(current_shoe)
-				# useful when dialing with a high number of shoes
-				if move_to_top:
-					self.shoes.insert(0, shoe)
-				else:
-					self.shoes.insert(index, shoe)
-				return
-
-	def update_db(self):
-		with open(self.full_db_path, "wb") as wf:
-			pickle.dump(self.shoes, wf, pickle.HIGHEST_PROTOCOL)
-		self.logger.debug("Written " + str(len(self.shoes)) + " shoes to file")
+	def update_shoe(self, shoe: Shoe):
+		self._db.update_many({"_Shoe__name": shoe.name}, {"$set": shoe.__dict__})

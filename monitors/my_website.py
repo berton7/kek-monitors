@@ -12,6 +12,7 @@ from fake_headers import Headers
 from utils.shoe_stuff import Shoe
 
 from monitors.base_monitor import BaseMonitor
+import random
 
 
 class MyWebsite(BaseMonitor):
@@ -27,6 +28,8 @@ class MyWebsite(BaseMonitor):
 
 	async def loop(self):
 		# current links are contained in self.links
+		if not self.links:
+			self.links = ["https://footdistrict.com/adidas-ultra-boost-ltd-af5836.html"]
 		self.general_logger.debug(f"Links are: {self.links}")
 
 		# tasks will contain asynchronous tasks to be executed at once asynchronously
@@ -55,7 +58,12 @@ class MyWebsite(BaseMonitor):
 			s = Shoe()
 			# parse all the page. for simplicity here we only get the name
 			s.name = soup.find("div", {"id": "product_text"}).h1.get_text()
-			self.general_logger.debug(f"Checked {s.name}")
+			min_size = 35
+			max_size = 42
+			for size in range(min_size, max_size + 1):
+				available = random.random() > 0.5
+				s.sizes[str(size)] = {"available": available}
+			self.general_logger.debug(f"{s.name} has random sizes: {s.sizes}")
 
 			# append the shoe to self.shoes. ShoeManager will check for restocked sizes or new products just after this loop, in self.shoe_check()
 			self.shoes.append(s)

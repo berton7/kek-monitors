@@ -44,7 +44,7 @@ class BaseMonitor(Common, NetworkUtils):
 		self.links = []  # type: List[str]
 		self.shoes = []  # type: List[Shoe]
 
-		self.shoe_manager = ShoeManager(self.class_name, logger=self.general_logger)
+		self.shoe_manager = ShoeManager(logger=self.general_logger)
 		self.webhook_manager = WebhookManager(
 			self.general_logger.name, add_stream_handler)
 
@@ -123,13 +123,14 @@ class BaseMonitor(Common, NetworkUtils):
 				self.links += self.buffer_links
 				self.buffer_links = []
 			try:
+				self.shoes = []
 				await self.loop()
 				self.shoe_check()
-				self.shoe_manager.update_db()
 			except:
 				self.general_logger.exception("")
-				data = {"content": f"{self.general_logger.name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."}
-				await self.client.fetch(CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"})
+				data = json.dumps(
+					{"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."[:2000]})
+				await self.client.fetch(CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"})
 			self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
 
@@ -148,24 +149,22 @@ class BaseMonitor(Common, NetworkUtils):
 			if returned:
 				embed = discord_embeds.get_default_embed(returned)
 				self.webhook_manager.add_to_queue(embed, self.webhooks)
-		self.shoes = []
 
 	def set_reason_and_update_shoe(self, shoe: Shoe) -> Optional[Shoe]:
 		"""Check shoe against db. If present in db check if there are new sizes;\n
 			if so, set reason to restock, update the db and return a shoe with only the restocked sizes;\n
 			else update the shoe and return None. If not in the db return a copy of the shoe."""
 		self.general_logger.debug(
-			"Checking " + shoe.name + " - " + shoe.link + " in db...")
+			f"Checking {shoe.name} - {shoe.link} in db...")
 		new_or_restocked = True
-		db_shoe = self.shoe_manager.find_shoe(shoe)
-		return_shoe = copy.copy(shoe)
-		self.general_logger.info("Checking " + shoe.link + " in db.")
+		db_shoe = self.shoe_manager.find_shoe({"name": shoe.name})
+		return_shoe = copy.deepcopy(shoe)
 		if db_shoe:
 			new_or_restocked = False
 			return_shoe.sizes = {}
 			self.general_logger.debug("\tIt's present in db. Checking sizes.")
-			self.general_logger.debug("\t\tdb_shoe sizes: " + str(db_shoe.sizes))
-			self.general_logger.debug("\t\tShoe sizes: " + str(shoe.sizes))
+			self.general_logger.debug(f"\t\tdb_shoe sizes: {str(db_shoe.sizes)}")
+			self.general_logger.debug(f"\t\tShoe sizes: {str(shoe.sizes)}")
 			for shoe_size in shoe.sizes:
 				try:
 					db_available = db_shoe.sizes[shoe_size]["available"]
@@ -173,29 +172,28 @@ class BaseMonitor(Common, NetworkUtils):
 						if shoe.sizes[shoe_size]["available"] == True:
 							new_or_restocked = True
 							return_shoe.sizes[shoe_size] = shoe.sizes[shoe_size]
-							self.general_logger.info("\t" + shoe.link + ": " +
-                                                            str(shoe_size) + " is now available")
+							self.general_logger.info(
+								f"\t{shoe.link}: {str(shoe_size)} is now available")
 				except (NameError, KeyError):
 					# is shoe size available?
 					if shoe.sizes[shoe_size]["available"]:
 						new_or_restocked = True
 						return_shoe.sizes[shoe_size] = shoe.sizes[shoe_size]
-						self.general_logger.info("\t" + shoe.link + ": " +
-                                                    str(shoe_size) + " not in db.")
+						self.general_logger.info(f"\t{shoe.link}: {str(shoe_size)} not in db.")
 
 			if new_or_restocked:
 				shoe.reason = shoe_stuff.RESTOCK
 				return_shoe.reason = shoe_stuff.RESTOCK
 				self.shoe_manager.update_shoe(shoe)
 			else:
-				self.general_logger.info("\t" + shoe.link + ": it has no restocked sizes.")
-				self.shoe_manager.update_shoe(shoe, move_to_top=False)
+				self.general_logger.info(f"\t{shoe.link}: it has no restocked sizes.")
+				self.shoe_manager.update_shoe(shoe)
 				return None
 
 		else:
 			shoe.reason = shoe_stuff.NEW_RELEASE
 			return_shoe.reason = shoe_stuff.NEW_RELEASE
-			self.general_logger.info("\t" + shoe.link + ": not in db. Adding it.")
+			self.general_logger.info(f"\t{shoe.link}: not in db. Adding it.")
 			self.shoe_manager.add_shoe(shoe)
 
 		return return_shoe
