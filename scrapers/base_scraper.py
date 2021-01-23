@@ -78,10 +78,9 @@ class BaseScraper(Common, NetworkUtils):
 		cmd.cmd = COMMANDS.SET_LINKS
 		cmd.payload = self.links
 		response = await self.make_request(socket_path, cmd)
-		if not response:
-			self.client_logger.warning("Could not decode response")
-		elif not response.success:
-			self.client_logger.warning(f"Got bad response: {response.reason}")
+		if not response.success:
+			self.client_logger.warning(
+				f"_set_links: got bad response: {response.reason}")
 
 	async def _add_links(self):
 		'''Connect to the corresponding monitor, if available, and send it the new links.'''
@@ -90,10 +89,9 @@ class BaseScraper(Common, NetworkUtils):
 		cmd.cmd = COMMANDS.ADD_LINKS
 		cmd.payload = self.links
 		response = await self.make_request(socket_path, cmd)
-		if not response:
-			self.client_logger.warning("Could not decode response")
-		elif not response.success:
-			self.client_logger.warning(f"Got bad response: {response.reason}")
+		if not response.success:
+			self.client_logger.warning(
+				f"_add_links: got bad response: {response.reason}")
 
 
 if __name__ == "__main__":
