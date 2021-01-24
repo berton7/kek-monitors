@@ -3,6 +3,7 @@ import enum
 
 @enum.unique
 class COMMANDS(enum.Enum):
+	PING = enum.auto()
 	STOP = enum.auto()
 	SET_LINKS = enum.auto()
 	ADD_LINKS = enum.auto()
@@ -44,4 +45,4 @@ class WebhookConfig(object):
 	DEFAULT_EMBED_COLOR = 255
 
 
-SOCKET_PATH = "/tmp"
+SOCKET_PATH = "./sockets"

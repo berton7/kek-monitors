@@ -15,6 +15,11 @@ import utils.tools
 from configs.config import COMMANDS, SOCKET_PATH, WebhookConfig
 from utils.server.msg import *
 from utils.server.server import Server
+import copy
+
+
+def get_directory_from_file(src: str):
+	return src[:src.rfind(os.path.sep)]
 
 
 class MonitorManager(Server, FileSystemEventHandler):
@@ -44,6 +49,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		self.monitor_processes = {}  # type: Dict[str, Dict[str, Any]]
 		self.scraper_processes = {}  # type: Dict[str, Dict[str, Any]]
+		self.monitor_sockets = {}  # type: Dict[str, str]
+		self.scraper_sockets = {}  # type: Dict[str, str]
+		self.socket_lock = asyncio.Lock()
 
 		self.add_scraper_args = self.add_monitor_args = self.add_monitor_scraper_args = [
 			"filename", "class_name"]
@@ -55,6 +63,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		self.config_watcher = observers.Observer()
 		self.config_watcher.schedule(self, "./configs", True)
+		self.config_watcher.schedule(self, SOCKET_PATH, True)
 		self.has_to_quit = False
 
 	def start(self):
@@ -63,9 +72,83 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 	def on_modified(self, event: FileSystemEvent):
 		filename = event.key[1]  # type: str
-		if len(filename.split(os.path.sep)) > 3:
+		splits = filename.split(os.path.sep)
+		if splits[1] == "config":
+			if len(splits) > 3:
+				asyncio.run_coroutine_threadsafe(
+					self.update_configs(filename), self.asyncio_loop)
+
+	def on_created(self, event: FileSystemEvent):
+		filename = event.key[1]  # type: str
+		splits = filename.split(os.path.sep)
+		if get_directory_from_file(filename) == SOCKET_PATH:
+			asyncio.run_coroutine_threadsafe(self.on_add_sockets(), self.asyncio_loop)
+
+	def on_deleted(self, event):
+		filename = event.key[1]  # type: str
+		filename.split(os.path.sep)
+		if get_directory_from_file(filename) == SOCKET_PATH:
 			asyncio.run_coroutine_threadsafe(
-				self.update_configs(filename), self.asyncio_loop)
+				self.on_delete_sockets(), self.asyncio_loop)
+
+	async def on_add_sockets(self):
+		async with self.socket_lock:
+			new_monitor_sockets = {}  # type: Dict[str, str]
+			new_scraper_sockets = {}  # type: Dict[str, str]
+			for filename in os.listdir(SOCKET_PATH):
+				splits = filename.split(".")
+				if splits[0] == "Monitor" and splits[1] not in self.monitor_sockets:
+					new_monitor_sockets[splits[1]] = os.path.sep.join([SOCKET_PATH, filename])
+				elif splits[0] == "Scraper" and splits[1] not in self.scraper_sockets:
+					new_scraper_sockets[splits[1]] = os.path.sep.join([SOCKET_PATH, filename])
+
+			alive_monitor_sockets, alive_scraper_sockets = await asyncio.gather(self.get_alive_sockets(new_monitor_sockets.values()), self.get_alive_sockets(new_scraper_sockets.values()))
+
+			for class_name in new_monitor_sockets:
+				if new_monitor_sockets[class_name] in alive_monitor_sockets:
+					self.monitor_sockets[class_name] = new_monitor_sockets[class_name]
+
+			for class_name in new_scraper_sockets:
+				if new_scraper_sockets[class_name] in alive_scraper_sockets:
+					self.scraper_sockets[class_name] = new_scraper_sockets[class_name]
+
+	async def on_delete_sockets(self):
+		async with self.socket_lock:
+			monitor_sockets = []
+			scraper_sockets = []
+			for f in list(os.listdir(SOCKET_PATH)):
+				if f.startswith("Monitor."):
+					monitor_sockets.append(f)
+				elif f.startswith("Scraper."):
+					scraper_sockets.append(f)
+
+			new_monitor_sockets = copy.deepcopy(self.monitor_sockets)
+			new_scraper_sockets = copy.deepcopy(self.scraper_sockets)
+
+			for class_name in self.monitor_sockets:
+				if "Monitor." + class_name not in monitor_sockets:
+					new_monitor_sockets.pop(class_name)
+			for class_name in self.scraper_sockets:
+				if "Scraper." + class_name not in scraper_sockets:
+					new_scraper_sockets.pop(class_name)
+
+			self.monitor_sockets = new_monitor_sockets
+			self.scraper_sockets = new_scraper_sockets
+
+	async def get_alive_sockets(self, sockets: List[str]) -> List[str]:
+		tasks = []
+		for socket in sockets:
+			cmd = Cmd()
+			cmd.cmd = COMMANDS.PING
+			tasks.append(self.make_request(socket, cmd))
+
+		responses = await asyncio.gather(*tasks)  # type: List[Response]
+		alive = []
+		for response, socket in zip(responses, sockets):
+			if response.success:
+				alive.append(socket)
+
+		return alive
 
 	async def update_configs(self, filename: str):
 		self.general_logger.debug(f"File {filename} has changed!")
@@ -281,23 +364,31 @@ class MonitorManager(Server, FileSystemEventHandler):
 		return r
 
 	async def on_get_monitor_status(self, cmd: Cmd) -> Response:
-		status = {}
+		process_status = {}
 		for class_name in self.monitor_processes:
 			start = self.monitor_processes[class_name]["start"].strftime(
 				"%m/%d/%Y, %H:%M:%S")
-			status[class_name] = {"Started at": start}
+			process_status[class_name] = {"Started at": start}
+		sockets_status = {}
+		for class_name in self.monitor_sockets:
+			sockets_status[class_name] = {class_name: self.monitor_sockets[class_name]}
 		response = okResponse()
-		response.payload = {"status": status}
+		response.payload = {
+			"monitored_processes": process_status, "available_sockets": sockets_status}
 		return response
 
 	async def on_get_scraper_status(self, cmd: Cmd) -> Response:
-		status = {}
+		process_status = {}
 		for class_name in self.scraper_processes:
 			start = self.scraper_processes[class_name]["start"].strftime(
 				"%m/%d/%Y, %H:%M:%S")
-			status[class_name] = {"Started at": start}
+			process_status[class_name] = {"Started at": start}
+		sockets_status = {}
+		for class_name in self.scraper_sockets:
+			sockets_status[class_name] = {class_name: self.scraper_sockets[class_name]}
 		response = okResponse()
-		response.payload = {"status": status}
+		response.payload = {
+			"monitored_processes": process_status, "available_sockets": sockets_status}
 		return response
 
 	async def on_get_status(self, cmd: Cmd) -> Response:
@@ -307,7 +398,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		msp = cast(Dict[str, Any], ms.payload)  # type: Dict[str, Any]
 		ssp = cast(Dict[str, Any], ss.payload)  # type: Dict[str, Any]
 		response.payload = {"status": {
-			"monitors": msp["status"], "scrapers": ssp["status"]}}
+			"monitors": msp, "scrapers": ssp}}
 		return response
 
 	async def add_monitor(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):

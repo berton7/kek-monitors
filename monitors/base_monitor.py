@@ -26,6 +26,7 @@ class BaseMonitor(Common, NetworkUtils):
 			logger_name, add_stream_handler, f"{SOCKET_PATH}/Monitor.{self.get_class_name()}")
 		super(Server, self).__init__(logger_name)
 
+		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
 		self.cmd_to_callback[COMMANDS.SET_LINKS] = self.on_set_links
 		self.cmd_to_callback[COMMANDS.ADD_LINKS] = self.on_add_links
@@ -85,6 +86,9 @@ class BaseMonitor(Common, NetworkUtils):
 
 	async def on_server_stop(self) -> Response:
 		self._has_to_quit = True
+		return okResponse()
+
+	async def _on_ping(self, cmd: Cmd) -> Response:
 		return okResponse()
 
 	async def _get_links(self):

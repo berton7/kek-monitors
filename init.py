@@ -1,8 +1,9 @@
-from configs.config import *
+from configs.config import SOCKET_PATH
 import os
 
 
 def create_files(p, files):
+	os.makedirs(p, exist_ok=True)
 	for fn in files:
 		complete_fn = os.path.sep.join([p, fn])
 		if not os.path.isfile(complete_fn):
@@ -21,9 +22,8 @@ def create_sc(p):
 
 
 if __name__ == "__main__":
-	if not os.path.isdir(SOCKET_PATH):
-		os.makedirs(SOCKET_PATH)
-		print(f"Successfully created socket path {SOCKET_PATH}")
+	create_files("./sockets", [])
+	print(f"Successfully created socket path {SOCKET_PATH}")
 
 	cm_path = os.path.sep.join(["configs", "monitors"])
 	cs_path = os.path.sep.join(["configs", "scrapers"])
