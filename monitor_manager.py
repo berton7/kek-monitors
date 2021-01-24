@@ -436,8 +436,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 		response = okResponse()
 		msp = cast(Dict[str, Any], ms.payload)  # type: Dict[str, Any]
 		ssp = cast(Dict[str, Any], ss.payload)  # type: Dict[str, Any]
-		response.payload = {"status": {
-			"monitors": msp, "scrapers": ssp}}
+		response.payload = {
+			"monitors": msp, "scrapers": ssp}
 		return response
 
 	async def add_monitor(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):
