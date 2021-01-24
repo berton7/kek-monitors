@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, List
 
 import pymongo
+from configs.config import DB_CONFIG
 
 from utils.shoe_stuff import Shoe
 from utils.tools import get_logger
@@ -17,8 +18,8 @@ class ShoeManager(object):
 		else:
 			self._logger = logger
 
-		self.db_name = "kekmonitors"
-		self.db_path = "mongodb://localhost:27017/"
+		self.db_name = DB_CONFIG.DEFAULT_DB_NAME
+		self.db_path = DB_CONFIG.DEFAULT_DB_PATH
 
 		self._client = pymongo.MongoClient(self.db_path)
 		self._db = self._client[self.db_name]["items"]

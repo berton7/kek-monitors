@@ -1,5 +1,7 @@
 import enum
 
+SOCKET_PATH = "/tmp"
+
 
 @enum.unique
 class COMMANDS(enum.Enum):
@@ -44,4 +46,6 @@ class WebhookConfig(object):
 	DEFAULT_EMBED_COLOR = 255
 
 
-SOCKET_PATH = "/tmp"
+class DB_CONFIG(object):
+	DEFAULT_DB_NAME = "kekmonitors"
+	DEFAULT_DB_PATH = "mongodb://localhost:27017/"
