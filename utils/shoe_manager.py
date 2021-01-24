@@ -70,5 +70,5 @@ class ShoeManager(object):
 		return shoes
 
 	def update_shoe(self, shoe: Shoe):
-		'''Update the shoe in the db matching the same name.'''
-		self._db.update_many({"_Shoe__name": shoe.name}, {"$set": shoe.__dict__})
+		'''Update the shoe in the db matching the same link.'''
+		self._db.update_many({"_Shoe__link": shoe.link}, {"$set": shoe.__dict__})

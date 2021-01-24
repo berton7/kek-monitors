@@ -153,7 +153,7 @@ class BaseMonitor(Common, NetworkUtils):
 		self.general_logger.debug(
 			f"Checking {shoe.name} - {shoe.link} in db...")
 		new_or_restocked = True
-		db_shoe = self.shoe_manager.find_shoe({"name": shoe.name})
+		db_shoe = self.shoe_manager.find_shoe({"link": shoe.link})
 		return_shoe = copy.deepcopy(shoe)
 		if db_shoe:
 			new_or_restocked = False
