@@ -30,7 +30,16 @@ if __name__ == "__main__":
 	args = sys.argv
 	if len(args) < 2:
 		print("Usage: python monitor_manager_cli.py <cmd> [payload]")
+		print(f"To list available commands: python {args[0]} --list-cmd")
 		exit(1)
+	if args[1] == "--list-cmd":
+		for key in COMMANDS.__dict__:
+			try:
+				COMMANDS[key]
+				print(key)
+			except:
+				pass
+		exit(0)
 	cmd = COMMANDS.__dict__.get(args[1], None)
 	if not cmd:
 		print("Inserted cmd does not exist!")
