@@ -26,6 +26,7 @@ class BaseMonitor(Common, NetworkUtils):
 			logger_name, add_stream_handler, f"{SOCKET_PATH}/Monitor.{self.get_class_name()}")
 		super(Server, self).__init__(logger_name)
 
+		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
 		self.cmd_to_callback[COMMANDS.SET_LINKS] = self.on_set_links
 		self.cmd_to_callback[COMMANDS.ADD_LINKS] = self.on_add_links
@@ -87,6 +88,9 @@ class BaseMonitor(Common, NetworkUtils):
 		self._has_to_quit = True
 		return okResponse()
 
+	async def _on_ping(self, cmd: Cmd) -> Response:
+		return okResponse()
+
 	async def _get_links(self):
 		socket_path = f"{SOCKET_PATH}/Scraper.{self.class_name}"
 		self.client_logger.debug("Getting links...")
@@ -119,11 +123,11 @@ class BaseMonitor(Common, NetworkUtils):
 				self.shoe_check()
 			except:
 				self.general_logger.exception("")
-				if WebhookConfig.CRASH_WEBHOOK:
+				if WEBHOOK_CONFIG.CRASH_WEBHOOK:
 					data = json.dumps(
 						{"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."[:2000]})
-					await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"}, raise_error=False)
-			selfWEBHOOK_CONFIGer.info(f"Loop ended. Waiting {self.delay} secs.")
+					await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"}, raise_error=False)
+			self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
 
 		self.general_logger.info("SWEBHOOK_CONFIG..")

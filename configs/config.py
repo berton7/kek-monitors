@@ -1,10 +1,11 @@
 import enum
 
-SOCKET_PATH = "/tmp"
+SOCKET_PATH = "./sockets"
 
 
 @enum.unique
 class COMMANDS(enum.Enum):
+	PING = enum.auto()
 	STOP = enum.auto()
 	SET_LINKS = enum.auto()
 	ADD_LINKS = enum.auto()

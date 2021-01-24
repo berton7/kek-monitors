@@ -9,7 +9,7 @@ from typing import List, Optional
 from configs.config import COMMANDS, SOCKET_PATH, WEBHOOK_CONFIG
 from utils.common_base import Common
 from utils.network_utils import NetworkUtils
-from utils.server.msg import Cmd, Message, okResponse
+from utils.server.msg import Cmd, Message, Response, okResponse
 from utils.server.server import Server
 
 
@@ -21,6 +21,7 @@ class BaseScraper(Common, NetworkUtils):
 			logger_name, add_stream_handler, f"{SOCKET_PATH}/Scraper.{self.get_class_name()}")
 		super(Server, self).__init__(logger_name)
 
+		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
 		self.cmd_to_callback[COMMANDS.SET_LINKS] = self.on_get_links
 		self.links = []  # type: List[str]
@@ -70,6 +71,9 @@ class BaseScraper(Common, NetworkUtils):
 		if self.links != self._previous_links:
 			await self._set_links()
 			self._previous_links = copy.deepcopy(self.links)
+
+	async def _on_ping(self, cmd: Cmd) -> Response:
+		return okResponse()
 
 	async def _set_links(self):
 		'''Connect to the corresponding monitor, if available, and tell it to set the new links.'''
