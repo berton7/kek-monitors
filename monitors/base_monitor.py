@@ -6,7 +6,7 @@ import os
 import traceback
 from typing import List, Optional
 
-from configs.config import COMMANDS, SOCKET_PATH, WebhookConfig
+from configs.config import COMMANDS, SOCKET_PATH, WEBHOOK_CONFIG
 from utils import discord_embeds, shoe_stuff
 from utils.common_base import Common
 from utils.network_utils import NetworkUtils
@@ -123,10 +123,10 @@ class BaseMonitor(Common, NetworkUtils):
 					data = json.dumps(
 						{"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."[:2000]})
 					await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"}, raise_error=False)
-			self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
+			selfWEBHOOK_CONFIGer.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
 
-		self.general_logger.info("Shutting down...")
+		self.general_logger.info("SWEBHOOK_CONFIG..")
 
 	async def loop(self):
 		'''User-defined loop. Replace this with a function that will be run every `delay` seconds'''

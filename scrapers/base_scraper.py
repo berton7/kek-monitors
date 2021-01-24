@@ -6,7 +6,7 @@ import os
 import traceback
 from typing import List, Optional
 
-from configs.config import COMMANDS, SOCKET_PATH, WebhookConfig
+from configs.config import COMMANDS, SOCKET_PATH, WEBHOOK_CONFIG
 from utils.common_base import Common
 from utils.network_utils import NetworkUtils
 from utils.server.msg import Cmd, Message, okResponse
@@ -52,9 +52,9 @@ class BaseScraper(Common, NetworkUtils):
 				await self.update_links()
 			except:
 				self.general_logger.exception("")
-				if WebhookConfig.CRASH_WEBHOOK:
+				if WEBHOOK_CONFIG.CRASH_WEBHOOK:
 					data = {"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."}
-					await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+					await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 			self.general_logger.info(f"Loop ended, waiting {self.delay} secs")
 			await asyncio.sleep(self.delay)
 

@@ -12,7 +12,7 @@ from watchdog import observers
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
 import utils.tools
-from configs.config import COMMANDS, SOCKET_PATH, WebhookConfig
+from configs.config import COMMANDS, SOCKET_PATH, WEBHOOK_CONFIG
 from utils.server.msg import *
 from utils.server.server import Server
 
@@ -168,9 +168,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 					log = f"Monitor {class_name} has stopped with code: {monitor.returncode}"
 					if monitor.returncode:
 						self.general_logger.warning(log)
-						if WebhookConfig.CRASH_WEBHOOK:
+						if WEBHOOK_CONFIG.CRASH_WEBHOOK:
 							data = {"content": log}
-							await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+							await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 					else:
 						self.general_logger.info(log)
 				else:
@@ -184,9 +184,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 					log = f"Scraper {class_name} has stopped with code: {scraper.returncode}"
 					if scraper.returncode:
 						self.general_logger.warning(log)
-						if WebhookConfig.CRASH_WEBHOOK:
+						if WEBHOOK_CONFIG.CRASH_WEBHOOK:
 							data = {"content": log}
-							await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+							await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 					else:
 						self.general_logger.info(log)
 				else:

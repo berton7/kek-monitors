@@ -10,7 +10,7 @@ import requests
 from discord import Embed
 
 from utils.tools import get_logger
-from configs.config import WebhookConfig
+from configs.config import WEBHOOK_CONFIG
 
 
 class WebhookSender(Thread):
@@ -47,23 +47,23 @@ class WebhookSender(Thread):
 				webhook_values, embed, now = self.queue.get()
 				if "custom" in webhook_values:
 					provider = webhook_values["custom"].get(
-						"provider", WebhookConfig.DEFAULT_PROVIDER)
+						"provider", WEBHOOK_CONFIG.DEFAULT_PROVIDER)
 					timestamp_format = webhook_values["custom"].get(
-						"timestamp_format", WebhookConfig.DEFAULT_TIMESTAMP_FORMAT)
+						"timestamp_format", WEBHOOK_CONFIG.DEFAULT_TIMESTAMP_FORMAT)
 					ts = now.strftime(timestamp_format)
 					icon_url = webhook_values["custom"].get(
-						"icon_url", WebhookConfig.DEFAULT_PROVIDER_ICON)
+						"icon_url", WEBHOOK_CONFIG.DEFAULT_PROVIDER_ICON)
 					color = webhook_values["custom"].get(
-						"color", WebhookConfig.DEFAULT_EMBED_COLOR)
+						"color", WEBHOOK_CONFIG.DEFAULT_EMBED_COLOR)
 
 					embed.set_footer(text=" | ".join([provider, ts]), icon_url=icon_url)
 					embed.color = color
 				else:
-					ts = now.strftime(WebhookConfig.DEFAULT_TIMESTAMP_FORMAT)
+					ts = now.strftime(WEBHOOK_CONFIG.DEFAULT_TIMESTAMP_FORMAT)
 
-					embed.set_footer(text=f"{WebhookConfig.DEFAULT_PROVIDER} | {ts}",
-					                 icon_url=WebhookConfig.DEFAULT_PROVIDER_ICON)
-					embed.color = WebhookConfig.DEFAULT_EMBED_COLOR
+					embed.set_footer(text=f"{WEBHOOK_CONFIG.DEFAULT_PROVIDER} | {ts}",
+					                 icon_url=WEBHOOK_CONFIG.DEFAULT_PROVIDER_ICON)
+					embed.color = WEBHOOK_CONFIG.DEFAULT_EMBED_COLOR
 
 				embed.timestamp = Embed.Empty
 				data = {"embeds": [embed.to_dict()]}

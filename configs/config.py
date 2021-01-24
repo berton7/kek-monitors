@@ -38,7 +38,7 @@ class COMMANDS(enum.Enum):
 	MM_GET_WEBHOOKS = enum.auto()
 
 
-class WebhookConfig(object):
+class WEBHOOK_CONFIG(object):
 	CRASH_WEBHOOK = ""
 	DEFAULT_PROVIDER = "KekMonitors"
 	DEFAULT_PROVIDER_ICON = "https://avatars0.githubusercontent.com/u/11823129?s=400&u=3e617374871087e64b5fde0df668260f2671b076&v=4"
