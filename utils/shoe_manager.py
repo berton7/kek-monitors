@@ -26,15 +26,18 @@ class ShoeManager(object):
 		self._logger.debug("Database initialized.")
 
 	def add_shoe(self, shoe: Shoe):
+		'''Add this shoe to the database'''
 		self._db.insert_one(shoe.__dict__)
 
 	def add_shoes(self, shoes: List[Shoe]):
+		'''Add these shoes to the database'''
 		l = []
 		for shoe in shoes:
 			l.append(shoe.__dict__)
 		self._db.insert_many(l)
 
 	def find_shoe(self, query: Dict[str, Any]):
+		'''Find a shoe passing ```query``` to pymongo's find_one'''
 		q = {}
 		for k in query:
 			if not k.startswith("_Shoe__"):
@@ -50,6 +53,7 @@ class ShoeManager(object):
 			return None
 
 	def find_shoes(self, query: Dict[str, Any]):
+		'''Find all shoes passing ```query``` to pymongo's find_one'''
 		q = {}
 		for k in query:
 			if not k.startswith("_Shoe__"):
@@ -66,4 +70,5 @@ class ShoeManager(object):
 		return shoes
 
 	def update_shoe(self, shoe: Shoe):
+		'''Update the shoe in the db matching the same name.'''
 		self._db.update_many({"_Shoe__name": shoe.name}, {"$set": shoe.__dict__})
