@@ -60,23 +60,21 @@ class MyWebsite(BaseMonitor):
 			for script in soup.find_all("script", {"type": "text/javascript"}):
 				if script.string:
 					if script.string.find("var spConfig") != -1:
-						break
+						firststr = ".Config("
+						script_t = script.string
+						fi = script_t.find(firststr) + len(firststr)
+						li = script_t.find(");")
+						spConfig = script_t[fi:li]
+						spConfig = json.loads(spConfig)
+						for size in spConfig["attributes"]["134"]["options"]:
+							sizename = size["label"]
+							index = sizename.find(" * Not available")
+							available = index == -1
+							if not available:
+								sizename = sizename[:index]
+							s.sizes[sizename] = {"available": available}
 			else:
-				continue
-
-			firststr = ".Config("
-			script_t = script.string
-			fi = script_t.find(firststr) + len(firststr)
-			li = script_t.find(");")
-			spConfig = script_t[fi:li]
-			spConfig = json.loads(spConfig)
-			for size in spConfig["attributes"]["134"]["options"]:
-				sizename = size["label"]
-				index = sizename.find(" * Not available")
-				available = index == -1
-				if not available:
-					sizename = sizename[:index]
-				s.sizes[sizename] = {"available": available}
+				pass
 
 			# append the shoe to self.shoes. ShoeManager will check for restocked sizes or new products just after this loop, in self.shoe_check()
 			self.shoes.append(s)
