@@ -1,6 +1,6 @@
 import enum
 
-SOCKET_PATH = "/tmp"
+SOCKET_PATH = "./sockets"
 
 
 @enum.unique
