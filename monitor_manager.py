@@ -12,7 +12,7 @@ from watchdog import observers
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
 import utils.tools
-from configs.config import COMMANDS, SOCKET_PATH, WebhookConfig
+from configs.config import COMMANDS, SOCKET_PATH, WEBHOOK_CONFIG
 from utils.server.msg import *
 from utils.server.server import Server
 import copy
@@ -53,30 +53,39 @@ class MonitorManager(Server, FileSystemEventHandler):
 		self.scraper_sockets = {}  # type: Dict[str, str]
 		self.socket_lock = asyncio.Lock()
 
+		# mandatory arguments, needed in the command
 		self.add_scraper_args = self.add_monitor_args = self.add_monitor_scraper_args = [
 			"filename", "class_name"]
 		self.stop_args = ["class_name"]
+		self.shutdown_all_on_exit = True   # you might wanna change this
 
 		tornado.httpclient.AsyncHTTPClient.configure(
 			"tornado.curl_httpclient.CurlAsyncHTTPClient")
 		self.client = tornado.httpclient.AsyncHTTPClient()
 
+		# watches the config folder for any change. calls on_modified when any monitored file is modified
 		self.config_watcher = observers.Observer()
 		self.config_watcher.schedule(self, "./configs", True)
 		self.config_watcher.schedule(self, SOCKET_PATH, True)
 		self.has_to_quit = False
 
 	def start(self):
+		'''Start the Monitor Manager.'''
 		self.config_watcher.start()
 		self.asyncio_loop.run_until_complete(self.check_status())
 
 	def on_modified(self, event: FileSystemEvent):
+		# called when any of the monitored files is modified.
+		# we are only interested int the configs for now.
 		filename = event.key[1]  # type: str
-		splits = filename.split(os.path.sep)
-		if splits[1] == "config":
-			if len(splits) > 3:
-				asyncio.run_coroutine_threadsafe(
-					self.update_configs(filename), self.asyncio_loop)
+		# if a config file is updated:
+		if len(filename.split(os.path.sep)) > 3:
+			# run the update (this might be called from another thread)
+			splits = filename.split(os.path.sep)
+			if splits[1] == "config":
+				if len(splits) > 3:
+					asyncio.run_coroutine_threadsafe(
+						self.update_configs(filename), self.asyncio_loop)
 
 	def on_created(self, event: FileSystemEvent):
 		filename = event.key[1]  # type: str
@@ -151,6 +160,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		return alive
 
 	async def update_configs(self, filename: str):
+		'''Reads the config file and updates the interested monitors/scrapers'''
 		self.general_logger.debug(f"File {filename} has changed!")
 		if filename.endswith(".json"):
 			try:
@@ -160,10 +170,12 @@ class MonitorManager(Server, FileSystemEventHandler):
 				self.general_logger.warning(
 					f"File {filename} was changed but constains invalid json data")
 				return
+
 			splits = filename.split(os.path.sep)
 			commands = []  # List[Cmd]
 			cmd = None  # Enum
 			sock_paths = []   # type: List[str]
+			# if it's from the monitors folder:
 			if splits[2] == "monitors":
 				# we are interested in configs, whitelist, blacklist, webhooks
 				if splits[3] == "whitelists.json":
@@ -177,12 +189,15 @@ class MonitorManager(Server, FileSystemEventHandler):
 				else:
 					cmd = None
 				if cmd:
+					# for every monitor socket
 					for sockname in os.listdir(SOCKET_PATH):
 						if sockname.startswith("Monitor."):
+							# add command and socket path to the list of todo
 							name = sockname.split(".")[1]
 							if (name in j):
 								c = Cmd()
 								c.cmd = cmd
+								# send only the corresponding part to the monitor
 								c.payload = j[name]
 								commands.append(c)
 								sock_paths.append(os.path.sep.join([SOCKET_PATH, sockname]))
@@ -198,12 +213,15 @@ class MonitorManager(Server, FileSystemEventHandler):
 				else:
 					cmd = None
 				if cmd:
+					# for every scraper socket
 					for sockname in os.listdir(SOCKET_PATH):
 						if sockname.startswith("Scraper."):
+							# add command and socket path to the list of todo
 							name = sockname.split(".")[1]
 							if (name in j):
 								c = Cmd()
 								c.cmd = cmd
+								# send only the corresponding part to the scraper
 								c.payload = j[name]
 								commands.append(c)
 								sock_paths.append(os.path.sep.join([SOCKET_PATH, sockname]))
@@ -211,10 +229,12 @@ class MonitorManager(Server, FileSystemEventHandler):
 				self.general_logger.debug("File not useful.")
 				return
 
+			# prepare to make all the async requests
 			tasks = []
 			for sock_path, command in zip(sock_paths, commands):
 				tasks.append(self.make_request(sock_path, command))
 
+			# send the requests
 			responses = await asyncio.gather(*tasks)   # List[Response]
 
 			for response in responses:
@@ -222,27 +242,46 @@ class MonitorManager(Server, FileSystemEventHandler):
 					self.general_logger.warning(f"Failed to update config: {response.reason}")
 
 	async def on_server_stop(self):
+		# stop the config watcher
 		self.config_watcher.stop()
 		self.config_watcher.join()
-		for sockname in os.listdir(SOCKET_PATH):
-			if sockname.startswith("Scraper.") or sockname.startswith("Monitor."):
-				cmd = Cmd()
-				cmd.cmd = COMMANDS.STOP
-				r = await self.make_request(f"{SOCKET_PATH}{os.path.sep}{sockname}", cmd)
+
+		if self.shutdown_all_on_exit:
+			# get all the existing sockets
+			sockets = []  # type: List[str]
+			tasks = []
+			for sockname in os.listdir(SOCKET_PATH):
+				if sockname.startswith("Scraper.") or sockname.startswith("Monitor."):
+					cmd = Cmd()
+					cmd.cmd = COMMANDS.STOP
+					sockets.append(sockname)
+
+					tasks.append(self.make_request(
+						f"{SOCKET_PATH}{os.path.sep}{sockname}", cmd))
+
+			# send request to stop
+			responses = await asyncio.gather(*tasks)   # type: List[Response]
+
+			for sockname, r in zip(sockets, responses):
+				# if an error happened...
 				if not r.success:
+					# if the socket was not used remove it
 					if r.reason == f"Socket {sockname} unavailable":
+						os.remove(os.path.sep.join([SOCKET_PATH, sockname]))
 						self.general_logger.info(
 							f"{SOCKET_PATH}{os.path.sep}{sockname} was removed because unavailable")
-						os.remove(os.path.sep.join([SOCKET_PATH, sockname]))
+					# else something else happened, dont do anything
 					else:
 						self.general_logger.warning(
 							f"Error occurred while attempting to stop {sockname}: {r.reason}")
+				# ok
 				else:
 					self.general_logger.warning(f"{sockname} was successfully stopped")
 
 		self.has_to_quit = True
 
 	async def check_status(self):
+		'''Main MonitorManager loop. Every second it checks its monitored processes and looks if they are still alive, possibly reporting any exit code'''
 		while not self.has_to_quit:
 			new_monitor_processes = {}
 			for class_name in self.monitor_processes:
@@ -251,9 +290,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 					log = f"Monitor {class_name} has stopped with code: {monitor.returncode}"
 					if monitor.returncode:
 						self.general_logger.warning(log)
-						if WebhookConfig.CRASH_WEBHOOK:
+						if WEBHOOK_CONFIG.CRASH_WEBHOOK:
 							data = {"content": log}
-							await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+							await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 					else:
 						self.general_logger.info(log)
 				else:
@@ -267,9 +306,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 					log = f"Scraper {class_name} has stopped with code: {scraper.returncode}"
 					if scraper.returncode:
 						self.general_logger.warning(log)
-						if WebhookConfig.CRASH_WEBHOOK:
+						if WEBHOOK_CONFIG.CRASH_WEBHOOK:
 							data = {"content": log}
-							await self.client.fetch(WebhookConfig.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+							await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 					else:
 						self.general_logger.info(log)
 				else:

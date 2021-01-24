@@ -1,5 +1,7 @@
 import enum
 
+SOCKET_PATH = "/tmp"
+
 
 @enum.unique
 class COMMANDS(enum.Enum):
@@ -37,7 +39,7 @@ class COMMANDS(enum.Enum):
 	MM_GET_WEBHOOKS = enum.auto()
 
 
-class WebhookConfig(object):
+class WEBHOOK_CONFIG(object):
 	CRASH_WEBHOOK = ""
 	DEFAULT_PROVIDER = "KekMonitors"
 	DEFAULT_PROVIDER_ICON = "https://avatars0.githubusercontent.com/u/11823129?s=400&u=3e617374871087e64b5fde0df668260f2671b076&v=4"
@@ -45,4 +47,6 @@ class WebhookConfig(object):
 	DEFAULT_EMBED_COLOR = 255
 
 
-SOCKET_PATH = "./sockets"
+class DB_CONFIG(object):
+	DEFAULT_DB_NAME = "kekmonitors"
+	DEFAULT_DB_PATH = "mongodb://localhost:27017/"
