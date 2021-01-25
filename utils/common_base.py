@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from json.decoder import JSONDecodeError
@@ -18,6 +19,8 @@ class Common(Server):
 		self.class_name = self.get_class_name()
 
 		super().__init__(logger_name, add_stream_handler, socket_path)
+
+		self._loop_lock = asyncio.Lock()
 
 		self.cmd_to_callback[COMMANDS.SET_WHITELIST] = self.on_set_whitelist
 		self.cmd_to_callback[COMMANDS.SET_BLACKLIST] = self.on_set_blacklist
@@ -146,4 +149,6 @@ class Common(Server):
 	def start(self, delay):
 		'''Call this to start the loop.'''
 		self.delay = delay
-		self.asyncio_loop.run_until_complete(self.main())
+		self._main_task = self._asyncio_loop.create_task(self.main())
+		self._asyncio_loop.run_forever()
+		self.general_logger.debug("Shutting down...")

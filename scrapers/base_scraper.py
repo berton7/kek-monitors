@@ -30,31 +30,31 @@ class BaseScraper(Common, NetworkUtils):
 		# website-specific variables should be declared here
 		self.init()
 
+	async def on_server_stop(self) -> Response:
+		async with self._loop_lock:
+			self._asyncio_loop.stop()
+		return okResponse()
+
 	async def on_get_links(self, cmd: Cmd) -> Message:
 		response = okResponse()
 		response.payload = self.links
 		return response
 
-	async def on_server_stop(self):
-		self._has_to_quit = True
-		return okResponse()
-
 	async def main(self):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
-		while not self._has_to_quit:
-			self.update_local_config()
-			try:
-				await self.loop()
-				await self.update_links()
-			except:
-				self.general_logger.exception("")
-				if WEBHOOK_CONFIG.CRASH_WEBHOOK:
-					data = {"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."}
-					await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
-			self.general_logger.info(f"Loop ended, waiting {self.delay} secs")
+		while True:
+			async with self._loop_lock:
+				self.update_local_config()
+				try:
+					await self.loop()
+					await self.update_links()
+				except:
+					self.general_logger.exception("")
+					if WEBHOOK_CONFIG.CRASH_WEBHOOK:
+						data = {"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."}
+						await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+				self.general_logger.info(f"Loop ended, waiting {self.delay} secs")
 			await asyncio.sleep(self.delay)
-
-		self.general_logger.info("Shutting down...")
 
 	async def loop(self):
 		'''User-defined loop. Replace this with a function that will be run every `delay` seconds'''

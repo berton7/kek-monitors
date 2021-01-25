@@ -59,6 +59,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		self.stop_args = ["class_name"]
 		self.shutdown_all_on_exit = True   # you might wanna change this
 
+		self._loop_lock = asyncio.Lock()
 		tornado.httpclient.AsyncHTTPClient.configure(
 			"tornado.curl_httpclient.CurlAsyncHTTPClient")
 		self.client = tornado.httpclient.AsyncHTTPClient()
@@ -72,7 +73,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 	def start(self):
 		'''Start the Monitor Manager.'''
 		self.config_watcher.start()
-		self.asyncio_loop.run_until_complete(self.check_status())
+		self.check_status_task = self._asyncio_loop.create_task(self.check_status())
+		self._asyncio_loop.run_forever()
 
 	def on_modified(self, event: FileSystemEvent):
 		# called when any of the monitored files is modified.
@@ -85,20 +87,20 @@ class MonitorManager(Server, FileSystemEventHandler):
 			if splits[1] == "config":
 				if len(splits) > 3:
 					asyncio.run_coroutine_threadsafe(
-						self.update_configs(filename), self.asyncio_loop)
+						self.update_configs(filename), self._asyncio_loop)
 
 	def on_created(self, event: FileSystemEvent):
 		filename = event.key[1]  # type: str
 		splits = filename.split(os.path.sep)
 		if get_directory_from_file(filename) == SOCKET_PATH:
-			asyncio.run_coroutine_threadsafe(self.on_add_sockets(), self.asyncio_loop)
+			asyncio.run_coroutine_threadsafe(self.on_add_sockets(), self._asyncio_loop)
 
 	def on_deleted(self, event):
 		filename = event.key[1]  # type: str
 		filename.split(os.path.sep)
 		if get_directory_from_file(filename) == SOCKET_PATH:
 			asyncio.run_coroutine_threadsafe(
-				self.on_delete_sockets(), self.asyncio_loop)
+				self.on_delete_sockets(), self._asyncio_loop)
 
 	async def on_add_sockets(self):
 		async with self.socket_lock:
@@ -242,81 +244,81 @@ class MonitorManager(Server, FileSystemEventHandler):
 					self.general_logger.warning(f"Failed to update config: {response.reason}")
 
 	async def on_server_stop(self):
-		# stop the config watcher
-		self.config_watcher.stop()
-		self.config_watcher.join()
+		async with self._loop_lock:
+			# stop the config watcher
+			self.config_watcher.stop()
+			self.config_watcher.join()
 
-		if self.shutdown_all_on_exit:
-			# get all the existing sockets
-			sockets = []  # type: List[str]
-			tasks = []
-			for sockname in os.listdir(SOCKET_PATH):
-				if sockname.startswith("Scraper.") or sockname.startswith("Monitor."):
-					cmd = Cmd()
-					cmd.cmd = COMMANDS.STOP
-					sockets.append(sockname)
+			if self.shutdown_all_on_exit:
+				# get all the existing sockets
+				sockets = []  # type: List[str]
+				tasks = []
+				for sockname in os.listdir(SOCKET_PATH):
+					if sockname.startswith("Scraper.") or sockname.startswith("Monitor."):
+						cmd = Cmd()
+						cmd.cmd = COMMANDS.STOP
+						sockets.append(sockname)
 
-					tasks.append(self.make_request(
-						f"{SOCKET_PATH}{os.path.sep}{sockname}", cmd))
+						tasks.append(self.make_request(
+							f"{SOCKET_PATH}{os.path.sep}{sockname}", cmd))
 
-			# send request to stop
-			responses = await asyncio.gather(*tasks)   # type: List[Response]
+				# send request to stop
+				responses = await asyncio.gather(*tasks)   # type: List[Response]
 
-			for sockname, r in zip(sockets, responses):
-				# if an error happened...
-				if not r.success:
-					# if the socket was not used remove it
-					if r.reason == f"Socket {sockname} unavailable":
-						os.remove(os.path.sep.join([SOCKET_PATH, sockname]))
-						self.general_logger.info(
-							f"{SOCKET_PATH}{os.path.sep}{sockname} was removed because unavailable")
-					# else something else happened, dont do anything
+				for sockname, r in zip(sockets, responses):
+					# if an error happened...
+					if not r.success:
+						# if the socket was not used remove it
+						if r.reason == f"Socket {sockname} unavailable":
+							os.remove(os.path.sep.join([SOCKET_PATH, sockname]))
+							self.general_logger.info(
+								f"{SOCKET_PATH}{os.path.sep}{sockname} was removed because unavailable")
+						# else something else happened, dont do anything
+						else:
+							self.general_logger.warning(
+								f"Error occurred while attempting to stop {sockname}: {r.reason}")
+					# ok
 					else:
-						self.general_logger.warning(
-							f"Error occurred while attempting to stop {sockname}: {r.reason}")
-				# ok
-				else:
-					self.general_logger.warning(f"{sockname} was successfully stopped")
+						self.general_logger.warning(f"{sockname} was successfully stopped")
 
-		self.has_to_quit = True
+		self._asyncio_loop.stop()
 
 	async def check_status(self):
 		'''Main MonitorManager loop. Every second it checks its monitored processes and looks if they are still alive, possibly reporting any exit code'''
-		while not self.has_to_quit:
-			new_monitor_processes = {}
-			for class_name in self.monitor_processes:
-				monitor = self.monitor_processes[class_name]["process"]
-				if monitor.poll() is not None:
-					log = f"Monitor {class_name} has stopped with code: {monitor.returncode}"
-					if monitor.returncode:
-						self.general_logger.warning(log)
-						if WEBHOOK_CONFIG.CRASH_WEBHOOK:
-							data = {"content": log}
-							await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+		while True:
+			async with self._loop_lock:
+				new_monitor_processes = {}
+				for class_name in self.monitor_processes:
+					monitor = self.monitor_processes[class_name]["process"]
+					if monitor.poll() is not None:
+						log = f"Monitor {class_name} has stopped with code: {monitor.returncode}"
+						if monitor.returncode:
+							self.general_logger.warning(log)
+							if WEBHOOK_CONFIG.CRASH_WEBHOOK:
+								data = {"content": log}
+								await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+						else:
+							self.general_logger.info(log)
 					else:
-						self.general_logger.info(log)
-				else:
-					new_monitor_processes[class_name] = self.monitor_processes[class_name]
-			self.monitor_processes = new_monitor_processes
+						new_monitor_processes[class_name] = self.monitor_processes[class_name]
+				self.monitor_processes = new_monitor_processes
 
-			new_scraper_processes = {}
-			for class_name in self.scraper_processes:
-				scraper = self.scraper_processes[class_name]["process"]
-				if scraper.poll() is not None:
-					log = f"Scraper {class_name} has stopped with code: {scraper.returncode}"
-					if scraper.returncode:
-						self.general_logger.warning(log)
-						if WEBHOOK_CONFIG.CRASH_WEBHOOK:
-							data = {"content": log}
-							await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+				new_scraper_processes = {}
+				for class_name in self.scraper_processes:
+					scraper = self.scraper_processes[class_name]["process"]
+					if scraper.poll() is not None:
+						log = f"Scraper {class_name} has stopped with code: {scraper.returncode}"
+						if scraper.returncode:
+							self.general_logger.warning(log)
+							if WEBHOOK_CONFIG.CRASH_WEBHOOK:
+								data = {"content": log}
+								await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+						else:
+							self.general_logger.info(log)
 					else:
-						self.general_logger.info(log)
-				else:
-					new_scraper_processes[class_name] = self.scraper_processes[class_name]
-			self.scraper_processes = new_scraper_processes
+						new_scraper_processes[class_name] = self.scraper_processes[class_name]
+				self.scraper_processes = new_scraper_processes
 			await asyncio.sleep(1)
-
-		self.general_logger.info("Shutting down...")
 
 	async def on_add_monitor(self, cmd: Cmd) -> Response:
 		r = badResponse()

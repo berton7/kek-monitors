@@ -80,7 +80,8 @@ class BaseMonitor(Common, NetworkUtils):
 		return response
 
 	async def on_server_stop(self) -> Response:
-		self._has_to_quit = True
+		async with self._loop_lock:
+			self._asyncio_loop.stop()
 		return okResponse()
 
 	async def _on_ping(self, cmd: Cmd) -> Response:
@@ -102,30 +103,29 @@ class BaseMonitor(Common, NetworkUtils):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
 		# Try to get a set of links as soon as the monitor starts.
 		await self._get_links()
-		while not self._has_to_quit:
-			self.update_local_config()
-			if self.new_links:
-				self.general_logger.info(f"Received new set of links: {self.new_links}")
-				self.links = self.new_links
-				self.new_links = []
-			if self.buffer_links:
-				self.general_logger.info(f"Adding new set of links: {self.buffer_links}")
-				self.links += self.buffer_links
-				self.buffer_links = []
-			try:
-				self.shoes = []
-				await self.loop()
-				self.shoe_check()
-			except:
-				self.general_logger.exception("")
-				if WEBHOOK_CONFIG.CRASH_WEBHOOK:
-					data = json.dumps(
-						{"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."[:2000]})
-					await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"}, raise_error=False)
-			self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
+		while True:
+			async with self._loop_lock:
+				self.update_local_config()
+				if self.new_links:
+					self.general_logger.info(f"Received new set of links: {self.new_links}")
+					self.links = self.new_links
+					self.new_links = []
+				if self.buffer_links:
+					self.general_logger.info(f"Adding new set of links: {self.buffer_links}")
+					self.links += self.buffer_links
+					self.buffer_links = []
+				try:
+					self.shoes = []
+					await self.loop()
+					self.shoe_check()
+				except:
+					self.general_logger.exception("")
+					if WEBHOOK_CONFIG.CRASH_WEBHOOK:
+						data = json.dumps(
+							{"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."[:2000]})
+						await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"}, raise_error=False)
+				self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
-
-		self.general_logger.info("Shutting down...")
 
 	async def loop(self):
 		'''User-defined loop. Replace this with a function that will be run every `delay` seconds'''

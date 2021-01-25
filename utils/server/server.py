@@ -12,11 +12,10 @@ class Server(object):
 		self.server_logger = get_logger(logger_name + ".Server", add_stream_handler)
 		self.server_path = server_path
 		# init asyncio stuff
-		self.asyncio_loop = asyncio.get_event_loop()
-		self.server_task = self.asyncio_loop.create_task(self._init_server())
+		self._asyncio_loop = asyncio.get_event_loop()
+		self._server_task = self._asyncio_loop.create_task(self._init_server())
 
 		self.cmd_to_callback = {}   # type: Dict[int, Callable]
-		self.server_stop_called = False
 
 	async def _init_server(self):
 		'''Initialise the underlying socket server, to allow communication between monitor/scraper.'''
@@ -33,11 +32,10 @@ class Server(object):
 		await self.server.wait_closed()
 		os.remove(self.server_path)
 		self.server_logger.info("Server successfully closed.")
-		self.server_stop_called = True
-		return okResponse()
+		return await self.on_server_stop()
 
 	async def on_server_stop(self):
-		pass
+		return okResponse()
 
 	async def _handle_msg(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
 		'''Handle incoming messages.'''
@@ -59,9 +57,6 @@ class Server(object):
 
 		self.server_logger.debug(f"Closed connection from {print_addr}")
 		writer.close()
-
-		if self.server_stop_called:
-			await self.on_server_stop()
 
 	async def make_request(self, socket_path: str, cmd: Cmd, expect_response: bool = True) -> Response:
 		if os.path.exists(socket_path):
