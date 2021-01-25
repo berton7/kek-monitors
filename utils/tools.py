@@ -3,6 +3,7 @@ import logging.handlers
 import os
 from datetime import timezone
 from typing import Optional
+import argparse
 
 
 def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_level: int = logging.DEBUG, file_level: int = logging.DEBUG):
@@ -69,3 +70,18 @@ def chunks(lst, n):
 	Yield successive n-sized chunks from lst."""
 	for i in range(0, len(lst), n):
 		yield lst[i:i + n]
+
+
+def make_default_executable(class_name):
+	parser = argparse.ArgumentParser(
+            description=f"{class_name.__name__} is the base monitor class from which every monitor should inherit. It provides a default loop which does nothing and is therefore fully executable.")
+	default_delay = 5
+	parser.add_argument("-d", "--delay", default=default_delay, type=int,
+                     help=f"Specify a delay for the loop. (default: {default_delay})")
+	parser.add_argument("--output", action=argparse.BooleanOptionalAction,
+                     default=True,
+                     help="Specify wether you want output to the console or not.",)
+	args = parser.parse_args()
+	if args.delay < 0:
+		print(f"Cannot have a negative delay")
+	class_name(args.output).start(args.delay)

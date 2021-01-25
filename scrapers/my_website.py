@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import os
+from utils.tools import make_default_executable
 
 from bs4 import BeautifulSoup
 from fake_headers import Headers
@@ -60,15 +61,4 @@ class MyWebsite(BaseScraper):
 
 
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser(
-		description="Sample scraper.")
-	default_delay = 10
-	parser.add_argument("-d", "--delay", default=default_delay, type=int,
-	                    help=f"Specify a delay for the loop. (default: {default_delay})")
-	parser.add_argument("--output", action=argparse.BooleanOptionalAction,
-                     default=True,
-	                    help="Specify wether you want output to the console or not.",)
-	args = parser.parse_args()
-	if args.delay < 0:
-		print(f"Cannot have a negative delay")
-	MyWebsite(args.output).start(args.delay)
+	make_default_executable(MyWebsite)

@@ -5,6 +5,7 @@ import json
 import os
 import traceback
 from typing import List, Optional
+from utils.tools import make_default_executable
 
 from configs.config import COMMANDS, SOCKET_PATH, WEBHOOK_CONFIG
 from utils import discord_embeds, shoe_stuff
@@ -191,17 +192,5 @@ class BaseMonitor(Common, NetworkUtils):
 
 		return return_shoe
 
-
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser(
-		description="BaseMonitor is the base monitor class from which every monitor should inherit. It provides a default loop which does nothing and is therefore fully executable.")
-	default_delay = 5
-	parser.add_argument("-d", "--delay", default=default_delay, type=int,
-	                    help=f"Specify a delay for the loop. (default: {default_delay})")
-	parser.add_argument("--output", action=argparse.BooleanOptionalAction,
-                     default=True,
-	                    help="Specify wether you want output to the console or not.",)
-	args = parser.parse_args()
-	if args.delay < 0:
-		print(f"Cannot have a negative delay")
-	BaseMonitor(args.output).start(args.delay)
+	make_default_executable(BaseMonitor)
