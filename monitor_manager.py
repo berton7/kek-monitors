@@ -282,6 +282,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 						self.general_logger.warning(f"{sockname} was successfully stopped")
 
 		self._asyncio_loop.stop()
+		self.general_logger.info("Shutting down...")
+		return okResponse()
 
 	async def check_status(self):
 		'''Main MonitorManager loop. Every second it checks its monitored processes and looks if they are still alive, possibly reporting any exit code'''
