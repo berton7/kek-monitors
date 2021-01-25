@@ -114,7 +114,8 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new blacklist but it was invalid: {blacklist}")
-			r.reason = "Invalid blacklist"
+			r.error = ERRORS.INVALID_PAYLOAD
+			r.info = "Invalid blacklist"
 		return r
 
 	async def on_set_webhooks(self, cmd: Cmd) -> Response:
@@ -127,7 +128,8 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new webhooks but it was invalid: {webhooks}")
-			r.reason = "Invalid webhooks"
+			r.error = ERRORS.INVALID_PAYLOAD
+			r.info = "Invalid webhooks"
 		return r
 
 	async def on_set_config(self, cmd: Cmd) -> Response:
@@ -140,7 +142,8 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new config but it was invalid: {config}")
-			r.reason = "Invalid config"
+			r.error = ERRORS.INVALID_PAYLOAD
+			r.info = "Invalid config"
 		return r
 
 	async def main(self):

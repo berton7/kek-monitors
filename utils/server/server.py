@@ -49,7 +49,7 @@ class Server(object):
 			response = await self.cmd_to_callback[msg.cmd](msg)
 		else:
 			response = badResponse()
-			response.reason = "Unrecognized cmd."
+			response.error = ERRORS.UNRECOGNIZED_COMMAND
 
 		writer.write(response.get_bytes())
 		writer.write_eof()
@@ -66,13 +66,16 @@ class Server(object):
 				writer.write_eof()
 
 				if expect_response:
-					response = Response(await reader.read())
+					r = Response(await reader.read())
 
 					writer.close()
-					return response
+					return r
 				return okResponse()
 			except ConnectionRefusedError:
 				self.server_logger.exception(f"Couldn't connect to socket {socket_path}")
+				r = badResponse()
+				r.error = ERRORS.SOCKET_COULDNT_CONNECT
+				return r
 		r = badResponse()
-		r.reason = f"Socket {socket_path} unavailable"
+		r.error = ERRORS.SOCKET_DOESNT_EXIST
 		return r

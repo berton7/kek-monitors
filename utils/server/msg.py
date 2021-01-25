@@ -1,8 +1,10 @@
 import enum
+import json
 import pickle
+from pprint import pprint
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from configs.config import COMMANDS
+from configs.config import COMMANDS, ERRORS
 
 # sanitize functions remove any unneeded data from an object (e.g. None, empty lists/dicts)
 
@@ -57,7 +59,7 @@ class Message(object):
 		# update member variables by cycling through the first level of the json dict
 		if isinstance(msg, bytes):
 			try:
-				j = pickle.loads(msg)
+				j = json.loads(msg)
 				for key in j:
 					if key in self.__dict__:
 						self.__dict__[key] = j[key]
@@ -76,7 +78,7 @@ class Message(object):
 
 	def get_bytes(self) -> bytes:
 		'''Return a bytes representation of the message (using pickle)'''
-		return pickle.dumps(self.get_json())
+		return json.dumps(self.get_json()).encode("utf-8")
 
 
 class Cmd(Message):
@@ -122,17 +124,47 @@ class Response(Message):
 	If you need to return data insert it into the payload'''
 
 	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
-		self.success = None  # type: Optional[bool]
-		self.reason = None  # type: Optional[str]
+		self.error = None  # type: Optional[int]
+		self.info = None  # type: Optional[str]
 		self.payload = None  # type: Optional[Dict[str, Any]]
 		super().__init__(msg)
+
+	@property
+	def error(self):
+		try:
+			return ERRORS(self.__error)
+		except:
+			return self.__error
+
+	@error.setter
+	def error(self, error):
+		if isinstance(error, enum.Enum):
+			self.__error = error.value
+		else:
+			self.__error = error
 
 
 def badResponse():
 	'''Quickly create an unsuccessful response with a default error.'''
-	return Response({"success": False, "reason": "Generic error"})
+	r = Response()
+	r.error = ERRORS.OTHER_ERROR
+	r.info = "Error returned from badResponse()"
+	return r
 
 
 def okResponse():
 	'''Quickly create a successful response'''
-	return Response({"success": True})
+	r = Response()
+	r.error = ERRORS.OK
+	return r
+
+
+c = Cmd()
+c.cmd = COMMANDS.ADD_LINKS
+b = c.get_bytes()
+bc = Cmd(b)
+r = okResponse()
+r.payload = {"aa": 123, "dfg": [3, 5, 7]}
+b = r.get_bytes()
+br = Response(b)
+pass

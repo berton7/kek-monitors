@@ -6,7 +6,7 @@ import os
 import traceback
 from typing import List, Optional
 
-from configs.config import COMMANDS, SOCKET_PATH, WEBHOOK_CONFIG
+from configs.config import COMMANDS, ERRORS, SOCKET_PATH, WEBHOOK_CONFIG
 from utils.common_base import Common
 from utils.network_utils import NetworkUtils
 from utils.server.msg import Cmd, Message, Response, okResponse
@@ -77,9 +77,12 @@ class BaseScraper(Common, NetworkUtils):
 		cmd.cmd = COMMANDS.SET_LINKS
 		cmd.payload = self.links
 		response = await self.make_request(socket_path, cmd)
-		if not response.success:
-			self.client_logger.warning(
-				f"_set_links: got bad response: {response.reason}")
+		if response.error.value:
+			log_str = f"_set_links: got bad response: {response.error.name}"
+			if response.info:
+				log_str += "; " + response.info
+			self.client_logger.warning(log_str)
+
 
 	async def _add_links(self):
 		'''Connect to the corresponding monitor, if available, and send it the new links.'''
@@ -88,9 +91,11 @@ class BaseScraper(Common, NetworkUtils):
 		cmd.cmd = COMMANDS.ADD_LINKS
 		cmd.payload = self.links
 		response = await self.make_request(socket_path, cmd)
-		if not response.success:
-			self.client_logger.warning(
-				f"_add_links: got bad response: {response.reason}")
+		if response.error.value:
+			log_str = f"_get_links: got bad response: {response.error.name}"
+			if response.info:
+				log_str += "; " + response.info
+			self.client_logger.warning(log_str)
 
 
 if __name__ == "__main__":

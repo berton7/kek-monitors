@@ -41,18 +41,23 @@ class COMMANDS(enum.Enum):
 
 @enum.unique
 class ERRORS(enum.Enum):
-	OK = enum.auto()
+	OK = 0
 
-	SOCKET_PATH_DOESNT_EXIT = enum.auto()
 	SOCKET_DOESNT_EXIST = enum.auto()
 	SOCKET_COULDNT_CONNECT = enum.auto()
 	SOCKET_TIMEOUT = enum.auto()
 
 	UNRECOGNIZED_COMMAND = enum.auto()
-	BAD_COMMAND = enum.auto()
+	BAD_PAYLOAD = enum.auto()
 	MISSING_PAYLOAD = enum.auto()
 	MISSING_PAYLOAD_ARGS = enum.auto()
-	WRONG_PAYLOAD = enum.auto()
+
+	MM_COULDNT_ADD_MONITOR = enum.auto()
+	MM_COULDNT_ADD_SCRAPER = enum.auto()
+	MM_COULDNT_ADD_MONITOR_SCRAPER = enum.auto()
+	MM_COULDNT_STOP_MONITOR = enum.auto()
+	MM_COULDNT_STOP_SCRAPER = enum.auto()
+	MM_COULDNT_STOP_MONITOR_SCRAPER = enum.auto()
 
 	OTHER_ERROR = enum.auto()
 	UNKNOWN_ERROR = enum.auto()
@@ -69,4 +74,3 @@ class WEBHOOK_CONFIG(object):
 class DB_CONFIG(object):
 	DEFAULT_DB_NAME = "kekmonitors"
 	DEFAULT_DB_PATH = "mongodb://localhost:27017/"
-

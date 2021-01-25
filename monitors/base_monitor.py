@@ -6,7 +6,7 @@ import os
 import traceback
 from typing import List, Optional
 
-from configs.config import COMMANDS, SOCKET_PATH, WEBHOOK_CONFIG
+from configs.config import COMMANDS, ERRORS, SOCKET_PATH, WEBHOOK_CONFIG
 from utils import discord_embeds, shoe_stuff
 from utils.common_base import Common
 from utils.network_utils import NetworkUtils
@@ -49,16 +49,16 @@ class BaseMonitor(Common, NetworkUtils):
 		if p is not None:
 			if isinstance(p, list):
 				self.new_links = p
-				response.set_success(True)
+				response.error = ERRORS.OK
 			else:
 				self.client_logger.warning(
 					"Received new set of links, but payload was not a list: ", p)
-				response.set_reason("Payload was not a list")
+				response.error = ERRORS.BAD_PAYLOAD
 
 		else:
 			self.client_logger.warning(
-				"Failed to decode payload; msg: ", msg.get_json())
-			response.set_reason("Failed to decode payload")
+				"Missing payload; msg: ", msg.get_json())
+			response.error = ERRORS.MISSING_PAYLOAD
 		return response
 
 	async def on_add_links(self, msg: Cmd) -> Response:
@@ -67,16 +67,16 @@ class BaseMonitor(Common, NetworkUtils):
 		if p is not None:
 			if isinstance(p, list):
 				self.buffer_links = p
-				response.success = True
+				response.error = ERRORS.OK
 			else:
 				self.general_logger.warning(
 					"Received new added links, but payload was not a list: ", p)
-				response.reason = "Payload was not a list"
+				response.error = ERRORS.BAD_PAYLOAD
 
 		else:
 			self.general_logger.warning(
-				"Failed to decode payload; msg: ", msg.get_json())
-			response.reason = "Failed to decode payload"
+				"Missing payload; msg: ", msg.get_json())
+			response.error = ERRORS.MISSING_PAYLOAD
 		return response
 
 	async def on_server_stop(self) -> Response:
@@ -96,10 +96,13 @@ class BaseMonitor(Common, NetworkUtils):
 		cmd = Cmd()
 		cmd.cmd = COMMANDS.GET_LINKS
 		response = await self.make_request(socket_path, cmd)
-		if response and response.success:
-			self.links = response.payload
+		if not response.error.value:
+			if response.payload:
+				self.links = response.payload
+			else:
+				self.client_logger.warning("Tried to get links but payload was invalid.")
 		else:
-			self.client_logger.warning(f"Failed to get links: {response.reason}")
+			self.client_logger.warning(f"Failed to get links: {response.error.name}")
 
 	async def main(self):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
