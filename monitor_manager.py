@@ -269,7 +269,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 					# if an error happened...
 					if not r.success:
 						# if the socket was not used remove it
-						if r.reason == f"Socket {sockname} unavailable":
+						if r.reason == f"Socket {os.path.sep.join([SOCKET_PATH, sockname])} unavailable":
 							os.remove(os.path.sep.join([SOCKET_PATH, sockname]))
 							self.general_logger.info(
 								f"{SOCKET_PATH}{os.path.sep}{sockname} was removed because unavailable")
