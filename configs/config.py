@@ -39,6 +39,25 @@ class COMMANDS(enum.Enum):
 	MM_GET_WEBHOOKS = enum.auto()
 
 
+@enum.unique
+class ERRORS(enum.Enum):
+	OK = enum.auto()
+
+	SOCKET_PATH_DOESNT_EXIT = enum.auto()
+	SOCKET_DOESNT_EXIST = enum.auto()
+	SOCKET_COULDNT_CONNECT = enum.auto()
+	SOCKET_TIMEOUT = enum.auto()
+
+	UNRECOGNIZED_COMMAND = enum.auto()
+	BAD_COMMAND = enum.auto()
+	MISSING_PAYLOAD = enum.auto()
+	MISSING_PAYLOAD_ARGS = enum.auto()
+	WRONG_PAYLOAD = enum.auto()
+
+	OTHER_ERROR = enum.auto()
+	UNKNOWN_ERROR = enum.auto()
+
+
 class WEBHOOK_CONFIG(object):
 	CRASH_WEBHOOK = ""
 	DEFAULT_PROVIDER = "KekMonitors"
@@ -50,3 +69,4 @@ class WEBHOOK_CONFIG(object):
 class DB_CONFIG(object):
 	DEFAULT_DB_NAME = "kekmonitors"
 	DEFAULT_DB_PATH = "mongodb://localhost:27017/"
+
