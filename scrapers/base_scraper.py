@@ -30,11 +30,6 @@ class BaseScraper(Common, NetworkUtils):
 		# website-specific variables should be declared here
 		self.init()
 
-	def get_filename(self):
-		'''Internal function needed to get the correct filename.'''
-		# take current path, split, get last element (=filename), remove ".py"
-		return __file__.split(os.path.sep)[-1][:-3]
-
 	async def on_get_links(self, cmd: Cmd) -> Message:
 		response = okResponse()
 		response.payload = self.links

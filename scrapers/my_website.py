@@ -9,11 +9,6 @@ from scrapers.base_scraper import BaseScraper
 
 
 class MyWebsite(BaseScraper):
-	def get_filename(self):
-		'''YOU MUST OVERRIDE ME! Needed to get the correct filename.'''
-		# take current path, split, get last element (=filename), remove ".py"
-		return __file__.split(os.path.sep)[-1][:-3]
-
 	def init(self):
 		# website infos
 		self.base_url = "https://footdistrict.com"

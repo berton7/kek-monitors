@@ -11,12 +11,6 @@ import json
 
 
 class MyWebsite(BaseMonitor):
-
-	def get_filename(self):
-		'''YOU MUST OVERRIDE ME!!! Copy and paste me. Needed to get the correct filename.'''
-		# take current path, split, get last element (=filename), remove ".py"
-		return __file__.split(os.path.sep)[-1][:-3]
-
 	def init(self):
 		# create a random headers generator, configured to generate random windows headers
 		self.headers_gen = Headers(os="win", headers=True)

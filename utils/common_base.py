@@ -16,7 +16,6 @@ class Common(Server):
 		self.client_logger = get_logger(logger_name + ".Client")
 
 		self.class_name = self.get_class_name()
-		self.filename = self.get_filename()
 
 		super().__init__(logger_name, add_stream_handler, socket_path)
 
@@ -51,11 +50,6 @@ class Common(Server):
 	def init(self):
 		'''Override this in your website-specific monitor, if needed.'''
 		pass
-
-	def get_filename(self):
-		'''YOU MUST OVERRIDE ME!!! Copy and paste me. Needed to get the correct filename.'''
-		# take current path, split, get last element (=filename), remove ".py"
-		return __file__.split(os.path.sep)[-1][:-3]
 
 	def get_class_name(self):
 		'''Internal function used to get the correct filename.'''

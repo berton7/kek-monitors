@@ -43,11 +43,6 @@ class BaseMonitor(Common, NetworkUtils):
 		# website-specific variables should be declared here
 		self.init()
 
-	def get_filename(self):
-		'''YOU MUST OVERRIDE ME! Needed to get the correct filename.'''
-		# take current path, split, get last element (=filename), remove ".py"
-		return __file__.split(os.path.sep)[-1][:-3]
-
 	async def on_set_links(self, msg: Cmd) -> Response:
 		response = badResponse()
 		p = msg.payload
@@ -130,7 +125,7 @@ class BaseMonitor(Common, NetworkUtils):
 			self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
 
-		self.general_logger.info("SWEBHOOK_CONFIG..")
+		self.general_logger.info("Shutting down...")
 
 	async def loop(self):
 		'''User-defined loop. Replace this with a function that will be run every `delay` seconds'''
