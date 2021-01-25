@@ -21,6 +21,9 @@ python3 -m pip install -r requirements.txt
 
 # setup the environment
 ./setup.sh
+
+# source the virtual environment
+source ./venv/bin/activate
 ```
 
 ## Usage
