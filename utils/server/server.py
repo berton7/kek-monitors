@@ -46,11 +46,9 @@ class Server(object):
 		print_addr = addr if addr else "localhost"
 		self.server_logger.debug(f"Received from {print_addr}")
 
-		for cmd in self.cmd_to_callback:
-			if cmd == msg.cmd:
-				self.server_logger.debug(f"Got cmd: {cmd}")
-				response = await self.cmd_to_callback[cmd](msg)
-				break
+		if msg.cmd in self.cmd_to_callback:
+			self.server_logger.debug(f"Got cmd: {msg.cmd}")
+			response = await self.cmd_to_callback[msg.cmd](msg)
 		else:
 			response = badResponse()
 			response.reason = "Unrecognized cmd."
