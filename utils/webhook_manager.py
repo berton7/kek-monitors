@@ -23,7 +23,7 @@ class WebhookSender(Thread):
 		self.queue = Queue()  # type: Queue[Tuple[List[Any], List[Any], datetime]]
 		# contains the webhook config, embeds and time at which they were added
 		self.add_event = Event()
-		self.quit_variable = False
+		self.has_to_quit = False
 		super().__init__()
 
 	def add_to_queue(self, webhook_values: Any, embed: Embed):
@@ -35,13 +35,13 @@ class WebhookSender(Thread):
 		return not self.add_event.isSet()
 
 	def quit(self):
-		self.quit_variable = True
+		self.has_to_quit = True
 		self.add_event.set()
 
 	def run(self):
 		while True:
 			self.add_event.wait()
-			if self.quit_variable:
+			if self.has_to_quit:
 				break
 			while not self.queue.empty():
 				webhook_values, embed, now = self.queue.get()
@@ -101,6 +101,7 @@ class WebhookManager():
 		self.logger.debug("Started webhook manager")
 
 	def quit(self):
+		self.logger.debug("Starting shutdown...")
 		for w in self.webhook_senders:
 			ws = self.webhook_senders[w]
 			while not ws.is_done():
@@ -108,8 +109,9 @@ class WebhookManager():
 			ws.quit()
 
 		for w in self.webhook_senders:
-			while not self.webhook_senders[w].is_done():
-				time.sleep(0.5)
+			ws = self.webhook_senders[w]
+			ws.join()
+		self.logger.debug("Shut down...")
 
 	def add_to_queue(self, embed: Embed, webhooks: Dict[str, Dict[str, Any]]):
 		'''Add the embed to the queue of webhooks to send. It will be processed as soon as possible.'''

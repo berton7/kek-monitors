@@ -82,6 +82,8 @@ class BaseMonitor(Common, NetworkUtils):
 	async def on_server_stop(self) -> Response:
 		async with self._loop_lock:
 			self._asyncio_loop.stop()
+		self.general_logger.debug("Shutting down webhook manager...")
+		self.webhook_manager.quit()
 		return okResponse()
 
 	async def _on_ping(self, cmd: Cmd) -> Response:
