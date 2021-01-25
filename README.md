@@ -12,18 +12,13 @@ Here scrapers and actual monitors are separated and working asynchronously, comm
 
 ## Setup
 ```bash
-# create and activate a virtual environment, optional but recommended
-python3 -m venv venv 
-source ./venv/bin/activate
-
-# install requirements
-python3 -m pip install -r requirements.txt
-
 # setup the environment
 ./setup.sh
 
 # source the virtual environment
 source ./venv/bin/activate
+
+# you're ready to go!
 ```
 
 ## Usage
