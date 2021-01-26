@@ -1,8 +1,11 @@
+import inspect
 import logging
 import logging.handlers
 import os
 from datetime import timezone
 from typing import Optional
+
+from utils.server.msg import Response
 
 
 def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_level: int = logging.DEBUG, file_level: int = logging.DEBUG):
@@ -69,3 +72,15 @@ def chunks(lst, n):
 	Yield successive n-sized chunks from lst."""
 	for i in range(0, len(lst), n):
 		yield lst[i:i + n]
+
+
+def dump_error(logger: logging.Logger, response: Response):
+	e = response.error.value
+	if e:
+		curframe = inspect.currentframe()
+		calframe = inspect.getouterframes(curframe, 2)
+		fn_name = calframe[1][3]
+		log = f"{fn_name}: Error: {response.error.name}"
+		if response.info:
+			log += f"; info: {response.info}"
+		logger.warning(log)
