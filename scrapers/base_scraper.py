@@ -11,6 +11,7 @@ from utils.common_base import Common
 from utils.network_utils import NetworkUtils
 from utils.server.msg import Cmd, Message, Response, okResponse
 from utils.server.server import Server
+from utils.tools import dump_error
 
 
 class BaseScraper(Common, NetworkUtils):
@@ -78,10 +79,7 @@ class BaseScraper(Common, NetworkUtils):
 		cmd.payload = self.links
 		response = await self.make_request(socket_path, cmd)
 		if response.error.value:
-			log_str = f"_set_links: got bad response: {response.error.name}"
-			if response.info:
-				log_str += "; " + response.info
-			self.client_logger.warning(log_str)
+			dump_error(self.client_logger, response)
 
 
 	async def _add_links(self):
@@ -92,10 +90,7 @@ class BaseScraper(Common, NetworkUtils):
 		cmd.payload = self.links
 		response = await self.make_request(socket_path, cmd)
 		if response.error.value:
-			log_str = f"_get_links: got bad response: {response.error.name}"
-			if response.info:
-				log_str += "; " + response.info
-			self.client_logger.warning(log_str)
+			dump_error(self.client_logger, response)
 
 
 if __name__ == "__main__":

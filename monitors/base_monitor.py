@@ -14,6 +14,7 @@ from utils.server.msg import *
 from utils.server.server import Server
 from utils.shoe_manager import ShoeManager
 from utils.shoe_stuff import Shoe
+from utils.tools import dump_error
 from utils.webhook_manager import WebhookManager
 
 
@@ -54,6 +55,7 @@ class BaseMonitor(Common, NetworkUtils):
 				self.client_logger.warning(
 					"Received new set of links, but payload was not a list: ", p)
 				response.error = ERRORS.BAD_PAYLOAD
+				response.info = f"Invalid links (expected list, got {type(p)}"
 
 		else:
 			self.client_logger.warning(
@@ -72,6 +74,7 @@ class BaseMonitor(Common, NetworkUtils):
 				self.general_logger.warning(
 					"Received new added links, but payload was not a list: ", p)
 				response.error = ERRORS.BAD_PAYLOAD
+				response.info = f"Invalid links (expected list, got {type(p)}"
 
 		else:
 			self.general_logger.warning(
@@ -101,8 +104,10 @@ class BaseMonitor(Common, NetworkUtils):
 				self.links = response.payload
 			else:
 				self.client_logger.warning("Tried to get links but payload was invalid.")
+				dump_error(self.client_logger, response)
 		else:
-			self.client_logger.warning(f"Failed to get links: {response.error.name}")
+			self.client_logger.warning(f"Failed to get links")
+			dump_error(self.client_logger, response)
 
 	async def main(self):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
