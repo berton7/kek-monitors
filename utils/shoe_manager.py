@@ -1,11 +1,44 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import pymongo
 from configs.config import DB_CONFIG
 
 from utils.shoe_stuff import Shoe
 from utils.tools import get_logger
+
+
+def _change_keys(d, _from, _to):
+	if isinstance(d, list):
+		new_list = []
+		for element in d:
+			new_list.append(_change_keys(element, _from, _to))
+		return new_list
+	elif isinstance(d, dict):
+		new_dict = {}
+		for key, value in d.items():
+			value = _change_keys(value, _from, _to)
+			new_key = key
+			if isinstance(key, str) and _from in key:
+				new_key = key.replace(_from, _to)
+			new_dict[new_key] = value
+		return new_dict
+	else:
+		return d
+
+
+def sanitize(d: Union[Dict[Any, Any], List[Any]]) -> Union[Dict[Any, Any], List[Any]]:
+	"""
+	Converts keys with "." to "_dot_", as it's not possile to add keys with a "." in MongoDBc
+	"""
+	return _change_keys(d, ".", "_dot_")
+
+
+def unsanitize(d: Union[Dict[Any, Any], List[Any]]) -> Union[Dict[Any, Any], List[Any]]:
+	"""
+	Converts keys with "_dot_" back to "."
+	"""
+	return _change_keys(d, "_dot_", ".")
 
 
 class ShoeManager(object):
@@ -27,13 +60,13 @@ class ShoeManager(object):
 
 	def add_shoe(self, shoe: Shoe):
 		'''Add this shoe to the database'''
-		self._db.insert_one(shoe.__dict__)
+		self._db.insert_one(sanitize(shoe.__dict__))
 
 	def add_shoes(self, shoes: List[Shoe]):
 		'''Add these shoes to the database'''
 		l = []
 		for shoe in shoes:
-			l.append(shoe.__dict__)
+			l.append(sanitize(shoe.__dict__))
 		self._db.insert_many(l)
 
 	def find_shoe(self, query: Dict[str, Any]):
@@ -47,7 +80,7 @@ class ShoeManager(object):
 		item = self._db.find_one(q, {"_id": 0})
 		if item:
 			shoe = Shoe()
-			shoe.__dict__ = item
+			shoe.__dict__ = unsanitize(item)
 			return shoe
 		else:
 			return None
@@ -65,10 +98,11 @@ class ShoeManager(object):
 		for item in items:
 			if item:
 				shoe = Shoe()
-				shoe.__dict__ = item
+				shoe.__dict__ = unsanitize(item)
 				shoes.append(shoe)
 		return shoes
 
 	def update_shoe(self, shoe: Shoe):
 		'''Update the shoe in the db matching the same link.'''
-		self._db.update_many({"_Shoe__link": shoe.link}, {"$set": shoe.__dict__})
+		self._db.update_many({"_Shoe__link": shoe.link}, {
+		                     "$set": sanitize(shoe.__dict__)})
