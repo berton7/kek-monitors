@@ -24,7 +24,7 @@ class BaseScraper(Common, NetworkUtils):
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
-		self.cmd_to_callback[COMMANDS.SET_LINKS] = self.on_get_links
+		self.cmd_to_callback[COMMANDS.GET_LINKS] = self.on_get_links
 		self.links = []  # type: List[str]
 		self._previous_links = []  # type: List[str]
 
