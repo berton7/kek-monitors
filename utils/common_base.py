@@ -13,8 +13,9 @@ from utils.tools import get_logger
 
 class Common(Server):
 	def __init__(self, logger_name: str, add_stream_handler, socket_path: str):
-		self.general_logger = get_logger(logger_name + ".General")
-		self.client_logger = get_logger(logger_name + ".Client")
+		self.general_logger = get_logger(
+			logger_name + ".General", add_stream_handler)
+		self.client_logger = get_logger(logger_name + ".Client", add_stream_handler)
 
 		self.class_name = self.get_class_name()
 
