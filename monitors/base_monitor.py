@@ -24,6 +24,13 @@ class BaseMonitor(Common, NetworkUtils):
 		# init some internal variables (logger, links)
 		logger_name = f"Monitor.{self.get_class_name()}"
 
+		self.default_configs_file_path = ["configs", "monitors", "configs.json"]
+		self.default_webhooks_file_path = ["configs", "monitors", "webhooks.json"]
+		self.default_whitelists_file_path = [
+			"configs", "monitors", "whitelists.json"]
+		self.default_blacklists_file_path = [
+			"configs", "monitors", "blacklists.json"]
+
 		super().__init__(
 			logger_name, add_stream_handler, f"{SOCKET_PATH}/Monitor.{self.get_class_name()}")
 		super(Server, self).__init__(logger_name)

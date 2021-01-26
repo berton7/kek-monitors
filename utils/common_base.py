@@ -27,13 +27,10 @@ class Common(Server):
 		self.cmd_to_callback[COMMANDS.SET_BLACKLIST] = self.on_set_blacklist
 		self.cmd_to_callback[COMMANDS.SET_WEBHOOKS] = self.on_set_webhooks
 		self.cmd_to_callback[COMMANDS.SET_CONFIG] = self.on_set_config
-
-		self.default_configs_file_path = ["configs", "monitors", "configs.json"]
-		self.default_webhooks_file_path = ["configs", "monitors", "webhooks.json"]
-		self.default_whitelists_file_path = [
-			"configs", "monitors", "whitelists.json"]
-		self.default_blacklists_file_path = [
-			"configs", "monitors", "blacklists.json"]
+		self.cmd_to_callback[COMMANDS.GET_WHITELIST] = self.on_get_whitelist
+		self.cmd_to_callback[COMMANDS.GET_BLACKLIST] = self.on_get_blacklist
+		self.cmd_to_callback[COMMANDS.GET_WEBHOOKS] = self.on_get_webhooks
+		self.cmd_to_callback[COMMANDS.GET_CONFIG] = self.on_get_config
 
 		self.whitelist = self.load_config(
 			os.path.sep.join(self.default_whitelists_file_path))  # type List[str]
@@ -85,7 +82,7 @@ class Common(Server):
 			self._new_whitelist = None
 		if self._new_webhooks is not None:
 			self.general_logger.info(f"New webhooks: {self._new_webhooks}")
-			self.webhooks = self.webhooks
+			self.webhooks = self._new_webhooks
 			self._new_webhooks = None
 		if self._new_config is not None:
 			self.general_logger.info(f"New config: {self._new_config}")
@@ -146,6 +143,26 @@ class Common(Server):
 				f"Got new config but it was invalid: {config}")
 			r.error = ERRORS.INVALID_PAYLOAD
 			r.info = f"Invalid config (expected dict, got {type(cmd.payload)}"
+		return r
+
+	async def on_get_config(self, cmd: Cmd) -> Response:
+		r = okResponse()
+		r.payload = self.config
+		return r
+
+	async def on_get_whitelist(self, cmd: Cmd) -> Response:
+		r = okResponse()
+		r.payload = self.whitelist
+		return r
+
+	async def on_get_blacklist(self, cmd: Cmd) -> Response:
+		r = okResponse()
+		r.payload = self.blacklist
+		return r
+
+	async def on_get_webhooks(self, cmd: Cmd) -> Response:
+		r = okResponse()
+		r.payload = self.webhooks
 		return r
 
 	async def main(self):

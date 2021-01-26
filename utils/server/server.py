@@ -48,6 +48,7 @@ class Server(object):
 			self.server_logger.debug(f"Got cmd: {msg.cmd}")
 			response = await self.cmd_to_callback[msg.cmd](msg)
 		else:
+			self.server_logger.warning(f"Got unrecognized command: {msg.cmd.value}")
 			response = badResponse()
 			response.error = ERRORS.UNRECOGNIZED_COMMAND
 

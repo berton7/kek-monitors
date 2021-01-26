@@ -19,6 +19,13 @@ class BaseScraper(Common, NetworkUtils):
 	def __init__(self, add_stream_handler: Optional[bool] = True):
 		logger_name = f"Scraper.{self.get_class_name()}"
 
+		self.default_configs_file_path = ["configs", "scrapers", "configs.json"]
+		self.default_webhooks_file_path = ["configs", "scrapers", "webhooks.json"]
+		self.default_whitelists_file_path = [
+			"configs", "scrapers", "whitelists.json"]
+		self.default_blacklists_file_path = [
+			"configs", "scrapers", "blacklists.json"]
+
 		super().__init__(
 			logger_name, add_stream_handler, f"{SOCKET_PATH}/Scraper.{self.get_class_name()}")
 		super(Server, self).__init__(logger_name)

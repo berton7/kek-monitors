@@ -40,12 +40,22 @@ class MonitorManager(Server, FileSystemEventHandler):
 		self.cmd_to_callback[COMMANDS.MM_GET_MONITOR_STATUS] = self.on_get_monitor_status
 		self.cmd_to_callback[COMMANDS.MM_GET_SCRAPER_STATUS] = self.on_get_scraper_status
 		self.cmd_to_callback[COMMANDS.MM_GET_MONITOR_SCRAPER_STATUS] = self.on_get_status
-		self.cmd_to_callback[COMMANDS.MM_GET_CONFIG] = self.on_get_config
-		self.cmd_to_callback[COMMANDS.MM_SET_CONFIG] = self.on_set_config
-		self.cmd_to_callback[COMMANDS.MM_GET_WHITELIST] = self.on_get_whitelist
-		self.cmd_to_callback[COMMANDS.MM_SET_WHITELIST] = self.on_set_whitelist
-		self.cmd_to_callback[COMMANDS.MM_GET_WEBHOOKS] = self.on_get_webhooks
-		self.cmd_to_callback[COMMANDS.MM_SET_WEBHOOKS] = self.on_set_webhooks
+		self.cmd_to_callback[COMMANDS.MM_GET_MONITOR_CONFIG] = self.on_get_monitor_config
+		self.cmd_to_callback[COMMANDS.MM_SET_MONITOR_CONFIG] = self.on_set_monitor_config
+		self.cmd_to_callback[COMMANDS.MM_GET_MONITOR_WHITELIST] = self.on_get_monitor_whitelist
+		self.cmd_to_callback[COMMANDS.MM_SET_MONITOR_WHITELIST] = self.on_set_monitor_whitelist
+		self.cmd_to_callback[COMMANDS.MM_GET_MONITOR_BLACKLIST] = self.on_get_monitor_blacklist
+		self.cmd_to_callback[COMMANDS.MM_SET_MONITOR_BLACKLIST] = self.on_set_monitor_blacklist
+		self.cmd_to_callback[COMMANDS.MM_GET_MONITOR_WEBHOOKS] = self.on_get_monitor_webhooks
+		self.cmd_to_callback[COMMANDS.MM_SET_MONITOR_WEBHOOKS] = self.on_set_monitor_webhooks
+		self.cmd_to_callback[COMMANDS.MM_GET_SCRAPER_CONFIG] = self.on_get_scraper_config
+		self.cmd_to_callback[COMMANDS.MM_SET_SCRAPER_CONFIG] = self.on_set_scraper_config
+		self.cmd_to_callback[COMMANDS.MM_GET_SCRAPER_WHITELIST] = self.on_get_scraper_whitelist
+		self.cmd_to_callback[COMMANDS.MM_SET_SCRAPER_WHITELIST] = self.on_set_scraper_whitelist
+		self.cmd_to_callback[COMMANDS.MM_GET_SCRAPER_BLACKLIST] = self.on_get_scraper_blacklist
+		self.cmd_to_callback[COMMANDS.MM_SET_SCRAPER_BLACKLIST] = self.on_set_scraper_blacklist
+		self.cmd_to_callback[COMMANDS.MM_GET_SCRAPER_WEBHOOKS] = self.on_get_scraper_webhooks
+		self.cmd_to_callback[COMMANDS.MM_SET_SCRAPER_WEBHOOKS] = self.on_set_scraper_webhooks
 
 		self.monitor_processes = {}  # type: Dict[str, Dict[str, Any]]
 		self.scraper_processes = {}  # type: Dict[str, Dict[str, Any]]
@@ -87,7 +97,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		if len(filename.split(os.path.sep)) > 3:
 			# run the update (this might be called from another thread)
 			splits = filename.split(os.path.sep)
-			if splits[1] == "config":
+			if splits[1] == "configs":
 				if len(splits) > 3:
 					asyncio.run_coroutine_threadsafe(
 						self.update_configs(filename), self._asyncio_loop)
@@ -529,35 +539,61 @@ class MonitorManager(Server, FileSystemEventHandler):
 		msg = "" + (msg1 if not s1 else "") + (msg2 if not s2 else "")
 		return s, msg
 
-	async def on_get_config(self, cmd: Cmd) -> Response:
-		return await self.getter_config(cmd, COMMANDS.GET_CONFIG)
+	async def on_get_monitor_config(self, cmd: Cmd) -> Response:
+		return await self.getter_config(cmd, COMMANDS.GET_CONFIG, True)
 
-	async def on_set_config(self, cmd: Cmd) -> Response:
-		return await self.setter_config(cmd, COMMANDS.SET_CONFIG)
+	async def on_set_monitor_config(self, cmd: Cmd) -> Response:
+		return await self.setter_config(cmd, COMMANDS.SET_CONFIG, True)
 
-	async def on_get_whitelist(self, cmd: Cmd) -> Response:
-		return await self.getter_config(cmd, COMMANDS.GET_WHITELIST)
+	async def on_get_monitor_whitelist(self, cmd: Cmd) -> Response:
+		return await self.getter_config(cmd, COMMANDS.GET_WHITELIST, True)
 
-	async def on_set_whitelist(self, cmd: Cmd) -> Response:
-		return await self.setter_config(cmd, COMMANDS.SET_WHITELIST)
+	async def on_set_monitor_whitelist(self, cmd: Cmd) -> Response:
+		return await self.setter_config(cmd, COMMANDS.SET_WHITELIST, True)
 
-	async def on_get_blacklist(self, cmd: Cmd) -> Response:
-		return await self.getter_config(cmd, COMMANDS.GET_BLACKLIST)
+	async def on_get_monitor_blacklist(self, cmd: Cmd) -> Response:
+		return await self.getter_config(cmd, COMMANDS.GET_BLACKLIST, True)
 
-	async def on_set_blacklist(self, cmd: Cmd) -> Response:
-		return await self.setter_config(cmd, COMMANDS.SET_BLACKLIST)
+	async def on_set_monitor_blacklist(self, cmd: Cmd) -> Response:
+		return await self.setter_config(cmd, COMMANDS.SET_BLACKLIST, True)
 
-	async def on_get_webhooks(self, cmd: Cmd) -> Response:
-		return await self.getter_config(cmd, COMMANDS.GET_WEBHOOKS)
+	async def on_get_monitor_webhooks(self, cmd: Cmd) -> Response:
+		return await self.getter_config(cmd, COMMANDS.GET_WEBHOOKS, True)
 
-	async def on_set_webhooks(self, cmd: Cmd) -> Response:
-		return await self.setter_config(cmd, COMMANDS.SET_WEBHOOKS)
+	async def on_set_monitor_webhooks(self, cmd: Cmd) -> Response:
+		return await self.setter_config(cmd, COMMANDS.SET_WEBHOOKS, True)
 
-	async def getter_config(self, cmd: Cmd, command: COMMANDS):
+	async def on_get_scraper_config(self, cmd: Cmd) -> Response:
+		return await self.getter_config(cmd, COMMANDS.GET_CONFIG, False)
+
+	async def on_set_scraper_config(self, cmd: Cmd) -> Response:
+		return await self.setter_config(cmd, COMMANDS.SET_CONFIG, False)
+
+	async def on_get_scraper_whitelist(self, cmd: Cmd) -> Response:
+		return await self.getter_config(cmd, COMMANDS.GET_WHITELIST, False)
+
+	async def on_set_scraper_whitelist(self, cmd: Cmd) -> Response:
+		return await self.setter_config(cmd, COMMANDS.SET_WHITELIST, False)
+
+	async def on_get_scraper_blacklist(self, cmd: Cmd) -> Response:
+		return await self.getter_config(cmd, COMMANDS.GET_BLACKLIST, False)
+
+	async def on_set_scraper_blacklist(self, cmd: Cmd) -> Response:
+		return await self.setter_config(cmd, COMMANDS.SET_BLACKLIST, False)
+
+	async def on_get_scraper_webhooks(self, cmd: Cmd) -> Response:
+		return await self.getter_config(cmd, COMMANDS.GET_WEBHOOKS, False)
+
+	async def on_set_scraper_webhooks(self, cmd: Cmd) -> Response:
+		return await self.setter_config(cmd, COMMANDS.SET_WEBHOOKS, False)
+
+	async def getter_config(self, cmd: Cmd, command: COMMANDS, is_monitor: bool):
 		success, missing = cmd.has_valid_args(self.getter_configs_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": command}))
+			c = Cmd()
+			c.cmd = command
+			r = await self.make_request(f"{SOCKET_PATH}/{'Monitor' if is_monitor else 'Scraper'}.{payload['class_name']}", c)
 			return r
 		else:
 			r = badResponse()
@@ -565,11 +601,11 @@ class MonitorManager(Server, FileSystemEventHandler):
 			r.info = f"{missing}"
 			return r
 
-	async def setter_config(self, cmd: Cmd, command: COMMANDS):
+	async def setter_config(self, cmd: Cmd, command: COMMANDS, is_monitor: bool):
 		success, missing = cmd.has_valid_args(self.setter_configs_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": command, "payload": payload["payload"]}))
+			r = await self.make_request(f"{SOCKET_PATH}/{'Monitor' if is_monitor else 'Scraper'}.{payload['class_name']}", Cmd({"cmd": command, "payload": payload["payload"]}))
 			return r
 		else:
 			r = badResponse()

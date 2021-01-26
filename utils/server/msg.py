@@ -1,16 +1,16 @@
 import json
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from configs.config import COMMANDS, ERRORS
 
 
 class Message(object):
 	'''
-	Represents a message to be sent. It can be initialized with a json structure or bytes taken from msg.get_bytes().\n
+	Represents a message to be sent. It can be initialized with bytes taken from msg.get_bytes().\n
 	It automatically sets the class (and sub-class) variables to the value set in provided msg.\n
 	'''
 
-	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
+	def __init__(self, msg: Optional[bytes] = None):
 		# update member variables by cycling through the first level of the json dict
 		if isinstance(msg, bytes):
 			try:
@@ -19,9 +19,6 @@ class Message(object):
 					self.__dict__[key] = j.get(key, None)
 			except:
 				pass
-		elif isinstance(msg, dict):
-			for key in self.__dict__:
-				self.__dict__[key] = msg.get(key, None)
 		else:
 			pass
 
@@ -36,11 +33,11 @@ class Message(object):
 
 class Cmd(Message):
 	'''
-	Represents a command to be sent. It can be initialized with a json structure or bytes taken from cmd.get_bytes().\n
+	Represents a command to be sent. It can be initialized with bytes taken from cmd.get_bytes().\n
 	payload can be used to return data.
 	'''
 
-	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
+	def __init__(self, msg: Optional[bytes] = None):
 		self.cmd = None  # type: Optional[int]
 		self.payload = None  # type: Optional[Any]
 		super().__init__(msg)
@@ -78,12 +75,12 @@ class Cmd(Message):
 
 class Response(Message):
 	'''
-	Represents a response to a command. It can be initialized with a json structure or bytes taken from a response.get_bytes().\n
+	Represents a response to a command. It can be initialized with bytes taken from a response.get_bytes().\n
 	The success is represented by error == ERRORS.OK; info can be set to a human-readable string to provide more information about the error.\n
 	payload can be used to return data.
 	'''
 
-	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
+	def __init__(self, msg: Optional[bytes] = None):
 		self.error = None  # type: Optional[int]
 		self.info = None  # type: Optional[str]
 		self.payload = None  # type: Optional[Dict[str, Any]]
