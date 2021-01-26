@@ -360,12 +360,13 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.add_monitor_scraper_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			success = await self.add_monitor_scraper(
+			success, msg = await self.add_monitor_scraper(
 				payload["filename"], payload["class_name"], payload.get("monitor_delay", None), payload.get("scraper_delay", None))
 			if success:
 				r = okResponse()
 			else:
 				r.error = ERRORS.MM_COULDNT_ADD_MONITOR_SCRAPER
+				r.info = msg
 		else:
 			r.error = ERRORS.MISSING_PAYLOAD_ARGS
 			r.info = f"Missing arguments: {missing}"
