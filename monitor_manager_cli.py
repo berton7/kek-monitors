@@ -1,31 +1,10 @@
 import asyncio
-import os
 import sys
 from pprint import pprint
 
 from configs.config import COMMANDS, SOCKET_PATH
 from utils.server.msg import *
-
-
-async def make_request(socket_path, cmd, expect_response):
-	if os.path.exists(socket_path):
-		try:
-			reader, writer = await asyncio.open_unix_connection(socket_path)
-			writer.write(cmd.get_bytes())
-			writer.write_eof()
-
-			if expect_response:
-				response = Response(await reader.read())
-
-				writer.close()
-				return response
-			return okResponse()
-		except ConnectionRefusedError:
-			#self.server_logger.exception(f"Couldn't connect to socket {socket_path}")
-			pass
-	r = badResponse()
-	r.error = ERRORS.SOCKET_DOESNT_EXIST
-	return r
+from utils.tools import make_request
 
 if __name__ == "__main__":
 	args = sys.argv

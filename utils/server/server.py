@@ -24,7 +24,7 @@ class Server(object):
 		addr = self.server.sockets[0].getsockname()
 		self.server_logger.debug(f'Serving on {addr}')
 
-		await self.server.start_serving()
+		#await self.server.start_serving()
 
 	async def _stop_serving(self, msg: Cmd):
 		self.server_logger.info("Closing server...")

@@ -22,7 +22,7 @@ async def make_request(socket_path, cmd, expect_response=True):
 		except ConnectionRefusedError:
 			pass
 	r = badResponse()
-	r.reason = f"Socket {socket_path} unavailable"
+	r.info = f"Socket {socket_path} unavailable"
 	return r
 
 if __name__ == "__main__":

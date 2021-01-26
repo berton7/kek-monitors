@@ -1,32 +1,19 @@
 # This is an incomplete web app to access the monitor manager from the browser
 
-import tornado.web
-import tornado.ioloop
 import asyncio
-import pickle
-from configs.config import *
 import json
-from utils.server.msg import *
+
+import tornado.ioloop
+import tornado.web
+
+from configs.config import *
+from utils.server.msg import Cmd, Response, badResponse, okResponse
+from utils.tools import make_request
 
 
 async def send_to_moman(cmd: Cmd):
 	'''Send a command to the monitor manager'''
-	try:
-		reader, writer = await asyncio.open_unix_connection(
-			f"{SOCKET_PATH}/MonitorManager")
-	except:
-		r = badResponse()
-		r.reason = "Monitor manager not available"
-		return r
-
-	writer.write(cmd.get_bytes())
-	writer.write_eof()
-
-	data = await reader.read()
-	response = Response(data)
-
-	writer.close()
-	return response
+	return await make_request(f"{SOCKET_PATH}/MonitorManager", cmd)
 
 
 class RootHandler(tornado.web.RequestHandler):
@@ -45,7 +32,7 @@ class AddMonitorHandler(tornado.web.RequestHandler):
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
-		if not r.success:
+		if r.error.value:
 			self.set_status(400, r.reason)
 		self.write(r.get_json())
 
@@ -57,7 +44,7 @@ class AddScraperHandler(tornado.web.RequestHandler):
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
-		if not r.success:
+		if not r.error.value:
 			self.set_status(400, r.reason)
 		self.write(r.get_json())
 
@@ -69,7 +56,7 @@ class AddHandler(tornado.web.RequestHandler):
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
-		if not r.success:
+		if not r.error.value:
 			self.set_status(400, r.reason)
 		self.write(r.get_json())
 
@@ -81,7 +68,7 @@ class StopMonitorHandler(tornado.web.RequestHandler):
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
-		if not r.success:
+		if not r.error.value:
 			self.set_status(400, r.reason)
 		self.write(r.get_json())
 
@@ -93,7 +80,7 @@ class StopScraperHandler(tornado.web.RequestHandler):
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
-		if not r.success:
+		if not r.error.value:
 			self.set_status(400, r.reason)
 		self.write(r.get_json())
 
@@ -105,7 +92,7 @@ class StopHandler(tornado.web.RequestHandler):
 		cmd.payload = json.loads(self.request.body)
 		r = await send_to_moman(cmd)
 
-		if not r.success:
+		if not r.error.value:
 			self.set_status(400, r.reason)
 		self.write(r.get_json())
 

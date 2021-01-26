@@ -55,8 +55,11 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		# mandatory arguments, needed in the command
 		self.add_scraper_args = self.add_monitor_args = self.add_monitor_scraper_args = [
+
 			"filename", "class_name"]
 		self.stop_args = ["class_name"]
+		self.getter_configs_args = ["class_name"]
+		self.setter_configs_args = ["class_name", "payload"]
 		self.shutdown_all_on_exit = True   # you might wanna change this
 
 		self._loop_lock = asyncio.Lock()
@@ -156,7 +159,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		responses = await asyncio.gather(*tasks)  # type: List[Response]
 		alive = []
 		for response, socket in zip(responses, sockets):
-			if response.success:
+			if not response.error.value:
 				alive.append(socket)
 
 		return alive
@@ -423,8 +426,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 				"%m/%d/%Y, %H:%M:%S")
 			process_status[class_name] = {"Started at": start}
 		sockets_status = {}
-		for class_name in self.monitor_sockets:
-			sockets_status[class_name] = {class_name: self.monitor_sockets[class_name]}
+		# for class_name in self.monitor_sockets:
+			#sockets_status[class_name] = {class_name: self.monitor_sockets[class_name]}
+		sockets_status = self.monitor_sockets
 		response = okResponse()
 		response.payload = {
 			"monitored_processes": process_status, "available_sockets": sockets_status}
@@ -437,8 +441,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 				"%m/%d/%Y, %H:%M:%S")
 			process_status[class_name] = {"Started at": start}
 		sockets_status = {}
-		for class_name in self.scraper_sockets:
-			sockets_status[class_name] = {class_name: self.scraper_sockets[class_name]}
+		#for class_name in self.scraper_sockets:
+			#sockets_status[class_name] = {class_name: self.scraper_sockets[class_name]}
+		sockets_status = self.scraper_sockets
 		response = okResponse()
 		response.payload = {
 			"monitored_processes": process_status, "available_sockets": sockets_status}
@@ -525,44 +530,52 @@ class MonitorManager(Server, FileSystemEventHandler):
 		return s, msg
 
 	async def on_get_config(self, cmd: Cmd) -> Response:
-		payload = cast(Dict[str, Any], cmd.payload)
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.GET_CONFIG}))
-		return r
+		return await self.getter_config(cmd, COMMANDS.GET_CONFIG)
 
 	async def on_set_config(self, cmd: Cmd) -> Response:
-		payload = cast(Dict[str, Any], cmd.payload)
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.SET_CONFIG, "payload": payload}))
-		return r
+		return await self.setter_config(cmd, COMMANDS.SET_CONFIG)
 
 	async def on_get_whitelist(self, cmd: Cmd) -> Response:
-		payload = cast(Dict[str, Any], cmd.payload)
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.GET_WHITELIST}))
-		return r
+		return await self.getter_config(cmd, COMMANDS.GET_WHITELIST)
 
 	async def on_set_whitelist(self, cmd: Cmd) -> Response:
-		payload = cast(Dict[str, Any], cmd.payload)
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.SET_WHITELIST, "payload": payload}))
-		return r
+		return await self.setter_config(cmd, COMMANDS.SET_WHITELIST)
 
 	async def on_get_blacklist(self, cmd: Cmd) -> Response:
-		payload = cast(Dict[str, Any], cmd.payload)
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.GET_BLACKLIST}))
-		return r
+		return await self.getter_config(cmd, COMMANDS.GET_BLACKLIST)
 
 	async def on_set_blacklist(self, cmd: Cmd) -> Response:
-		payload = cast(Dict[str, Any], cmd.payload)
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.SET_CONFIG, "payload": payload}))
-		return r
+		return await self.setter_config(cmd, COMMANDS.SET_BLACKLIST)
 
 	async def on_get_webhooks(self, cmd: Cmd) -> Response:
-		payload = cast(Dict[str, Any], cmd.payload)
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.GET_WEBHOOKS}))
-		return r
+		return await self.getter_config(cmd, COMMANDS.GET_WEBHOOKS)
 
 	async def on_set_webhooks(self, cmd: Cmd) -> Response:
-		payload = cast(Dict[str, Any], cmd.payload)
-		r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": COMMANDS.SET_WEBHOOKS, "payload": payload}))
-		return r
+		return await self.setter_config(cmd, COMMANDS.SET_WEBHOOKS)
+
+	async def getter_config(self, cmd: Cmd, command: COMMANDS):
+		success, missing = cmd.has_valid_args(self.getter_configs_args)
+		if success:
+			payload = cast(Dict[str, Any], cmd.payload)
+			r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": command}))
+			return r
+		else:
+			r = badResponse()
+			r.error = ERRORS.MISSING_PAYLOAD_ARGS
+			r.info = f"{missing}"
+			return r
+
+	async def setter_config(self, cmd: Cmd, command: COMMANDS):
+		success, missing = cmd.has_valid_args(self.setter_configs_args)
+		if success:
+			payload = cast(Dict[str, Any], cmd.payload)
+			r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", Cmd({"cmd": command, "payload": payload["payload"]}))
+			return r
+		else:
+			r = badResponse()
+			r.error = ERRORS.MISSING_PAYLOAD_ARGS
+			r.info = f"{missing}"
+			return r
 
 
 if __name__ == "__main__":

@@ -5,9 +5,10 @@ from configs.config import COMMANDS, ERRORS
 
 
 class Message(object):
-	'''Represents a message to be sent. It can be initialized with a json structure or bytes taken from a pickle.dumps of another message.\n
-	Once you set all the member variables you need you convert the message to bytes with to_bytes()
-	or access it as a json structure with to_json()'''
+	'''
+	Represents a message to be sent. It can be initialized with a json structure or bytes taken from msg.get_bytes().\n
+	It automatically sets the class (and sub-class) variables to the value set in provided msg.\n
+	'''
 
 	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
 		# update member variables by cycling through the first level of the json dict
@@ -34,11 +35,14 @@ class Message(object):
 
 
 class Cmd(Message):
-	'''Represents a command to be sent. It can be initialized with a json structure or bytes taken from a pickle.dumps of another message.\n'''
+	'''
+	Represents a command to be sent. It can be initialized with a json structure or bytes taken from cmd.get_bytes().\n
+	payload can be used to return data.
+	'''
 
 	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
 		self.cmd = None  # type: Optional[int]
-		self.payload = None  # type: Optional[Dict[str, Any]]
+		self.payload = None  # type: Optional[Any]
 		super().__init__(msg)
 
 	@property
@@ -73,9 +77,11 @@ class Cmd(Message):
 
 
 class Response(Message):
-	'''Represents a response to a command. It can be initialized with a json structure or bytes taken from a pickle.dumps of another message.\n
-	Success always has to be set. If it is false, a reason must be provided, otherwise it's gonna be just ignored.\n
-	If you need to return data insert it into the payload'''
+	'''
+	Represents a response to a command. It can be initialized with a json structure or bytes taken from a response.get_bytes().\n
+	The success is represented by error == ERRORS.OK; info can be set to a human-readable string to provide more information about the error.\n
+	payload can be used to return data.
+	'''
 
 	def __init__(self, msg: Optional[Union[bytes, Dict[str, Any]]] = None):
 		self.error = None  # type: Optional[int]

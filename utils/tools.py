@@ -1,12 +1,15 @@
+import argparse
+import asyncio
 import inspect
 import logging
 import logging.handlers
 import os
 from datetime import timezone
 from typing import Optional
-import argparse
 
-from utils.server.msg import Response
+from configs.config import ERRORS
+
+from utils.server.msg import Response, badResponse, okResponse
 
 
 def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_level: int = logging.DEBUG, file_level: int = logging.DEBUG):
@@ -89,6 +92,7 @@ def make_default_executable(class_name, default_delay: int = 5):
 		return
 	class_name(args.output).start(args.delay)
 
+
 def dump_error(logger: logging.Logger, response: Response):
 	e = response.error.value
 	if e:
@@ -99,3 +103,23 @@ def dump_error(logger: logging.Logger, response: Response):
 		if response.info:
 			log += f"; info: {response.info}"
 		logger.warning(log)
+
+
+async def make_request(socket_path, cmd, expect_response=True):
+	if os.path.exists(socket_path):
+		try:
+			reader, writer = await asyncio.open_unix_connection(socket_path)
+			writer.write(cmd.get_bytes())
+			writer.write_eof()
+
+			if expect_response:
+				response = Response(await reader.read())
+
+				writer.close()
+				return response
+			return okResponse()
+		except ConnectionRefusedError:
+			pass
+	r = badResponse()
+	r.error = ERRORS.SOCKET_DOESNT_EXIST
+	return r
