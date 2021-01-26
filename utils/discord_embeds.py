@@ -1,3 +1,4 @@
+from configs.config import WEBHOOK_CONFIG
 from datetime import datetime
 
 from discord import Embed
@@ -9,7 +10,7 @@ from utils.shoe_stuff import Shoe
 def get_empty_embed() -> Embed:
 	'''Get an almost empty embed (only set color and timestamp)'''
 	empty_embed = Embed()
-	empty_embed.color = 6497144
+	empty_embed.color = WEBHOOK_CONFIG.DEFAULT_EMBED_COLOR
 	empty_embed.timestamp = datetime.utcnow()
 	return empty_embed
 
@@ -19,7 +20,7 @@ def add_link(s: str, link: str) -> str:
 	return "[" + s + "](" + link + ")"
 
 
-def get_default_embed(shoe: Shoe, allow_unavailable_sizes=False, split_sizes=True, show_website=False):
+def get_default_embed(shoe: Shoe, allow_unavailable_sizes=False, show_website=False):
 	'''Do you really need help to understand this?'''
 	embed = get_empty_embed()
 
@@ -108,7 +109,6 @@ def get_valid_values(values_list, max_elements):
 	# also, this requires too much fucking math.
 	tmp = ""
 	done = False
-	total_len = len("\n".join(values_list))
 	valid_values = []
 	count = 0
 	for value in values_list:
