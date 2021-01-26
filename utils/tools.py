@@ -75,18 +75,18 @@ def chunks(lst, n):
 		yield lst[i:i + n]
 
 
-def make_default_executable(class_name):
+def make_default_executable(class_name, default_delay: int = 5):
 	parser = argparse.ArgumentParser(
-            description=f"{class_name.__name__} is the base monitor class from which every monitor should inherit. It provides a default loop which does nothing and is therefore fully executable.")
-	default_delay = 5
+            description=f"Default executable for {class_name.__name__}, generated from utils.tools.make_default_executable")
 	parser.add_argument("-d", "--delay", default=default_delay, type=int,
                      help=f"Specify a delay for the loop. (default: {default_delay})")
 	parser.add_argument("--output", action=argparse.BooleanOptionalAction,
                      default=True,
-                     help="Specify wether you want output to the console or not.",)
+                     help="Specify wether you want log output to the console or not. (note: this does not disable file log)",)
 	args = parser.parse_args()
 	if args.delay < 0:
 		print(f"Cannot have a negative delay")
+		return
 	class_name(args.output).start(args.delay)
 
 def dump_error(logger: logging.Logger, response: Response):
