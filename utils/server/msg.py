@@ -118,7 +118,6 @@ def badResponse():
 	'''Quickly create an unsuccessful response with a default error.'''
 	r = Response()
 	r.error = ERRORS.OTHER_ERROR
-	r.info = "Error returned from badResponse()"
 	return r
 
 
