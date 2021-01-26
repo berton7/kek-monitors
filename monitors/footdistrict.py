@@ -1,6 +1,4 @@
-import argparse
 import asyncio
-import os
 from utils.tools import make_default_executable
 
 from bs4 import BeautifulSoup
@@ -11,7 +9,7 @@ from monitors.base_monitor import BaseMonitor
 import json
 
 
-class MyWebsite(BaseMonitor):
+class Footdistrict(BaseMonitor):
 	def init(self):
 		# create a random headers generator, configured to generate random windows headers
 		self.headers_gen = Headers(os="win", headers=True)
@@ -76,4 +74,4 @@ class MyWebsite(BaseMonitor):
 
 
 if __name__ == "__main__":
-	make_default_executable(MyWebsite)
+	make_default_executable(Footdistrict)

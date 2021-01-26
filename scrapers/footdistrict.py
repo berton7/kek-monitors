@@ -1,6 +1,4 @@
-import argparse
 import asyncio
-import os
 from utils.tools import make_default_executable
 
 from bs4 import BeautifulSoup
@@ -9,7 +7,7 @@ from fake_headers import Headers
 from scrapers.base_scraper import BaseScraper
 
 
-class MyWebsite(BaseScraper):
+class Footdistrict(BaseScraper):
 	def init(self):
 		# website infos
 		self.base_url = "https://footdistrict.com"
@@ -41,7 +39,7 @@ class MyWebsite(BaseScraper):
 			# BeautifulSoup can be used to parse html pages in a very convenient way
 			soup = BeautifulSoup(text, "lxml")
 
-			# parsing example. in this case we simply iterate through all the products, adding one each time up to self.max_links
+			# parsing example. in this case we simply add the first self.max_links products.
 			grid = soup.find("div", {"class": "category-products"})
 			count = 0
 			for row in grid.find_all("ul", {"class": "products-grid"}):
@@ -52,7 +50,7 @@ class MyWebsite(BaseScraper):
 						if link not in self.links:
 							self.links.append(link)
 							self.general_logger.info(f"Found {link}")
-							# if you want to send every link immediately:
+							# if you want to send every link immediately (not recommended):
 							# self.links = [link]
 							# await self.add_links()
 				break
@@ -61,4 +59,4 @@ class MyWebsite(BaseScraper):
 
 
 if __name__ == "__main__":
-	make_default_executable(MyWebsite)
+	make_default_executable(Footdistrict)

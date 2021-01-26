@@ -40,7 +40,7 @@ class BaseMonitor(Common, NetworkUtils):
 
 		self.shoe_manager = ShoeManager(logger=self.general_logger)
 		self.webhook_manager = WebhookManager(
-			self.class_name, add_stream_handler)
+			logger_name, add_stream_handler)
 
 		# website-specific variables should be declared here
 		self.init()
