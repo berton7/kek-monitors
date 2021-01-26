@@ -67,6 +67,8 @@ if __name__ == "__main__":
 	response = asyncio.run(make_request(
 		f"{SOCKET_PATH}/MonitorManager", command, True))
 
-	print("Response")
-	pprint(response.error.name)
-	pprint(response.payload)
+	print("E:", response.error.name)
+	if response.info:
+		print("Info:", response.info)
+	if response.payload:
+		pprint(response.payload)
