@@ -21,9 +21,10 @@ async def make_request(socket_path, cmd, expect_response):
 				return response
 			return okResponse()
 		except ConnectionRefusedError:
+			#self.server_logger.exception(f"Couldn't connect to socket {socket_path}")
 			pass
 	r = badResponse()
-	r.reason = f"Socket {socket_path} unavailable"
+	r.error = ERRORS.SOCKET_DOESNT_EXIST
 	return r
 
 if __name__ == "__main__":
@@ -66,5 +67,8 @@ if __name__ == "__main__":
 	response = asyncio.run(make_request(
 		f"{SOCKET_PATH}/MonitorManager", command, True))
 
-	print("Response")
-	pprint(response.get_json())
+	print("E:", response.error.name)
+	if response.info:
+		print("Info:", response.info)
+	if response.payload:
+		pprint(response.payload)

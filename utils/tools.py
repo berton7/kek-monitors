@@ -1,9 +1,12 @@
+import inspect
 import logging
 import logging.handlers
 import os
 from datetime import timezone
 from typing import Optional
 import argparse
+
+from utils.server.msg import Response
 
 
 def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_level: int = logging.DEBUG, file_level: int = logging.DEBUG):
@@ -85,3 +88,14 @@ def make_default_executable(class_name):
 	if args.delay < 0:
 		print(f"Cannot have a negative delay")
 	class_name(args.output).start(args.delay)
+
+def dump_error(logger: logging.Logger, response: Response):
+	e = response.error.value
+	if e:
+		curframe = inspect.currentframe()
+		calframe = inspect.getouterframes(curframe, 2)
+		fn_name = calframe[1][3]
+		log = f"{fn_name}: Error: {response.error.name}"
+		if response.info:
+			log += f"; info: {response.info}"
+		logger.warning(log)

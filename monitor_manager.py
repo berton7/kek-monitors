@@ -240,8 +240,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 			responses = await asyncio.gather(*tasks)   # List[Response]
 
 			for response in responses:
-				if not response.success:
-					self.general_logger.warning(f"Failed to update config: {response.reason}")
+				if response.error.value:
+					self.general_logger.warning(f"Failed to update config: {response.error}")
 
 	async def on_server_stop(self):
 		async with self._loop_lock:
@@ -267,16 +267,16 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 				for sockname, r in zip(sockets, responses):
 					# if an error happened...
-					if not r.success:
+					if r.error.value:
 						# if the socket was not used remove it
-						if r.reason == f"Socket {os.path.sep.join([SOCKET_PATH, sockname])} unavailable":
+						if r.error == ERRORS.SOCKET_COULDNT_CONNECT:
 							os.remove(os.path.sep.join([SOCKET_PATH, sockname]))
 							self.general_logger.info(
 								f"{SOCKET_PATH}{os.path.sep}{sockname} was removed because unavailable")
 						# else something else happened, dont do anything
 						else:
 							self.general_logger.warning(
-								f"Error occurred while attempting to stop {sockname}: {r.reason}")
+								f"Error occurred while attempting to stop {sockname}: {r.error}")
 					# ok
 					else:
 						self.general_logger.warning(f"{sockname} was successfully stopped")
@@ -332,9 +332,11 @@ class MonitorManager(Server, FileSystemEventHandler):
 			if success:
 				r = okResponse()
 			else:
-				r.reason = reason
+				r.error = ERRORS.MM_COULDNT_ADD_MONITOR
+				r.info = reason
 		else:
-			r.reason = f"Missing arguments: {missing}"
+			r.error = ERRORS.MISSING_PAYLOAD_ARGS
+			r.info = f"Missing arguments: {missing}"
 		return r
 
 	async def on_add_scraper(self, cmd: Cmd) -> Response:
@@ -342,14 +344,15 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.add_scraper_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			success, reason = await self.add_scraper(
+			success = await self.add_scraper(
 				payload["filename"], payload["class_name"], payload.get("delay", None))
 			if success:
 				r = okResponse()
 			else:
-				r.reason = reason
+				r.error = ERRORS.MM_COULDNT_ADD_SCRAPER
 		else:
-			r.reason = f"Missing arguments: {missing}"
+			r.error = ERRORS.MISSING_PAYLOAD_ARGS
+			r.info = f"Missing arguments: {missing}"
 		return r
 
 	async def on_add_monitor_scraper(self, cmd: Cmd) -> Response:
@@ -357,14 +360,16 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.add_monitor_scraper_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			success, reason = await self.add_monitor_scraper(
+			success, msg = await self.add_monitor_scraper(
 				payload["filename"], payload["class_name"], payload.get("monitor_delay", None), payload.get("scraper_delay", None))
 			if success:
 				r = okResponse()
 			else:
-				r.reason = reason
+				r.error = ERRORS.MM_COULDNT_ADD_MONITOR_SCRAPER
+				r.info = msg
 		else:
-			r.reason = f"Missing arguments: {missing}"
+			r.error = ERRORS.MISSING_PAYLOAD_ARGS
+			r.info = f"Missing arguments: {missing}"
 		return r
 
 	async def on_stop_monitor(self, cmd: Cmd) -> Response:
@@ -376,7 +381,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 			command.cmd = COMMANDS.STOP
 			r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", command)
 		else:
-			r.reason = f"Missing arguments: {missing}"
+			r.error = ERRORS.MISSING_PAYLOAD_ARGS
+			r.info = f"Missing arguments: {missing}"
 		return r
 
 	async def on_stop_scraper(self, cmd: Cmd) -> Response:
@@ -388,7 +394,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 			command.cmd = COMMANDS.STOP
 			r = await self.make_request(f"{SOCKET_PATH}/Scraper.{payload['class_name']}", command)
 		else:
-			r.reason = f"Missing arguments: {missing}"
+			r.error = ERRORS.MISSING_PAYLOAD_ARGS
+			r.info = f"Missing arguments: {missing}"
 		return r
 
 	async def on_stop_monitor_scraper(self, cmd: Cmd) -> Response:
@@ -396,14 +403,17 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
 			r1, r2 = await asyncio.gather(self.on_stop_monitor(cmd), self.on_stop_scraper(cmd))
-			if r1.success and r2.success:
+			if not r1.error.value and not r2.error.value:
 				r = okResponse()
 			else:
-				r1.reason = cast(str, r1.reason)
-				r.reason = "" + (r1.reason + "; " if r1.reason else "") + \
-                                    (r2.reason if r2.reason else "")
+				r.error = ERRORS.MM_COULDNT_STOP_MONITOR_SCRAPER
+				r.info = ""
+				for i in [r1.info, r2.info]:
+					if i:
+						r.info += i + "; "
 		else:
-			r.reason = f"Missing arguments: {missing}"
+			r.error = ERRORS.MISSING_PAYLOAD_ARGS
+			r.info = f"Missing arguments: {missing}"
 		return r
 
 	async def on_get_monitor_status(self, cmd: Cmd) -> Response:
