@@ -9,7 +9,7 @@ from typing import Optional
 
 from configs.config import ERRORS
 
-from utils.server.msg import Response, badResponse, okResponse
+from utils.server.msg import Cmd, Response, badResponse, okResponse
 
 
 def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_level: int = logging.DEBUG, file_level: int = logging.DEBUG):
@@ -105,7 +105,7 @@ def dump_error(logger: logging.Logger, response: Response):
 		logger.warning(log)
 
 
-async def make_request(socket_path, cmd, expect_response=True):
+async def make_request(socket_path: str, cmd: Cmd, expect_response=True) -> Response:
 	if os.path.exists(socket_path):
 		try:
 			reader, writer = await asyncio.open_unix_connection(socket_path)
