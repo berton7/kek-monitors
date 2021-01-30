@@ -40,8 +40,10 @@ class BaseScraper(Common, NetworkUtils):
 		self.init()
 
 	async def on_server_stop(self) -> Response:
+		await self.on_async_shutdown()
 		async with self._loop_lock:
 			self._asyncio_loop.stop()
+		self.on_shutdown()
 		return okResponse()
 
 	async def on_get_links(self, cmd: Cmd) -> Message:
@@ -51,6 +53,7 @@ class BaseScraper(Common, NetworkUtils):
 
 	async def main(self):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
+		await self.async_init()
 		while True:
 			async with self._loop_lock:
 				self.update_local_config()

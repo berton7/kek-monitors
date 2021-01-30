@@ -91,10 +91,12 @@ class BaseMonitor(Common, NetworkUtils):
 		return response
 
 	async def on_server_stop(self) -> Response:
+		await self.on_async_shutdown()
 		async with self._loop_lock:
 			self._asyncio_loop.stop()
 		self.general_logger.debug("Shutting down webhook manager...")
 		self.webhook_manager.quit()
+		self.on_shutdown()
 		return okResponse()
 
 	async def _on_ping(self, cmd: Cmd) -> Response:
@@ -119,6 +121,7 @@ class BaseMonitor(Common, NetworkUtils):
 
 	async def main(self):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
+		await self.async_init()
 		# Try to get a set of links as soon as the monitor starts.
 		await self._get_links()
 		while True:

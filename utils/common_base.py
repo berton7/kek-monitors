@@ -52,6 +52,18 @@ class Common(Server):
 		'''Override this in your website-specific monitor, if needed.'''
 		pass
 
+	async def async_init(self):
+		'''Override this in your website-specific monitor, if needed.'''
+		pass
+
+	def on_shutdown(self):
+		'''Override this in your website-specific monitor, if needed.'''
+		pass
+
+	async def on_async_shutdown(self):
+		'''Override this in your website-specific monitor, if needed.'''
+		pass
+
 	def get_class_name(self):
 		'''Internal function used to get the correct filename.'''
 		'''Not necessary, but sometimes you might want to override this.'''
