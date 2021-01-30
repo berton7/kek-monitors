@@ -9,3 +9,4 @@ pycurl
 requests
 watchdog
 pymongo
+pyppeteer
