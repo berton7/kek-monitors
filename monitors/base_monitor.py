@@ -91,9 +91,12 @@ class BaseMonitor(Common, NetworkUtils):
 		return response
 
 	async def on_server_stop(self) -> Response:
-		await self.on_async_shutdown()
+		self.general_logger.debug("Waiting for loop to complete...")
 		async with self._loop_lock:
-			self._asyncio_loop.stop()
+			pass
+		self.general_logger.debug("Loop is completed, starting shutdown...")
+		await self.on_async_shutdown()
+		self._asyncio_loop.stop()
 		self.general_logger.debug("Shutting down webhook manager...")
 		self.webhook_manager.quit()
 		self.on_shutdown()

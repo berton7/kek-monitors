@@ -22,6 +22,7 @@ class Common(Server):
 		super().__init__(logger_name, add_stream_handler, socket_path)
 
 		self._loop_lock = asyncio.Lock()
+		#self._stop_event = asyncio.Event()
 
 		self.cmd_to_callback[COMMANDS.SET_WHITELIST] = self.on_set_whitelist
 		self.cmd_to_callback[COMMANDS.SET_BLACKLIST] = self.on_set_blacklist

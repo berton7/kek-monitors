@@ -18,7 +18,7 @@ def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_leve
 	logger.propagate = False
 	logger.setLevel(logging.DEBUG)
 	formatter = logging.Formatter(
-		"[%(asctime)s] %(levelname)s - %(name)s: %(message)s")
+		"[%(asctime)s] %(levelname)s: %(message)s")
 
 	while logger.handlers:
 		logger.handlers.pop()
