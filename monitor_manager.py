@@ -271,7 +271,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 						cmd = Cmd()
 						cmd.cmd = COMMANDS.STOP
 						sockets.append(sockname)
-						self.general_logger.info("Stopping {sockname}...")
+						self.general_logger.info(f"Stopping {sockname}...")
 						tasks.append(self.make_request(
 							f"{SOCKET_PATH}{os.path.sep}{sockname}", cmd))
 
