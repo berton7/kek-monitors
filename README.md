@@ -7,7 +7,7 @@ Here scrapers and actual monitors are separated and working asynchronously, comm
 
 ## Pre-requisites
 * `Python 3` > 3.6
-* `linux`: the monitors have been tested on an Arch Linux installation for only a short amount of time unfortunately, but they should be able to run well and on any linux distribution.
+* `linux`: the monitors have been tested on Arch Linux and Ubuntu, but they should work on any other linux distro/WSL without any problem.
 * `libcurl` compiled with async and possibly brotli support (look for `brotli` and `AsynchDNS` in `curl --version` features). Brotli support is recommended but often not shipped with packaged versions of curl; if you want to add support to it you can compile and install curl yourself with brotli, making sure with ```curl --version``` that you are getting the output from your compiled version, and reinstall `pycurl` with ```pip install pycurl --no-binary :all: --force-reinstall```
 * [MongoDB](https://www.mongodb.org/dl/linux/) installed and running (get it from the link or from your package manager)
 
