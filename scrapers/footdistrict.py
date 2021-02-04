@@ -15,7 +15,7 @@ class Footdistrict(BaseScraper):
 	def init(self):
 		# website infos
 		self.base_url = "https://footdistrict.com"
-		self.endpoints = ["/zapatillas/f/b/adidas/"]
+		self.endpoints = ["/zapatillas/f/b/converse/"]
 
 		# create a random headers generator, configured to generate random windows headers
 		self.headers_gen = Headers(os="win", headers=True)
