@@ -50,4 +50,5 @@ if __name__ == "__main__":
 	if response.info:
 		print("Info:", response.info)
 	if response.payload is not None:
+		print("Payload:", end="")
 		pprint(response.payload)

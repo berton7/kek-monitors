@@ -271,7 +271,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 						cmd = Cmd()
 						cmd.cmd = COMMANDS.STOP
 						sockets.append(sockname)
-
+						self.general_logger.info("Stopping {sockname}...")
 						tasks.append(self.make_request(
 							f"{SOCKET_PATH}{os.path.sep}{sockname}", cmd))
 
@@ -390,9 +390,12 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
+			socket = f"{SOCKET_PATH}/Monitor.{payload['class_name']}"
 			command = Cmd()
 			command.cmd = COMMANDS.STOP
-			r = await self.make_request(f"{SOCKET_PATH}/Monitor.{payload['class_name']}", command)
+			self.general_logger.debug(f"Sending STOP to {socket}...")
+			r = await self.make_request(socket, command)
+			self.general_logger.debug(f"Sent STOP to {socket}")
 		else:
 			r.error = ERRORS.MISSING_PAYLOAD_ARGS
 			r.info = f"Missing arguments: {missing}"
@@ -403,9 +406,12 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
+			socket = f"{SOCKET_PATH}/Scraper.{payload['class_name']}"
 			command = Cmd()
 			command.cmd = COMMANDS.STOP
-			r = await self.make_request(f"{SOCKET_PATH}/Scraper.{payload['class_name']}", command)
+			self.general_logger.debug(f"Sending STOP to {socket}...")
+			r = await self.make_request(socket, command)
+			self.general_logger.debug(f"Sent STOP to {socket}")
 		else:
 			r.error = ERRORS.MISSING_PAYLOAD_ARGS
 			r.info = f"Missing arguments: {missing}"
@@ -416,14 +422,11 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
 			r1, r2 = await asyncio.gather(self.on_stop_monitor(cmd), self.on_stop_scraper(cmd))
-			if not r1.error.value and not r2.error.value:
-				r = okResponse()
-			else:
-				r.error = ERRORS.MM_COULDNT_STOP_MONITOR_SCRAPER
-				r.info = ""
-				for i in [r1.info, r2.info]:
-					if i:
-						r.info += i + "; "
+			r.error = ERRORS.OK if not r1.error.value and not r2.error.value else ERRORS.MM_COULDNT_STOP_MONITOR_SCRAPER
+			r.info = f"Monitor: {r1.error.name}, Scraper: {r2.error.name}"
+			if r.error.value and r.error:
+				self.general_logger.warning(f"Couldn't stop monitor and scraper")
+				utils.tools.dump_error(self.general_logger, r)
 		else:
 			r.error = ERRORS.MISSING_PAYLOAD_ARGS
 			r.info = f"Missing arguments: {missing}"

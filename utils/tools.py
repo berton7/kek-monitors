@@ -102,6 +102,8 @@ def dump_error(logger: logging.Logger, response: Response):
 		log = f"{fn_name}: Error: {response.error.name}"
 		if response.info:
 			log += f"; info: {response.info}"
+		if response.payload:
+			log += f"; payload: {response.payload}"
 		logger.warning(log)
 
 
