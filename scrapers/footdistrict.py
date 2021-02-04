@@ -15,7 +15,7 @@ class Footdistrict(BaseScraper):
 	def init(self):
 		# website infos
 		self.base_url = "https://footdistrict.com"
-		self.endpoints = ["/zapatillas/f/b/nike/"]
+		self.endpoints = ["/zapatillas/f/b/adidas/"]
 
 		# create a random headers generator, configured to generate random windows headers
 		self.headers_gen = Headers(os="win", headers=True)
@@ -78,7 +78,7 @@ class Footdistrict(BaseScraper):
 		for link, page, response in zip(self.endpoints, pages, responses):
 			if not response.ok:
 				self.general_logger.debug(
-					f"{link}: skipping parsing on code {response.code}")
+					f"{link}: skipping parsing on code {response.status}")
 				continue
 
 			self.general_logger.debug("Getting content...")
