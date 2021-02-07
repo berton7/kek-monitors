@@ -16,6 +16,7 @@ if __name__ == "__main__":
                       "requests",
                       "pycurl",
                       "watchdog",
-                      "pymongo"
+                      "pymongo",
+                      "aiohttp[speedups]" # needed for discord
                   ],
                   zip_safe=False)
