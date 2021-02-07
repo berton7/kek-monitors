@@ -54,6 +54,11 @@ class ERRORS(enum.Enum):
 	SOCKET_COULDNT_CONNECT = enum.auto()
 	SOCKET_TIMEOUT = enum.auto()
 
+	MONITOR_DOESNT_EXIST = enum.auto()
+	SCRAPER_DOESNT_EXIST = enum.auto()
+	MONITOR_NOT_REGISTERED = enum.auto()
+	SCRAPER_NOT_REGISTERED = enum.auto()
+
 	UNRECOGNIZED_COMMAND = enum.auto()
 	BAD_PAYLOAD = enum.auto()
 	MISSING_PAYLOAD = enum.auto()
@@ -77,7 +82,7 @@ class GlobalConfig(object):
 	db_path = "mongodb://localhost:27017/"
 
 
-class _Config(object):
+class BaseConfig(object):
 	def __init__(self):
 		self.name = ""
 		self.crash_webhook = ""
@@ -86,13 +91,4 @@ class _Config(object):
 		self.timestamp_format = "%d %b %Y, %H:%M:%S.%f"
 		self.embed_color = 255
 		self.add_stream_handler = True
-
-
-class MonitorConfig(_Config):
-	def __init__(self):
-		pass
-
-
-class ScraperConfig(_Config):
-	def __init__(self):
-		pass
+		self.loop_delay = 5

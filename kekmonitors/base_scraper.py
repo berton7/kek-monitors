@@ -5,7 +5,7 @@ import traceback
 from typing import List, Optional
 from kekmonitors.utils.tools import make_default_executable
 
-from kekmonitors.config import COMMANDS, GlobalConfig, ScraperConfig
+from kekmonitors.config import COMMANDS, GlobalConfig, BaseConfig
 from kekmonitors.utils.common_base import Common
 from kekmonitors.utils.network_utils import NetworkUtils
 from kekmonitors.utils.server.msg import Cmd, Message, Response, okResponse
@@ -14,14 +14,16 @@ from kekmonitors.utils.tools import dump_error
 
 
 class BaseScraper(Common, NetworkUtils):
-	def __init__(self, config: ScraperConfig = ScraperConfig()):
+	def __init__(self, config: BaseConfig = BaseConfig()):
 		if not config.name:
-			config.name = f"Monitor.{self.get_class_name()}"
+			config.name = f"Scraper.{self.get_class_name()}"
 		self.crash_webhook = config.crash_webhook
 		# init some internal variables (logger, links)
 
 		super().__init__(config, False)
 		super(Server, self).__init__(config.name)
+
+		self._mark_as_scraper()
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving

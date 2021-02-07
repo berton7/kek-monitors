@@ -5,7 +5,7 @@ import traceback
 from typing import List, Optional
 from kekmonitors.utils.tools import make_default_executable
 
-from kekmonitors.config import COMMANDS, ERRORS, GlobalConfig, MonitorConfig
+from kekmonitors.config import COMMANDS, ERRORS, GlobalConfig, BaseConfig
 from kekmonitors.utils import discord_embeds, shoe_stuff
 from kekmonitors.utils.common_base import Common
 from kekmonitors.utils.network_utils import NetworkUtils
@@ -18,7 +18,7 @@ from kekmonitors.utils.webhook_manager import WebhookManager
 
 
 class BaseMonitor(Common, NetworkUtils):
-	def __init__(self, config: MonitorConfig = MonitorConfig()):
+	def __init__(self, config: BaseConfig = BaseConfig()):
 		if not config.name:
 			config.name = f"Monitor.{self.get_class_name()}"
 		self.crash_webhook = config.crash_webhook
@@ -26,6 +26,8 @@ class BaseMonitor(Common, NetworkUtils):
 
 		super().__init__(config, True)
 		super(Server, self).__init__(config.name)
+
+		self._mark_as_monitor()
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving

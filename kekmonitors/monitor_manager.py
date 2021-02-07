@@ -11,11 +11,12 @@ import tornado.httpclient
 from watchdog import observers
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
-from kekmonitors.config import COMMANDS, ERRORS, GlobalConfig, _Config
+from kekmonitors.config import COMMANDS, ERRORS, GlobalConfig, BaseConfig
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 from kekmonitors.utils.server.server import Server
 import kekmonitors.utils.tools
 import copy
+import pymongo
 
 
 def get_directory_from_file(src: str):
@@ -25,7 +26,7 @@ def get_directory_from_file(src: str):
 class MonitorManager(Server, FileSystemEventHandler):
 	'''This can be used to manage monitors/scrapers with an external api.'''
 
-	def __init__(self, config: _Config = _Config()):
+	def __init__(self, config: BaseConfig = BaseConfig()):
 		self.config = config
 
 		logger_name = "Executable.MonitorManager"
@@ -68,11 +69,12 @@ class MonitorManager(Server, FileSystemEventHandler):
 		self.socket_lock = asyncio.Lock()
 
 		# mandatory arguments, needed in the command
-		self.add_scraper_args = self.add_monitor_args = self.add_monitor_scraper_args = [
-			"filename", "class_name"]
-		self.stop_args = ["class_name"]
-		self.getter_configs_args = ["class_name"]
-		self.setter_configs_args = ["class_name", "payload"]
+		self.db = pymongo.MongoClient(GlobalConfig.db_path)[
+                    GlobalConfig.db_name]["register"]
+		self.add_args = ["name"]
+		self.stop_args = ["name"]
+		self.getter_configs_args = ["name"]
+		self.setter_configs_args = ["name", "payload"]
 		self.shutdown_all_on_exit = True   # you might wanna change this
 
 		self._loop_lock = asyncio.Lock()
@@ -344,16 +346,21 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 	async def on_add_monitor(self, cmd: Cmd) -> Response:
 		r = badResponse()
-		success, missing = cmd.has_valid_args(self.add_monitor_args)
+		success, missing = cmd.has_valid_args(self.add_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			success, reason = await self.add_monitor(
-				payload["filename"], payload["class_name"], payload.get("delay", None))
-			if success:
-				r = okResponse()
+			db_monitor = self.db["Monitors"].find_one({"name": payload["name"]})
+			if db_monitor:
+				success, reason = await self.add_monitor(
+					db_monitor["path"], payload["name"], payload.get("delay", None))
+				if success:
+					r = okResponse()
+				else:
+					r.error = ERRORS.MM_COULDNT_ADD_MONITOR
+					r.info = reason
 			else:
-				r.error = ERRORS.MM_COULDNT_ADD_MONITOR
-				r.info = reason
+				r.error = ERRORS.MONITOR_NOT_REGISTERED
+				r.info = f"Tried to add monitor {payload['name']} but it was not found in the db. Did you start it at least once manually?"
 		else:
 			r.error = ERRORS.MISSING_PAYLOAD_ARGS
 			r.info = f"Missing arguments: {missing}"
@@ -361,35 +368,36 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 	async def on_add_scraper(self, cmd: Cmd) -> Response:
 		r = badResponse()
-		success, missing = cmd.has_valid_args(self.add_scraper_args)
+		success, missing = cmd.has_valid_args(self.add_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			success = await self.add_scraper(
-				payload["filename"], payload["class_name"], payload.get("delay", None))
-			if success:
-				r = okResponse()
+			db_scraper = self.db["Scrapers"].find_one({"name": payload["name"]})
+			if db_scraper:
+				success, reason = await self.add_scraper(
+					db_scraper["path"], payload["name"], payload.get("delay", None))
+				if success:
+					r = okResponse()
+				else:
+					r.error = ERRORS.MM_COULDNT_ADD_SCRAPER
+					r.info = reason
 			else:
-				r.error = ERRORS.MM_COULDNT_ADD_SCRAPER
+				r.error = ERRORS.SCRAPER_NOT_REGISTERED
+				r.info = f"Tried to add scraper {payload['name']} but it was not found in the db. Did you start it at least once manually?"
 		else:
 			r.error = ERRORS.MISSING_PAYLOAD_ARGS
 			r.info = f"Missing arguments: {missing}"
+
 		return r
 
 	async def on_add_monitor_scraper(self, cmd: Cmd) -> Response:
-		r = badResponse()
-		success, missing = cmd.has_valid_args(self.add_monitor_scraper_args)
-		if success:
-			payload = cast(Dict[str, Any], cmd.payload)
-			success, msg = await self.add_monitor_scraper(
-				payload["filename"], payload["class_name"], payload.get("monitor_delay", None), payload.get("scraper_delay", None))
-			if success:
-				r = okResponse()
-			else:
-				r.error = ERRORS.MM_COULDNT_ADD_MONITOR_SCRAPER
-				r.info = msg
-		else:
-			r.error = ERRORS.MISSING_PAYLOAD_ARGS
-			r.info = f"Missing arguments: {missing}"
+		r = Response()
+		r1, r2 = await asyncio.gather(self.on_add_monitor(cmd), self.on_add_scraper(cmd))
+		r.error = ERRORS.OK if not r1.error.value and not r2.error.value else ERRORS.MM_COULDNT_ADD_MONITOR_SCRAPER
+		r.info = f"Monitor: {r1.error.name}, Scraper: {r2.error.name}"
+		if r.error.value and r.error:
+			self.general_logger.warning(f"Couldn't add monitor and scraper")
+			kekmonitors.utils.tools.dump_error(self.general_logger, r)
+
 		return r
 
 	async def on_stop_monitor(self, cmd: Cmd) -> Response:
@@ -397,7 +405,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			socket = f"{GlobalConfig.socket_path}/Monitor.{payload['class_name']}"
+			socket = f"{GlobalConfig.socket_path}/Monitor.{payload['name']}"
 			command = Cmd()
 			command.cmd = COMMANDS.STOP
 			self.general_logger.debug(f"Sending STOP to {socket}...")
@@ -413,7 +421,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			socket = f"{GlobalConfig.socket_path}/Scraper.{payload['class_name']}"
+			socket = f"{GlobalConfig.socket_path}/Scraper.{payload['name']}"
 			command = Cmd()
 			command.cmd = COMMANDS.STOP
 			self.general_logger.debug(f"Sending STOP to {socket}...")
@@ -461,7 +469,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 				"%m/%d/%Y, %H:%M:%S")
 			process_status[class_name] = {"Started at": start}
 		sockets_status = {}
-		#for class_name in self.scraper_sockets:
+		# for class_name in self.scraper_sockets:
 		#sockets_status[class_name] = {class_name: self.scraper_sockets[class_name]}
 		sockets_status = self.scraper_sockets
 		response = okResponse()
@@ -485,7 +493,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 				f"Tried to add an already existing monitor ({filename}.{class_name})")
 			return False, "Monitor already started."
 
-		cmd = f"nohup python -m monitors.{filename} --no-output"
+		cmd = f"nohup python {filename} --no-output"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
@@ -517,7 +525,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 				f"Tried to add an already existing scraper ({filename}.{class_name})")
 			return False, "Scraper already started."
 
-		cmd = f"nohup python -m scrapers.{filename} --no-output"
+		cmd = f"nohup python {filename} --no-output"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
@@ -542,12 +550,6 @@ class MonitorManager(Server, FileSystemEventHandler):
 			success = True
 			msg = ""
 		return success, msg
-
-	async def add_monitor_scraper(self, filename: str, class_name: str, scraper_delay: Optional[Union[int, float]], monitor_delay: Optional[Union[int, float]]):
-		(s1, msg1), (s2, msg2) = await asyncio.gather(self.add_monitor(filename, class_name, monitor_delay), self.add_scraper(filename, class_name, scraper_delay))
-		s = s1 and s2
-		msg = "" + (msg1 if not s1 else "") + (msg2 if not s2 else "")
-		return s, msg
 
 	async def on_get_monitor_config(self, cmd: Cmd) -> Response:
 		return await self.getter_config(cmd, COMMANDS.GET_CONFIG, True)

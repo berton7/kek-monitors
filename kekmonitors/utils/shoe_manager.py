@@ -54,8 +54,7 @@ class ShoeManager(object):
 		self.db_name = GlobalConfig.db_name
 		self.db_path = GlobalConfig.db_path
 
-		self._client = pymongo.MongoClient(self.db_path)
-		self._db = self._client[self.db_name]["items"]
+		self._db = pymongo.MongoClient(self.db_path)[self.db_name]["items"]
 		self._logger.debug("Database initialized.")
 
 	def add_shoe(self, shoe: Shoe):

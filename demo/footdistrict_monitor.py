@@ -1,5 +1,6 @@
 import asyncio
 import json
+from kekmonitors.config import BaseConfig
 from typing import List
 
 from bs4 import BeautifulSoup
@@ -127,4 +128,6 @@ class Footdistrict(BaseMonitor):
 
 
 if __name__ == "__main__":
-	make_default_executable(Footdistrict)
+	custom_config = BaseConfig()
+	custom_config.crash_webhook = "your-crash-webhook-here"
+	make_default_executable(Footdistrict, custom_config)

@@ -1,12 +1,10 @@
-from kekmonitors.utils.shoe_manager import ShoeManager
-from kekmonitors.utils.tools import get_logger
+import pymongo
+from kekmonitors.config import GlobalConfig
 
 
 if __name__ == "__main__":
-	l = get_logger("Resetter")
-	s = ShoeManager(l)
 	c = input(
-		f"Executing this file will destroy {s.db_name} (ALL WEBSITES, MONITORS, SCRAPERS) unrecoverably. Are you sure you want to proceed? (y/n) ")
+		f"Executing this file will destroy {GlobalConfig.db_name} (ALL WEBSITES, MONITORS, SCRAPERS) unrecoverably. Are you sure you want to proceed? (y/n) ")
 	if c != "y":
 		print("Exiting (no modifications have been made.)")
 		exit(0)
@@ -15,7 +13,10 @@ if __name__ == "__main__":
 		print("Exiting (no modifications have been made.)")
 		exit(0)
 
-	s._db.drop()
-	print(f"Databases now available: {s._client.list_database_names()}")
-	if s.db_name in s._client.list_database_names():
-		print(f"Content of {s.db_name}: {list(s._db.find())}")
+	root_db = pymongo.MongoClient(GlobalConfig.db_path)
+	db = root_db[GlobalConfig.db_name]
+	db["items"].drop()
+	db["register"]["Monitors"].drop()
+	db["register"]["Scrapers"].drop()
+
+	print("Done!")

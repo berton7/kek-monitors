@@ -4,15 +4,28 @@ import os
 from json.decoder import JSONDecodeError
 from typing import Any, Dict, List, Optional
 
-from kekmonitors.config import COMMANDS, ERRORS, GlobalConfig, _Config
+from kekmonitors.config import COMMANDS, ERRORS, GlobalConfig, BaseConfig
 
 from kekmonitors.utils.server.msg import Cmd, Response, okResponse, badResponse
 from kekmonitors.utils.server.server import Server
 from kekmonitors.utils.tools import get_logger
+import __main__
+import pymongo
+from pymongo.collection import Collection
+
+
+def mark_as(_type: str, name: str, path: str, client: Collection):
+	existing = client[_type].find_one({"name": name})
+	if not existing:
+		client[_type].insert_one({"name": name, "path": path})
+	else:
+		if existing["path"] != path:
+			raise Exception(
+				f"Trying to register new {_type} ({name}) when it already exists in the database with a different path: {existing['path']}")
 
 
 class Common(Server):
-	def __init__(self, config: _Config, is_monitor: bool):
+	def __init__(self, config: BaseConfig, is_monitor: bool):
 		self.general_logger = get_logger(
 			config.name + ".General", config.add_stream_handler)
 		self.client_logger = get_logger(
@@ -22,6 +35,9 @@ class Common(Server):
 
 		super().__init__(config.name,
                    config.add_stream_handler, os.path.sep.join([GlobalConfig.socket_path, config.name]))
+
+		self.db_client = pymongo.MongoClient(GlobalConfig.db_path)[
+                    GlobalConfig.db_name]["register"]
 
 		self._loop_lock = asyncio.Lock()
 		#self._stop_event = asyncio.Event()
@@ -86,6 +102,12 @@ class Common(Server):
 		'''Internal function used to get the correct filename.'''
 		'''Not necessary, but sometimes you might want to override this.'''
 		return type(self).__name__
+
+	def _mark_as_monitor(self):
+		mark_as("Monitors", self.class_name, __main__.__file__, self.db_client)
+
+	def _mark_as_scraper(self):
+		mark_as("Scrapers", self.class_name, __main__.__file__, self.db_client)
 
 	def load_config(self, path):
 		with open(path, "r") as f:

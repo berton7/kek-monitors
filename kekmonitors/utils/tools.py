@@ -7,7 +7,7 @@ import os
 from datetime import timezone
 from typing import Optional
 
-from kekmonitors.config import ERRORS, MonitorConfig, _Config
+from kekmonitors.config import ERRORS, BaseConfig
 
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 
@@ -78,11 +78,11 @@ def chunks(lst, n):
 		yield lst[i:i + n]
 
 
-def make_default_executable(class_name, default_delay: int = 5):
+def make_default_executable(_class, config: BaseConfig = BaseConfig()):
 	parser = argparse.ArgumentParser(
-            description=f"Default executable for {class_name.__name__}, generated from utils.tools.make_default_executable")
-	parser.add_argument("-d", "--delay", default=default_delay, type=int,
-                     help=f"Specify a delay for the loop. (default: {default_delay})")
+            description=f"Default executable for {_class.__name__}, generated from utils.tools.make_default_executable")
+	parser.add_argument("-d", "--delay", default=config.loop_delay, type=int,
+                     help=f"Specify a delay for the loop. (default: {config.loop_delay})")
 	parser.add_argument("--output", action=argparse.BooleanOptionalAction,
                      default=True,
                      help="Specify wether you want log output to the console or not. (note: this does not disable file log)",)
@@ -90,9 +90,9 @@ def make_default_executable(class_name, default_delay: int = 5):
 	if args.delay < 0:
 		print(f"Cannot have a negative delay")
 		return
-	config = _Config()
 	config.add_stream_handler = args.output
-	class_name(config).start(args.delay)
+	config.loop_delay = args.delay
+	_class(config).start(args.delay)
 
 
 def dump_error(logger: logging.Logger, response: Response):
