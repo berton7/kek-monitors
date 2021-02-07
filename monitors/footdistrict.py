@@ -102,6 +102,7 @@ class Footdistrict(BaseMonitor):
 				# https://footdistrict.com/media/resize/500x333/catalog/product/p/r/producto_02_10_2063_4/adidas-rivalry-hi-x-star-wars-chewbacca-fx9290-0.webp
 				# s.img_link = soup.find("div", {"id": "productos-ficha-item"}).find(
 				#	"img", {"class": "img-responsive lazyloaded"}).get("src")
+				s.img_link = "https://i.imgur.com/UKwBVpg.png"
 				for script in soup.find_all("script", {"type": "text/x-magento-init"}):
 					script_text = script.string
 					if script_text.find("jsonConfig") != -1:
