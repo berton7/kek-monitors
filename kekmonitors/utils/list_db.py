@@ -1,5 +1,5 @@
-from utils.shoe_manager import ShoeManager
-from utils.tools import get_logger
+from kekmonitors.utils.shoe_manager import ShoeManager
+from kekmonitors.utils.tools import get_logger
 from pprint import pprint
 
 if __name__ == "__main__":

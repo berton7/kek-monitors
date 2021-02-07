@@ -6,7 +6,7 @@ import tornado.httpclient
 from tornado.curl_httpclient import CurlError
 from typing import Dict
 import pycurl
-from utils.tools import get_logger
+from kekmonitors.utils.tools import get_logger
 
 
 class NetworkUtils(object):

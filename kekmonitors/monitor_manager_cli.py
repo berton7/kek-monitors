@@ -2,9 +2,9 @@ import asyncio
 import sys
 from pprint import pprint
 
-from configs.config import COMMANDS, SOCKET_PATH
-from utils.server.msg import *
-from utils.tools import make_request
+from kekmonitors.config import COMMANDS, GlobalConfig
+from kekmonitors.utils.server.msg import *
+from kekmonitors.utils.tools import make_request
 
 if __name__ == "__main__":
 	args = sys.argv
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 	print(f"Payload: {command.payload}")
 	print("Executing request...")
 	response = asyncio.run(make_request(
-		f"{SOCKET_PATH}/MonitorManager", command, True))
+		f"{GlobalConfig.socket_path}/MonitorManager", command, True))
 
 	print("E:", response.error.name)
 	if response.info:

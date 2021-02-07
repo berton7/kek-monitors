@@ -7,9 +7,9 @@ import os
 from datetime import timezone
 from typing import Optional
 
-from configs.config import ERRORS
+from kekmonitors.config import ERRORS, MonitorConfig, _Config
 
-from utils.server.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 
 
 def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_level: int = logging.DEBUG, file_level: int = logging.DEBUG):
@@ -90,7 +90,9 @@ def make_default_executable(class_name, default_delay: int = 5):
 	if args.delay < 0:
 		print(f"Cannot have a negative delay")
 		return
-	class_name(args.output).start(args.delay)
+	config = _Config()
+	config.add_stream_handler = args.output
+	class_name(config).start(args.delay)
 
 
 def dump_error(logger: logging.Logger, response: Response):

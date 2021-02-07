@@ -7,10 +7,9 @@ from fake_headers import Headers
 from pyppeteer.launcher import launch
 from pyppeteer.network_manager import Response
 from pyppeteer.page import Page
-from utils.shoe_stuff import Shoe
-from utils.tools import make_default_executable
-
-from monitors.base_monitor import BaseMonitor
+from kekmonitors.utils.shoe_stuff import Shoe
+from kekmonitors.utils.tools import make_default_executable
+from kekmonitors.base_monitor import BaseMonitor
 
 
 class Footdistrict(BaseMonitor):

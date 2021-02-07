@@ -6,9 +6,9 @@ from fake_headers import Headers
 from pyppeteer import launch
 from pyppeteer.network_manager import Response
 from pyppeteer.page import Page
-from utils.tools import make_default_executable
+from kekmonitors.utils.tools import make_default_executable
 
-from scrapers.base_scraper import BaseScraper
+from kekmonitors.base_scraper import BaseScraper
 
 
 class Footdistrict(BaseScraper):

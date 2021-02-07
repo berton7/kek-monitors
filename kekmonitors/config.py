@@ -1,6 +1,5 @@
 import enum
-
-SOCKET_PATH = "./sockets"
+import os
 
 
 @enum.unique
@@ -71,14 +70,29 @@ class ERRORS(enum.Enum):
 	UNKNOWN_ERROR = enum.auto()
 
 
-class WEBHOOK_CONFIG(object):
-	CRASH_WEBHOOK = ""
-	DEFAULT_PROVIDER = "KekMonitors"
-	DEFAULT_PROVIDER_ICON = "https://avatars0.githubusercontent.com/u/11823129?s=400&u=3e617374871087e64b5fde0df668260f2671b076&v=4"
-	DEFAULT_TIMESTAMP_FORMAT = "%d %b %Y, %H:%M:%S.%f"
-	DEFAULT_EMBED_COLOR = 255
+class GlobalConfig(object):
+	socket_path = "/tmp/kekmonitors"
+	config_path = f"{os.getenv('HOME')}/.config/kekmonitors"
+	db_name = "kekmonitors"
+	db_path = "mongodb://localhost:27017/"
 
 
-class DB_CONFIG(object):
-	DEFAULT_DB_NAME = "kekmonitors"
-	DEFAULT_DB_PATH = "mongodb://localhost:27017/"
+class _Config(object):
+	def __init__(self):
+		self.name = ""
+		self.crash_webhook = ""
+		self.provider = "KekMonitors"
+		self.provider_icon = "https://avatars0.githubusercontent.com/u/11823129?s=400&u=3e617374871087e64b5fde0df668260f2671b076&v=4"
+		self.timestamp_format = "%d %b %Y, %H:%M:%S.%f"
+		self.embed_color = 255
+		self.add_stream_handler = True
+
+
+class MonitorConfig(_Config):
+	def __init__(self):
+		pass
+
+
+class ScraperConfig(_Config):
+	def __init__(self):
+		pass

@@ -5,16 +5,16 @@ import shlex
 import subprocess
 from datetime import datetime
 from json.decoder import JSONDecodeError
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 import tornado.httpclient
 from watchdog import observers
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
-import utils.tools
-from configs.config import COMMANDS, SOCKET_PATH, WEBHOOK_CONFIG
-from utils.server.msg import *
-from utils.server.server import Server
+from kekmonitors.config import COMMANDS, ERRORS, GlobalConfig, _Config
+from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.utils.server.server import Server
+import kekmonitors.utils.tools
 import copy
 
 
@@ -25,11 +25,15 @@ def get_directory_from_file(src: str):
 class MonitorManager(Server, FileSystemEventHandler):
 	'''This can be used to manage monitors/scrapers with an external api.'''
 
-	def __init__(self):
+	def __init__(self, config: _Config = _Config()):
+		self.config = config
+
 		logger_name = "Executable.MonitorManager"
-		super().__init__(logger_name, True, f"{SOCKET_PATH}/MonitorManager")
+		super().__init__(logger_name, True,
+                   f"{GlobalConfig.socket_path}/MonitorManager")
 		super(Server).__init__()
-		self.general_logger = utils.tools.get_logger(logger_name + ".General")
+		self.general_logger = kekmonitors.utils.tools.get_logger(
+			logger_name + ".General")
 		self.cmd_to_callback[COMMANDS.MM_STOP_MONITOR_MANAGER] = self._stop_serving
 		self.cmd_to_callback[COMMANDS.MM_ADD_MONITOR] = self.on_add_monitor
 		self.cmd_to_callback[COMMANDS.MM_ADD_SCRAPER] = self.on_add_scraper
@@ -65,7 +69,6 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		# mandatory arguments, needed in the command
 		self.add_scraper_args = self.add_monitor_args = self.add_monitor_scraper_args = [
-
 			"filename", "class_name"]
 		self.stop_args = ["class_name"]
 		self.getter_configs_args = ["class_name"]
@@ -79,8 +82,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		# watches the config folder for any change. calls on_modified when any monitored file is modified
 		self.config_watcher = observers.Observer()
-		self.config_watcher.schedule(self, "./configs", True)
-		self.config_watcher.schedule(self, SOCKET_PATH, True)
+		self.config_watcher.schedule(self, GlobalConfig.config_path, True)
+		self.config_watcher.schedule(self, GlobalConfig.socket_path, True)
 		self.has_to_quit = False
 
 	def start(self):
@@ -105,13 +108,13 @@ class MonitorManager(Server, FileSystemEventHandler):
 	def on_created(self, event: FileSystemEvent):
 		filename = event.key[1]  # type: str
 		splits = filename.split(os.path.sep)
-		if get_directory_from_file(filename) == SOCKET_PATH:
+		if get_directory_from_file(filename) == GlobalConfig.socket_path:
 			asyncio.run_coroutine_threadsafe(self.on_add_sockets(), self._asyncio_loop)
 
 	def on_deleted(self, event):
 		filename = event.key[1]  # type: str
 		filename.split(os.path.sep)
-		if get_directory_from_file(filename) == SOCKET_PATH:
+		if get_directory_from_file(filename) == GlobalConfig.socket_path:
 			asyncio.run_coroutine_threadsafe(
 				self.on_delete_sockets(), self._asyncio_loop)
 
@@ -119,12 +122,14 @@ class MonitorManager(Server, FileSystemEventHandler):
 		async with self.socket_lock:
 			new_monitor_sockets = {}  # type: Dict[str, str]
 			new_scraper_sockets = {}  # type: Dict[str, str]
-			for filename in os.listdir(SOCKET_PATH):
+			for filename in os.listdir(GlobalConfig.socket_path):
 				splits = filename.split(".")
 				if splits[0] == "Monitor" and splits[1] not in self.monitor_sockets:
-					new_monitor_sockets[splits[1]] = os.path.sep.join([SOCKET_PATH, filename])
+					new_monitor_sockets[splits[1]] = os.path.sep.join(
+						[GlobalConfig.socket_path, filename])
 				elif splits[0] == "Scraper" and splits[1] not in self.scraper_sockets:
-					new_scraper_sockets[splits[1]] = os.path.sep.join([SOCKET_PATH, filename])
+					new_scraper_sockets[splits[1]] = os.path.sep.join(
+						[GlobalConfig.socket_path, filename])
 
 			alive_monitor_sockets, alive_scraper_sockets = await asyncio.gather(self.get_alive_sockets(new_monitor_sockets.values()), self.get_alive_sockets(new_scraper_sockets.values()))
 
@@ -140,7 +145,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		async with self.socket_lock:
 			monitor_sockets = []
 			scraper_sockets = []
-			for f in list(os.listdir(SOCKET_PATH)):
+			for f in list(os.listdir(GlobalConfig.socket_path)):
 				if f.startswith("Monitor."):
 					monitor_sockets.append(f)
 				elif f.startswith("Scraper."):
@@ -205,7 +210,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 					cmd = None
 				if cmd:
 					# for every monitor socket
-					for sockname in os.listdir(SOCKET_PATH):
+					for sockname in os.listdir(GlobalConfig.socket_path):
 						if sockname.startswith("Monitor."):
 							# add command and socket path to the list of todo
 							name = sockname.split(".")[1]
@@ -215,21 +220,22 @@ class MonitorManager(Server, FileSystemEventHandler):
 								# send only the corresponding part to the monitor
 								c.payload = j[name]
 								commands.append(c)
-								sock_paths.append(os.path.sep.join([SOCKET_PATH, sockname]))
+								sock_paths.append(os.path.sep.join(
+									[GlobalConfig.socket_path, sockname]))
 
 			elif splits[2] == "scrapers":
 				# we are interested in configs, whitelist, blacklist
 				if splits[3] == "whitelists.json":
 					cmd = COMMANDS.SET_WHITELIST
 				elif splits[3] == "configs.json":
-					cmd = COMMANDS.SET_CONFIGS
+					cmd = COMMANDS.SET_CONFIG
 				elif splits[3] == "blacklists.json":
 					cmd = COMMANDS.SET_BLACKLIST
 				else:
 					cmd = None
 				if cmd:
 					# for every scraper socket
-					for sockname in os.listdir(SOCKET_PATH):
+					for sockname in os.listdir(GlobalConfig.socket_path):
 						if sockname.startswith("Scraper."):
 							# add command and socket path to the list of todo
 							name = sockname.split(".")[1]
@@ -239,7 +245,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 								# send only the corresponding part to the scraper
 								c.payload = j[name]
 								commands.append(c)
-								sock_paths.append(os.path.sep.join([SOCKET_PATH, sockname]))
+								sock_paths.append(os.path.sep.join(
+									[GlobalConfig.socket_path, sockname]))
 			else:
 				self.general_logger.debug("File not useful.")
 				return
@@ -266,14 +273,14 @@ class MonitorManager(Server, FileSystemEventHandler):
 				# get all the existing sockets
 				sockets = []  # type: List[str]
 				tasks = []
-				for sockname in os.listdir(SOCKET_PATH):
+				for sockname in os.listdir(GlobalConfig.socket_path):
 					if sockname.startswith("Scraper.") or sockname.startswith("Monitor."):
 						cmd = Cmd()
 						cmd.cmd = COMMANDS.STOP
 						sockets.append(sockname)
 						self.general_logger.info(f"Stopping {sockname}...")
 						tasks.append(self.make_request(
-							f"{SOCKET_PATH}{os.path.sep}{sockname}", cmd))
+							f"{GlobalConfig.socket_path}{os.path.sep}{sockname}", cmd))
 
 				# send request to stop
 				responses = await asyncio.gather(*tasks)   # type: List[Response]
@@ -283,9 +290,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 					if r.error.value:
 						# if the socket was not used remove it
 						if r.error == ERRORS.SOCKET_COULDNT_CONNECT:
-							os.remove(os.path.sep.join([SOCKET_PATH, sockname]))
+							os.remove(os.path.sep.join([GlobalConfig.socket_path, sockname]))
 							self.general_logger.info(
-								f"{SOCKET_PATH}{os.path.sep}{sockname} was removed because unavailable")
+								f"{GlobalConfig.socket_path}{os.path.sep}{sockname} was removed because unavailable")
 						# else something else happened, dont do anything
 						else:
 							self.general_logger.warning(
@@ -309,9 +316,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 						log = f"Monitor {class_name} has stopped with code: {monitor.returncode}"
 						if monitor.returncode:
 							self.general_logger.warning(log)
-							if WEBHOOK_CONFIG.CRASH_WEBHOOK:
+							if self.config.crash_webhook:
 								data = {"content": log}
-								await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+								await self.client.fetch(self.config.crash_webhook, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 						else:
 							self.general_logger.info(log)
 					else:
@@ -325,9 +332,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 						log = f"Scraper {class_name} has stopped with code: {scraper.returncode}"
 						if scraper.returncode:
 							self.general_logger.warning(log)
-							if WEBHOOK_CONFIG.CRASH_WEBHOOK:
+							if self.config.crash_webhook:
 								data = {"content": log}
-								await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+								await self.client.fetch(self.config.crash_webhook, method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 						else:
 							self.general_logger.info(log)
 					else:
@@ -390,7 +397,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			socket = f"{SOCKET_PATH}/Monitor.{payload['class_name']}"
+			socket = f"{GlobalConfig.socket_path}/Monitor.{payload['class_name']}"
 			command = Cmd()
 			command.cmd = COMMANDS.STOP
 			self.general_logger.debug(f"Sending STOP to {socket}...")
@@ -406,7 +413,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.stop_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			socket = f"{SOCKET_PATH}/Scraper.{payload['class_name']}"
+			socket = f"{GlobalConfig.socket_path}/Scraper.{payload['class_name']}"
 			command = Cmd()
 			command.cmd = COMMANDS.STOP
 			self.general_logger.debug(f"Sending STOP to {socket}...")
@@ -426,7 +433,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 			r.info = f"Monitor: {r1.error.name}, Scraper: {r2.error.name}"
 			if r.error.value and r.error:
 				self.general_logger.warning(f"Couldn't stop monitor and scraper")
-				utils.tools.dump_error(self.general_logger, r)
+				kekmonitors.utils.tools.dump_error(self.general_logger, r)
 		else:
 			r.error = ERRORS.MISSING_PAYLOAD_ARGS
 			r.info = f"Missing arguments: {missing}"
@@ -440,7 +447,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 			process_status[class_name] = {"Started at": start}
 		sockets_status = {}
 		# for class_name in self.monitor_sockets:
-			#sockets_status[class_name] = {class_name: self.monitor_sockets[class_name]}
+		#sockets_status[class_name] = {class_name: self.monitor_sockets[class_name]}
 		sockets_status = self.monitor_sockets
 		response = okResponse()
 		response.payload = {
@@ -455,7 +462,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 			process_status[class_name] = {"Started at": start}
 		sockets_status = {}
 		#for class_name in self.scraper_sockets:
-			#sockets_status[class_name] = {class_name: self.scraper_sockets[class_name]}
+		#sockets_status[class_name] = {class_name: self.scraper_sockets[class_name]}
 		sockets_status = self.scraper_sockets
 		response = okResponse()
 		response.payload = {
@@ -596,7 +603,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 			payload = cast(Dict[str, Any], cmd.payload)
 			c = Cmd()
 			c.cmd = command
-			r = await self.make_request(f"{SOCKET_PATH}/{'Monitor' if is_monitor else 'Scraper'}.{payload['class_name']}", c)
+			r = await self.make_request(f"{GlobalConfig.socket_path}/{'Monitor' if is_monitor else 'Scraper'}.{payload['class_name']}", c)
 			return r
 		else:
 			r = badResponse()
@@ -608,7 +615,10 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.setter_configs_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			r = await self.make_request(f"{SOCKET_PATH}/{'Monitor' if is_monitor else 'Scraper'}.{payload['class_name']}", Cmd({"cmd": command, "payload": payload["payload"]}))
+			c = Cmd()
+			c.cmd = command
+			c.payload = payload["payload"]
+			r = await self.make_request(f"{GlobalConfig.socket_path}/{'Monitor' if is_monitor else 'Scraper'}.{payload['class_name']}", c)
 			return r
 		else:
 			r = badResponse()

@@ -2,24 +2,26 @@ import asyncio
 import json
 import os
 from json.decoder import JSONDecodeError
-from typing import Any
+from typing import Any, Dict, List, Optional
 
-from configs.config import *
+from kekmonitors.config import COMMANDS, ERRORS, GlobalConfig, _Config
 
-from utils.server.msg import *
-from utils.server.server import Server
-from utils.tools import get_logger
+from kekmonitors.utils.server.msg import Cmd, Response, okResponse, badResponse
+from kekmonitors.utils.server.server import Server
+from kekmonitors.utils.tools import get_logger
 
 
 class Common(Server):
-	def __init__(self, logger_name: str, add_stream_handler, socket_path: str):
+	def __init__(self, config: _Config, is_monitor: bool):
 		self.general_logger = get_logger(
-			logger_name + ".General", add_stream_handler)
-		self.client_logger = get_logger(logger_name + ".Client", add_stream_handler)
+			config.name + ".General", config.add_stream_handler)
+		self.client_logger = get_logger(
+			config.name + ".Client", config.add_stream_handler)
 
 		self.class_name = self.get_class_name()
 
-		super().__init__(logger_name, add_stream_handler, socket_path)
+		super().__init__(config.name,
+                   config.add_stream_handler, os.path.sep.join([GlobalConfig.socket_path, config.name]))
 
 		self._loop_lock = asyncio.Lock()
 		#self._stop_event = asyncio.Event()
@@ -33,14 +35,29 @@ class Common(Server):
 		self.cmd_to_callback[COMMANDS.GET_WEBHOOKS] = self.on_get_webhooks
 		self.cmd_to_callback[COMMANDS.GET_CONFIG] = self.on_get_config
 
-		self.whitelist = self.load_config(
-			os.path.sep.join(self.default_whitelists_file_path))  # type List[str]
-		self.blacklist = self.load_config(os.path.sep.join(
-			self.default_blacklists_file_path))  # type: List[str]
-		self.webhooks = self.load_config(os.path.sep.join(
-			self.default_webhooks_file_path))  # type: Dict[str, Dict[str, Any]]
-		self.config = self.load_config(os.path.sep.join(
-			self.default_configs_file_path))  # type: Dict[str, Any]
+		if is_monitor:
+			self.whitelist_filepath = os.path.sep.join(
+				[GlobalConfig.config_path, "monitors/whitelists.json"])
+			self.blacklist_filepath = os.path.sep.join(
+				[GlobalConfig.config_path, "monitors/blacklists.json"])
+			self.config_filepath = os.path.sep.join(
+				[GlobalConfig.config_path, "monitors/configs.json"])
+			self.webhooks_filepath = os.path.sep.join(
+				[GlobalConfig.config_path, "monitors/webhooks.json"])
+		else:
+			self.whitelist_filepath = os.path.sep.join(
+				[GlobalConfig.config_path, "scrapers/whitelists.json"])
+			self.blacklist_filepath = os.path.sep.join(
+				[GlobalConfig.config_path, "scrapers/blacklists.json"])
+			self.config_filepath = os.path.sep.join(
+				[GlobalConfig.config_path, "scrapers/configs.json"])
+			self.webhooks_filepath = os.path.sep.join(
+				[GlobalConfig.config_path, "scrapers/webhooks.json"])
+
+		self.whitelist = self.load_config(self.whitelist_filepath)
+		self.blacklist = self.load_config(self.blacklist_filepath)
+		self.webhooks = self.load_config(self.webhooks_filepath)
+		self.config = self.load_config(self.config_filepath)
 
 		self._new_whitelist = None  # type: Optional[List[str]]
 		self._new_blacklist = None  # type: Optional[List[str]]
@@ -112,7 +129,7 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new whitelist but it was invalid: {whitelist}")
-			r.error = ERRORS.INVALID_PAYLOAD
+			r.error = ERRORS.BAD_PAYLOAD
 			r.info = f"Invalid whitelist (expected list, got {type(cmd.payload)}"
 		return r
 
@@ -126,7 +143,7 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new blacklist but it was invalid: {blacklist}")
-			r.error = ERRORS.INVALID_PAYLOAD
+			r.error = ERRORS.BAD_PAYLOAD
 			r.info = f"Invalid blacklist (expected list, got {type(cmd.payload)}"
 		return r
 
@@ -140,7 +157,7 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new webhooks but it was invalid: {webhooks}")
-			r.error = ERRORS.INVALID_PAYLOAD
+			r.error = ERRORS.BAD_PAYLOAD
 			r.info = f"Invalid webhooks (expected dict, got {type(cmd.payload)}"
 		return r
 
@@ -154,7 +171,7 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new config but it was invalid: {config}")
-			r.error = ERRORS.INVALID_PAYLOAD
+			r.error = ERRORS.BAD_PAYLOAD
 			r.info = f"Invalid config (expected dict, got {type(cmd.payload)}"
 		return r
 

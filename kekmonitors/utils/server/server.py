@@ -1,9 +1,10 @@
 
 import asyncio
-from typing import Callable
-from utils.tools import get_logger
-from utils.server.msg import *
-from configs.config import *
+import enum
+from typing import Callable, Dict
+from kekmonitors.utils.tools import get_logger
+from kekmonitors.utils.server.msg import Cmd, Response, okResponse, badResponse
+from kekmonitors.config import ERRORS
 import os
 
 
@@ -15,7 +16,7 @@ class Server(object):
 		self._asyncio_loop = asyncio.get_event_loop()
 		self._server_task = self._asyncio_loop.create_task(self._init_server())
 
-		self.cmd_to_callback = {}   # type: Dict[int, Callable]
+		self.cmd_to_callback = {}   # type: Dict[enum.Enum, Callable]
 
 	async def _init_server(self):
 		'''Initialise the underlying socket server, to allow communication between monitor/scraper.'''

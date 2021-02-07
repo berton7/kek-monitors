@@ -1,16 +1,14 @@
-from configs.config import WEBHOOK_CONFIG
 from datetime import datetime
 
 from discord import Embed
 
-from utils import shoe_stuff
-from utils.shoe_stuff import Shoe
+from kekmonitors.utils import shoe_stuff
+from kekmonitors.utils.shoe_stuff import Shoe
 
 
 def get_empty_embed() -> Embed:
 	'''Get an almost empty embed (only set color and timestamp)'''
 	empty_embed = Embed()
-	empty_embed.color = WEBHOOK_CONFIG.DEFAULT_EMBED_COLOR
 	empty_embed.timestamp = datetime.utcnow()
 	return empty_embed
 
