@@ -205,7 +205,3 @@ class BaseMonitor(Common, NetworkUtils):
 			self.shoe_manager.add_shoe(shoe)
 
 		return return_shoe
-
-
-if __name__ == "__main__":
-	make_default_executable(BaseMonitor)

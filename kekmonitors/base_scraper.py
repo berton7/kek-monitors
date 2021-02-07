@@ -99,7 +99,3 @@ class BaseScraper(Common, NetworkUtils):
 		response = await self.make_request(socket_path, cmd)
 		if response.error.value:
 			dump_error(self.client_logger, response)
-
-
-if __name__ == "__main__":
-	make_default_executable(BaseScraper)
