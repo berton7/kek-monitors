@@ -24,11 +24,13 @@ python3 -m pip install dist/kekmonitors-{version}-py3-none-any.whl
 # perform initial setup
 python3 -m kekmonitors.init
 
-# if you want to try the example:
+# if you want to try the examples:
+# please make sure that `~/.local/bin/` is in your `$PATH`
 cd demo
 python3 -m pip install -r requirements.txt
 
 # you're ready to go!
+# remember to start MongoDB and perhaps setup a webhook in the configs so that you can see the notifications!
 ```
 
 ## Usage
