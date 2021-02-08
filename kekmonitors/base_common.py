@@ -8,7 +8,7 @@ from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 
 from kekmonitors.utils.server.msg import Cmd, Response, okResponse, badResponse
 from kekmonitors.utils.server.server import Server
-from kekmonitors.utils.tools import get_logger
+from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
 import __main__
 import pymongo
 from pymongo.collection import Collection
@@ -105,18 +105,18 @@ class Common(Server):
 		mark_as("Scrapers", self.class_name, __main__.__file__, self.db_client)
 
 	def load_config(self, path):
-		with open(path, "r") as f:
-			try:
-				j = json.load(f)
-			except JSONDecodeError:
-				self.general_logger.exception(f"{path} is not valid json. Quitting.")
-				exit(1)
-			if self.class_name not in j:
-				self.general_logger.warning(
-					f"{self.class_name} not in {path}, continuing with empty entry.")
-				return {}
-			else:
-				return j[self.class_name]
+		content = get_file_if_exist_else_create(path, "{}")
+		try:
+			j = json.loads(content)
+		except JSONDecodeError:
+			self.general_logger.exception(f"{path} is not valid json. Quitting.")
+			exit(1)
+		if self.class_name not in j:
+			self.general_logger.warning(
+				f"{self.class_name} not in {path}, continuing with empty entry.")
+			return {}
+		else:
+			return j[self.class_name]
 
 	def update_local_config(self):
 		if self._new_blacklist is not None:

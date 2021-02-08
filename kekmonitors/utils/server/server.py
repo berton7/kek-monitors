@@ -14,6 +14,13 @@ class Server(object):
 		logconfig.name += ".Server"
 		self.server_logger = get_logger(logconfig)
 		self.server_path = server_path
+		socket_directory = self.server_path[:self.server_path.rfind(os.path.sep)]
+		try:
+			os.makedirs(socket_directory, exist_ok=True)
+		except PermissionError:
+			self.server_logger.exception(
+				"Failed to create the socket directory. Please provide a directory where the current user has write permissions!")
+			exit(1)
 		# init asyncio stuff
 		self._asyncio_loop = asyncio.get_event_loop()
 		self._server_task = self._asyncio_loop.create_task(self._init_server())

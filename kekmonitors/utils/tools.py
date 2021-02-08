@@ -5,7 +5,7 @@ import logging
 import logging.handlers
 import os
 from datetime import timezone
-from typing import List, Optional
+from typing import List
 
 from kekmonitors.config import ERRORS, Config, LogConfig
 
@@ -137,3 +137,15 @@ def list_contains_find_item(l: List[str], s: str):
 			return True
 	else:
 		False
+
+
+def get_file_if_exist_else_create(filename_path, content) -> str:
+	filename_directory_path = filename_path[:filename_path.rfind(os.path.sep)]
+	os.makedirs(filename_directory_path, exist_ok=True)
+	if os.path.isfile(filename_path):
+		with open(filename_path, "r") as rf:
+			return rf.read()
+	else:
+		with open(filename_path, "w") as wf:
+			wf.write(content)
+		return content

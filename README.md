@@ -20,9 +20,6 @@ source ./venv/bin/activate
 # install the package from source (will be uploaded to the PyPI some time in the future, as soon as I feel comfortable with it)
 python3 -m pip install .
 
-# perform initial one-time setup
-python3 -m kekmonitors.init
-
 # if you want to try the examples:
 # please make sure that `~/.local/bin/` is in your `$PATH`
 cd demo

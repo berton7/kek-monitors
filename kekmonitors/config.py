@@ -77,14 +77,45 @@ class ERRORS(enum.Enum):
 	UNKNOWN_ERROR = enum.auto()
 
 
+# needed to avoid circular import
+def get_file_if_exist_else_create(filename_path, content) -> str:
+	filename_directory_path = filename_path[:filename_path.rfind(os.path.sep)]
+	os.makedirs(filename_directory_path, exist_ok=True)
+	if os.path.isfile(filename_path):
+		with open(filename_path, "r") as rf:
+			return rf.read()
+	else:
+		with open(filename_path, "w") as wf:
+			wf.write(content)
+		return content
+
+
+
 class Config(object):
 	def __init__(self):
-		path = os.path.sep.join([os.environ['HOME'], ".config", "kekmonitors"])
+		path = os.path.sep.join([os.environ['HOME'], ".kekmonitors", "config"])
 		config_path = os.path.sep.join([path, "config.cfg"])
+		default_config_str = f"\
+[GlobalConfig]\n\
+socket_path = {os.environ['HOME']}/.kekmonitors/sockets\n\
+log_path = {os.environ['HOME']}/.kekmonitors/logs\n\
+db_name = kekmonitors\n\
+db_path = mongodb://localhost:27017/\n\
+\n\
+[DefaultBaseConfig]\n\
+name = \n\
+crash_webhook = \n\
+provider = KekMonitors\n\
+provider_icon = https://avatars0.githubusercontent.com/u/11823129?s=400&u=3e617374871087e64b5fde0df668260f2671b076&v=4\n\
+timestamp_format = %d %b %Y, %H:%M:%S.%f\n\
+embed_color = 255\n\
+add_stream_handler = True\n\
+loop_delay = 5\n"
+		get_file_if_exist_else_create(config_path, default_config_str)
 		parser = configparser.RawConfigParser()
 		parser.read(config_path)
 		parser.set("GlobalConfig", "config_path", path)
-		
+
 		self.config_path = parser.get("GlobalConfig", "config_path")
 		self.socket_path = parser.get("GlobalConfig", "socket_path")
 		self.log_path = parser.get("GlobalConfig", "log_path")
