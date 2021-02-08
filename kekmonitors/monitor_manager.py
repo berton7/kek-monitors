@@ -18,6 +18,7 @@ import kekmonitors.utils.tools
 import copy
 import pymongo
 from kekmonitors.utils.tools import list_contains_find_item
+import sys
 
 
 def get_directory_from_file(src: str):
@@ -492,7 +493,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 				f"Tried to add an already existing monitor ({class_name} ({filename}))")
 			return False, "Monitor already started."
 
-		cmd = f"nohup python {filename} --no-output"
+		cmd = f"nohup {sys.executable} {filename} --no-output"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
@@ -524,7 +525,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 				f"Tried to add an already existing scraper ({class_name} ({filename}))")
 			return False, "Scraper already started."
 
-		cmd = f"nohup python {filename} --no-output"
+		cmd = f"nohup {sys.executable} {filename} --no-output"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
