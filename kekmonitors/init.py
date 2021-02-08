@@ -1,5 +1,7 @@
 import os
 from kekmonitors.config import GlobalConfig
+import subprocess
+import shlex
 
 
 def create_files(p, files):
@@ -26,5 +28,16 @@ if __name__ == "__main__":
 	print(f"Successfully created monitors configs at :{cm_path}")
 	create_config(cs_path)
 	print(f"Successfully created scrapers configs at :{cs_path}")
+
+	ret = subprocess.call(shlex.split("sudo mkdir -p /var/log/kekmonitors"))
+	if ret:
+		print(f"Failed to create log directory (exit code: {ret})")
+		exit(1)
+	ret = subprocess.call(shlex.split(
+		f"sudo chown -R {os.environ['USER']} /var/log/kekmonitors"))
+	if ret:
+		print(f"Failed to change log directory permissions (exit code: {ret})")
+		exit(1)
+	print(f"Successfully created log directory")
 
 	print("Successfully initialized")

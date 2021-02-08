@@ -24,9 +24,10 @@ def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_leve
 		logger.handlers.pop()
 
 	splitted_name = name.split(".")
-	os.makedirs(os.path.sep.join(["logs", *splitted_name[:2]]), exist_ok=True)
+	os.makedirs(os.path.sep.join(
+		["/var/log/kekmonitors", *splitted_name[:2]]), exist_ok=True)
 	file_handler = logging.handlers.TimedRotatingFileHandler(filename=os.path.sep.join(
-		["logs", *splitted_name[:2], "".join([splitted_name[-1], ".log"])]), when="midnight", interval=1, backupCount=7)
+		["/var/log/kekmonitors", *splitted_name[:2], "".join([splitted_name[-1], ".log"])]), when="midnight", interval=1, backupCount=7)
 	file_handler.setLevel(file_level)
 	file_handler.setFormatter(formatter)
 
