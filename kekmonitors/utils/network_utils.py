@@ -1,12 +1,12 @@
 import asyncio
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
-import tornado.httpclient
-from tornado.curl_httpclient import CurlError
-from typing import Dict
 import pycurl
-from utils.tools import get_logger
+import tornado.httpclient
+from kekmonitors.config import LogConfig
+from kekmonitors.utils.tools import get_logger
+from tornado.curl_httpclient import CurlError
 
 
 class NetworkUtils(object):
@@ -30,7 +30,9 @@ class NetworkUtils(object):
 		else:
 			self._has_brotli = False
 
-		self.network_logger = get_logger(logger_name + ".NetworkUtils")
+		config = LogConfig()
+		config.name = f"{logger_name}.NetworkUtils"
+		self.network_logger = get_logger(config)
 		self.network_logger.debug(f"Has brotli: {self._has_brotli}")
 
 	async def fetch(self, url: str, use_cache=True, attempts=3, delay=2, *args, **kwargs) -> Tuple[Optional[tornado.httpclient.HTTPResponse], str]:

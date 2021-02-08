@@ -1,5 +1,6 @@
 import asyncio
 import json
+from kekmonitors.config import Config
 from typing import List
 
 from bs4 import BeautifulSoup
@@ -7,10 +8,9 @@ from fake_headers import Headers
 from pyppeteer.launcher import launch
 from pyppeteer.network_manager import Response
 from pyppeteer.page import Page
-from utils.shoe_stuff import Shoe
-from utils.tools import make_default_executable
-
-from monitors.base_monitor import BaseMonitor
+from kekmonitors.utils.shoe_stuff import Shoe
+from kekmonitors.utils.tools import make_default_executable
+from kekmonitors.base_monitor import BaseMonitor
 
 
 class Footdistrict(BaseMonitor):
@@ -77,12 +77,12 @@ class Footdistrict(BaseMonitor):
 		self.network_logger.debug("Got all links")
 
 		for link, page, response in zip(self.links, pages, responses):
-			text = await response.text()
-
 			if not response.ok:
 				self.general_logger.debug(
 					f"{link}: skipping parsing on code {response.code}")
 				continue
+
+			text = await response.text()
 
 			if len(text) < 1000:
 				self.general_logger.warning(
@@ -117,7 +117,7 @@ class Footdistrict(BaseMonitor):
 
 				else:
 					self.general_logger.warning(
-						"Couldn't find name meta property -- skipping.")
+						"Couldn't find script -- skipping.")
 
 			else:
 				self.general_logger.warning(
@@ -129,4 +129,6 @@ class Footdistrict(BaseMonitor):
 
 
 if __name__ == "__main__":
-	make_default_executable(Footdistrict)
+	custom_config = Config()
+	custom_config.crash_webhook = "your-crash-webhook-here"
+	make_default_executable(Footdistrict, custom_config)

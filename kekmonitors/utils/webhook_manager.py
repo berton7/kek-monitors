@@ -1,25 +1,25 @@
 import json
-import logging
 import time
 from datetime import datetime
+from logging import Logger
 from queue import Queue
 from threading import Event, Thread
 from typing import Any, Dict, List, Tuple
 
 import requests
 from discord import Embed
-
-from utils.tools import get_logger
-from configs.config import WEBHOOK_CONFIG
+from kekmonitors.config import Config, LogConfig
+from kekmonitors.utils.tools import get_logger
 
 
 class WebhookSender(Thread):
 	'''This handles sending embeds to one specific webhook. Obviously being a thread sub-class you should not add too many webhooks (in the order of the hundreds) for the same monitor.\n
-	You should not use this, but `WebhookManager` instead'''
+	You should not use this directly, but `WebhookManager` instead'''
 
-	def __init__(self, webhook: str, logger: logging.Logger):
+	def __init__(self, webhook: str, config: Config):
+		self.config = config
 		self.webhook = webhook
-		self.logger = logger
+		self.logger = Logger(self.config.name)
 		self.queue = Queue()  # type: Queue[Tuple[List[Any], List[Any], datetime]]
 		# contains the webhook config, embeds and time at which they were added
 		self.add_event = Event()
@@ -47,23 +47,23 @@ class WebhookSender(Thread):
 				webhook_values, embed, now = self.queue.get()
 				if "custom" in webhook_values:
 					provider = webhook_values["custom"].get(
-						"provider", WEBHOOK_CONFIG.DEFAULT_PROVIDER)
+						"provider", self.config.provider)
 					timestamp_format = webhook_values["custom"].get(
-						"timestamp_format", WEBHOOK_CONFIG.DEFAULT_TIMESTAMP_FORMAT)
+						"timestamp_format", self.config.timestamp_format)
 					ts = now.strftime(timestamp_format)
 					icon_url = webhook_values["custom"].get(
-						"icon_url", WEBHOOK_CONFIG.DEFAULT_PROVIDER_ICON)
+						"icon_url", self.self.config.provider_icon)
 					color = webhook_values["custom"].get(
-						"color", WEBHOOK_CONFIG.DEFAULT_EMBED_COLOR)
+						"color", self.self.config.embed_color)
 
 					embed.set_footer(text=" | ".join([provider, ts]), icon_url=icon_url)
 					embed.color = color
 				else:
-					ts = now.strftime(WEBHOOK_CONFIG.DEFAULT_TIMESTAMP_FORMAT)
+					ts = now.strftime(self.config.timestamp_format)
 
-					embed.set_footer(text=f"{WEBHOOK_CONFIG.DEFAULT_PROVIDER} | {ts}",
-					                 icon_url=WEBHOOK_CONFIG.DEFAULT_PROVIDER_ICON)
-					embed.color = WEBHOOK_CONFIG.DEFAULT_EMBED_COLOR
+					embed.set_footer(text=f"{self.config.provider} | {ts}",
+					                 icon_url=self.self.config.provider_icon)
+					embed.color = self.self.config.embed_color
 
 				embed.timestamp = Embed.Empty
 				data = {"embeds": [embed.to_dict()]}
@@ -94,8 +94,11 @@ class WebhookSender(Thread):
 
 
 class WebhookManager():
-	def __init__(self, logger_name: str, add_stream_handler: bool):
-		self.logger = get_logger(logger_name + ".WebhookManager", add_stream_handler)
+	def __init__(self, config: Config):
+		self.config = config
+		logconfig = LogConfig(self.config)
+		logconfig.name += ".WebhookManager"
+		self.logger = get_logger(logconfig)
 		self.webhook_senders = {}  # type: Dict[str, WebhookSender]
 		self.add_event = Event()
 		self.logger.debug("Started webhook manager")
@@ -119,6 +122,6 @@ class WebhookManager():
 			if webhook in self.webhook_senders:
 				self.webhook_senders[webhook].add_to_queue(webhooks[webhook], embed)
 			else:
-				self.webhook_senders[webhook] = WebhookSender(webhook, self.logger)
+				self.webhook_senders[webhook] = WebhookSender(webhook, self.config)
 				self.webhook_senders[webhook].start()
 				self.webhook_senders[webhook].add_to_queue(webhooks[webhook], embed)

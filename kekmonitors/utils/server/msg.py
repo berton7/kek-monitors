@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, List, Optional, Tuple
 
-from configs.config import COMMANDS, ERRORS
+from kekmonitors.config import COMMANDS, ERRORS
 
 
 class Message(object):

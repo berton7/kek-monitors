@@ -1,39 +1,34 @@
-import argparse
 import asyncio
 import copy
 import json
-import os
 import traceback
 from typing import List, Optional
-from utils.tools import make_default_executable
 
-from configs.config import COMMANDS, ERRORS, SOCKET_PATH, WEBHOOK_CONFIG
-from utils import discord_embeds, shoe_stuff
-from utils.common_base import Common
-from utils.network_utils import NetworkUtils
-from utils.server.msg import *
-from utils.server.server import Server
-from utils.shoe_manager import ShoeManager
-from utils.shoe_stuff import Shoe
-from utils.tools import dump_error
-from utils.webhook_manager import WebhookManager
+from kekmonitors.base_common import Common
+from kekmonitors.config import COMMANDS, ERRORS, Config
+from kekmonitors.utils import discord_embeds, shoe_stuff
+from kekmonitors.utils.network_utils import NetworkUtils
+from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.utils.server.server import Server
+from kekmonitors.utils.shoe_manager import ShoeManager
+from kekmonitors.utils.shoe_stuff import Shoe
+from kekmonitors.utils.tools import dump_error
+from kekmonitors.utils.webhook_manager import WebhookManager
 
 
 class BaseMonitor(Common, NetworkUtils):
-	def __init__(self, add_stream_handler: bool = True):
-		# init some internal variables (logger, links)
-		logger_name = f"Monitor.{self.get_class_name()}"
+	def __init__(self, config: Config = Config()):
+		if not config.name:
+			config.name = f"Monitor.{self.get_class_name()}"
+		elif not config.name.startswith("Monitor."):
+			raise Exception(
+				f"You must start the monitor name with \"Monitor.\"! Currently: {config.name}")
+		self.crash_webhook = config.crash_webhook
 
-		self.default_configs_file_path = ["configs", "monitors", "configs.json"]
-		self.default_webhooks_file_path = ["configs", "monitors", "webhooks.json"]
-		self.default_whitelists_file_path = [
-			"configs", "monitors", "whitelists.json"]
-		self.default_blacklists_file_path = [
-			"configs", "monitors", "blacklists.json"]
+		super().__init__(config)
+		super(Server, self).__init__(config.name)
 
-		super().__init__(
-			logger_name, add_stream_handler, f"{SOCKET_PATH}/Monitor.{self.get_class_name()}")
-		super(Server, self).__init__(logger_name)
+		self._mark_as_monitor()
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
@@ -45,9 +40,8 @@ class BaseMonitor(Common, NetworkUtils):
 		self.links = []  # type: List[str]
 		self.shoes = []  # type: List[Shoe]
 
-		self.shoe_manager = ShoeManager(logger=self.general_logger)
-		self.webhook_manager = WebhookManager(
-			logger_name, add_stream_handler)
+		self.shoe_manager = ShoeManager()
+		self.webhook_manager = WebhookManager(config)
 
 		# website-specific variables should be declared here
 		self.init()
@@ -106,7 +100,7 @@ class BaseMonitor(Common, NetworkUtils):
 		return okResponse()
 
 	async def _get_links(self):
-		socket_path = f"{SOCKET_PATH}/Scraper.{self.class_name}"
+		socket_path = f"{self.config.socket_path}/Scraper.{self.class_name}"
 		self.client_logger.debug("Getting links...")
 
 		cmd = Cmd()
@@ -144,10 +138,10 @@ class BaseMonitor(Common, NetworkUtils):
 					self.shoe_check()
 				except:
 					self.general_logger.exception("")
-					if WEBHOOK_CONFIG.CRASH_WEBHOOK:
+					if self.crash_webhook:
 						data = json.dumps(
 							{"content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."[:2000]})
-						await self.client.fetch(WEBHOOK_CONFIG.CRASH_WEBHOOK, method="POST", body=data, headers={"content-type": "application/json"}, raise_error=False)
+						await self.client.fetch(self.crash_webhook, method="POST", body=data, headers={"content-type": "application/json"}, raise_error=False)
 				self.general_logger.info(f"Loop ended. Waiting {self.delay} secs.")
 			await asyncio.sleep(self.delay)
 
@@ -163,7 +157,7 @@ class BaseMonitor(Common, NetworkUtils):
 			returned = self.set_reason_and_update_shoe(shoe)
 			if returned:
 				embed = discord_embeds.get_default_embed(returned)
-				self.webhook_manager.add_to_queue(embed, self.webhooks)
+				self.webhook_manager.add_to_queue(embed, self.webhooks_json)
 
 	def set_reason_and_update_shoe(self, shoe: Shoe) -> Optional[Shoe]:
 		"""Check shoe against db. If present in db check if there are new sizes;\n
@@ -212,6 +206,3 @@ class BaseMonitor(Common, NetworkUtils):
 			self.shoe_manager.add_shoe(shoe)
 
 		return return_shoe
-
-if __name__ == "__main__":
-	make_default_executable(BaseMonitor)

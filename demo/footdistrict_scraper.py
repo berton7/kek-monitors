@@ -6,9 +6,10 @@ from fake_headers import Headers
 from pyppeteer import launch
 from pyppeteer.network_manager import Response
 from pyppeteer.page import Page
-from utils.tools import make_default_executable
+from kekmonitors.utils.tools import make_default_executable
 
-from scrapers.base_scraper import BaseScraper
+from kekmonitors.base_scraper import BaseScraper
+from kekmonitors.config import Config
 
 
 class Footdistrict(BaseScraper):
@@ -111,4 +112,6 @@ class Footdistrict(BaseScraper):
 
 
 if __name__ == "__main__":
+	custom_config = Config()
+	custom_config.crash_webhook = "your-crash-webhook-here"
 	make_default_executable(Footdistrict)

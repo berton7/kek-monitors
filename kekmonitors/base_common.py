@@ -2,27 +2,48 @@ import asyncio
 import json
 import os
 from json.decoder import JSONDecodeError
-from typing import Any
+from typing import Any, Dict, List, Optional
 
-from configs.config import *
+import __main__
+import pymongo
+from pymongo.collection import Collection
 
-from utils.server.msg import *
-from utils.server.server import Server
-from utils.tools import get_logger
+from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
+from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.utils.server.server import Server
+from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
+
+
+def mark_as(_type: str, name: str, path: str, client: Collection):
+	existing = client[_type].find_one({"name": name})
+	if not existing:
+		client[_type].insert_one({"name": name, "path": path})
+	else:
+		if existing["path"] != path:
+			raise Exception(
+				f"Trying to register new {_type} ({name}) when it already exists in the database with a different path: {existing['path']}")
 
 
 class Common(Server):
-	def __init__(self, logger_name: str, add_stream_handler, socket_path: str):
-		self.general_logger = get_logger(
-			logger_name + ".General", add_stream_handler)
-		self.client_logger = get_logger(logger_name + ".Client", add_stream_handler)
+	def __init__(self, config: Config):
+		self.config = config
+
+		log_config = LogConfig(config)
+
+		log_config.name += ".General"
+		self.general_logger = get_logger(log_config)
+		log_config.name = self.config.name + ".Client"
+		self.client_logger = get_logger(log_config)
 
 		self.class_name = self.get_class_name()
 
-		super().__init__(logger_name, add_stream_handler, socket_path)
+		super().__init__(config, os.path.sep.join(
+			[self.config.socket_path, config.name]))
+
+		self.db_client = pymongo.MongoClient(self.config.db_path)[
+                    self.config.db_name]["register"]
 
 		self._loop_lock = asyncio.Lock()
-		#self._stop_event = asyncio.Event()
 
 		self.cmd_to_callback[COMMANDS.SET_WHITELIST] = self.on_set_whitelist
 		self.cmd_to_callback[COMMANDS.SET_BLACKLIST] = self.on_set_blacklist
@@ -33,14 +54,21 @@ class Common(Server):
 		self.cmd_to_callback[COMMANDS.GET_WEBHOOKS] = self.on_get_webhooks
 		self.cmd_to_callback[COMMANDS.GET_CONFIG] = self.on_get_config
 
-		self.whitelist = self.load_config(
-			os.path.sep.join(self.default_whitelists_file_path))  # type List[str]
-		self.blacklist = self.load_config(os.path.sep.join(
-			self.default_blacklists_file_path))  # type: List[str]
-		self.webhooks = self.load_config(os.path.sep.join(
-			self.default_webhooks_file_path))  # type: Dict[str, Dict[str, Any]]
-		self.config = self.load_config(os.path.sep.join(
-			self.default_configs_file_path))  # type: Dict[str, Any]
+		is_monitor = config.name.startswith("Monitor.")
+		pre_conf_path = self.config.config_path
+		self.whitelist_json_filepath = os.path.sep.join(
+			[pre_conf_path, "monitors" if is_monitor else "scrapers", "whitelists.json"])
+		self.blacklist_json_filepath = os.path.sep.join(
+			[pre_conf_path, "monitors" if is_monitor else "scrapers", "blacklists.json"])
+		self.webhooks_json_filepath = os.path.sep.join(
+			[pre_conf_path, "monitors" if is_monitor else "scrapers", "webhooks.json"])
+		self.config_json_filepath = os.path.sep.join(
+			[pre_conf_path, "monitors" if is_monitor else "scrapers", "configs.json"])
+
+		self.whitelist_json = self.load_config(self.whitelist_json_filepath)
+		self.blacklist_json = self.load_config(self.blacklist_json_filepath)
+		self.webhooks_json = self.load_config(self.webhooks_json_filepath)
+		self.config_json = self.load_config(self.config_json_filepath)
 
 		self._new_whitelist = None  # type: Optional[List[str]]
 		self._new_blacklist = None  # type: Optional[List[str]]
@@ -70,36 +98,42 @@ class Common(Server):
 		'''Not necessary, but sometimes you might want to override this.'''
 		return type(self).__name__
 
+	def _mark_as_monitor(self):
+		mark_as("monitors", self.class_name, __main__.__file__, self.db_client)
+
+	def _mark_as_scraper(self):
+		mark_as("scrapers", self.class_name, __main__.__file__, self.db_client)
+
 	def load_config(self, path):
-		with open(path, "r") as f:
-			try:
-				j = json.load(f)
-			except JSONDecodeError:
-				self.general_logger.exception(f"{path} is not valid json. Quitting.")
-				exit(1)
-			if self.class_name not in j:
-				self.general_logger.warning(
-					f"{self.class_name} not in {path}, continuing with empty entry.")
-				return {}
-			else:
-				return j[self.class_name]
+		content = get_file_if_exist_else_create(path, "{}")
+		try:
+			j = json.loads(content)
+		except JSONDecodeError:
+			self.general_logger.exception(f"{path} is not valid json. Quitting.")
+			exit(1)
+		if self.class_name not in j:
+			self.general_logger.warning(
+				f"{self.class_name} not in {path}, continuing with empty entry.")
+			return {}
+		else:
+			return j[self.class_name]
 
 	def update_local_config(self):
 		if self._new_blacklist is not None:
 			self.general_logger.info(f"New blacklist: {self._new_blacklist}")
-			self.blacklist = self._new_blacklist
+			self.blacklist_json = self._new_blacklist
 			self._new_blacklist = None
 		if self._new_whitelist is not None:
 			self.general_logger.info(f"New whitelist: {self._new_whitelist}")
-			self.whitelist = self._new_whitelist
+			self.whitelist_json = self._new_whitelist
 			self._new_whitelist = None
 		if self._new_webhooks is not None:
 			self.general_logger.info(f"New webhooks: {self._new_webhooks}")
-			self.webhooks = self._new_webhooks
+			self.webhooks_json = self._new_webhooks
 			self._new_webhooks = None
 		if self._new_config is not None:
 			self.general_logger.info(f"New config: {self._new_config}")
-			self.config = self._new_config
+			self.config_json = self._new_config
 			self._new_config = None
 
 	async def on_set_whitelist(self, cmd: Cmd) -> Response:
@@ -112,7 +146,7 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new whitelist but it was invalid: {whitelist}")
-			r.error = ERRORS.INVALID_PAYLOAD
+			r.error = ERRORS.BAD_PAYLOAD
 			r.info = f"Invalid whitelist (expected list, got {type(cmd.payload)}"
 		return r
 
@@ -126,7 +160,7 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new blacklist but it was invalid: {blacklist}")
-			r.error = ERRORS.INVALID_PAYLOAD
+			r.error = ERRORS.BAD_PAYLOAD
 			r.info = f"Invalid blacklist (expected list, got {type(cmd.payload)}"
 		return r
 
@@ -140,7 +174,7 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new webhooks but it was invalid: {webhooks}")
-			r.error = ERRORS.INVALID_PAYLOAD
+			r.error = ERRORS.BAD_PAYLOAD
 			r.info = f"Invalid webhooks (expected dict, got {type(cmd.payload)}"
 		return r
 
@@ -154,28 +188,28 @@ class Common(Server):
 		else:
 			self.client_logger.warning(
 				f"Got new config but it was invalid: {config}")
-			r.error = ERRORS.INVALID_PAYLOAD
+			r.error = ERRORS.BAD_PAYLOAD
 			r.info = f"Invalid config (expected dict, got {type(cmd.payload)}"
 		return r
 
 	async def on_get_config(self, cmd: Cmd) -> Response:
 		r = okResponse()
-		r.payload = self.config
+		r.payload = self.config_json
 		return r
 
 	async def on_get_whitelist(self, cmd: Cmd) -> Response:
 		r = okResponse()
-		r.payload = self.whitelist
+		r.payload = self.whitelist_json
 		return r
 
 	async def on_get_blacklist(self, cmd: Cmd) -> Response:
 		r = okResponse()
-		r.payload = self.blacklist
+		r.payload = self.blacklist_json
 		return r
 
 	async def on_get_webhooks(self, cmd: Cmd) -> Response:
 		r = okResponse()
-		r.payload = self.webhooks
+		r.payload = self.webhooks_json
 		return r
 
 	async def main(self):

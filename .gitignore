@@ -1,6 +1,10 @@
-venv
-__pycache__
-.mypy_cache
+venv/
+__pycache__/
+.mypy_cache/
 .vscode
-logs
-db
+logs/
+
+# build related
+build/
+dist/
+kekmonitors.egg-info/

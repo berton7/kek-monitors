@@ -1,11 +1,8 @@
-import logging
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
 import pymongo
-from configs.config import DB_CONFIG
-
-from utils.shoe_stuff import Shoe
-from utils.tools import get_logger
+from kekmonitors.config import Config
+from kekmonitors.utils.shoe_stuff import Shoe
 
 
 def _change_keys(d, _from, _to):
@@ -27,14 +24,14 @@ def _change_keys(d, _from, _to):
 		return d
 
 
-def sanitize(d: Union[Dict[Any, Any], List[Any]]) -> Union[Dict[Any, Any], List[Any]]:
+def sanitize(d: Dict[str, Any]) -> Dict[str, Any]:
 	"""
 	Converts keys with "." to "_dot_", as it's not possile to add keys with a "." in MongoDBc
 	"""
 	return _change_keys(d, ".", "_dot_")
 
 
-def unsanitize(d: Union[Dict[Any, Any], List[Any]]) -> Union[Dict[Any, Any], List[Any]]:
+def unsanitize(d: Dict[str, Any]) -> Dict[str, Any]:
 	"""
 	Converts keys with "_dot_" back to "."
 	"""
@@ -44,19 +41,12 @@ def unsanitize(d: Union[Dict[Any, Any], List[Any]]) -> Union[Dict[Any, Any], Lis
 class ShoeManager(object):
 	'''Manages the database. Mostly a MongoDB wrapper.'''
 
-	def __init__(self, logger: logging.Logger):
-		# get a new logger if not provided
-		if not logger:
-			self._logger = get_logger("ShoeManager")
-		else:
-			self._logger = logger
+	def __init__(self):
+		config = Config()
+		self.db_name = config.db_name
+		self.db_path = config.db_path
 
-		self.db_name = DB_CONFIG.DEFAULT_DB_NAME
-		self.db_path = DB_CONFIG.DEFAULT_DB_PATH
-
-		self._client = pymongo.MongoClient(self.db_path)
-		self._db = self._client[self.db_name]["items"]
-		self._logger.debug("Database initialized.")
+		self._db = pymongo.MongoClient(self.db_path)[self.db_name]["items"]
 
 	def add_shoe(self, shoe: Shoe):
 		'''Add this shoe to the database'''

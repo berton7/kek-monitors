@@ -1,21 +1,31 @@
-
 import asyncio
-from typing import Callable
-from utils.tools import get_logger
-from utils.server.msg import *
-from configs.config import *
+import enum
 import os
+from typing import Callable, Dict
+
+from kekmonitors.config import ERRORS, Config, LogConfig
+from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.utils.tools import get_logger
 
 
 class Server(object):
-	def __init__(self, logger_name: str, add_stream_handler, server_path: str):
-		self.server_logger = get_logger(logger_name + ".Server", add_stream_handler)
+	def __init__(self, config: Config, server_path: str):
+		logconfig = LogConfig(config)
+		logconfig.name += ".Server"
+		self.server_logger = get_logger(logconfig)
 		self.server_path = server_path
+		socket_directory = self.server_path[:self.server_path.rfind(os.path.sep)]
+		try:
+			os.makedirs(socket_directory, exist_ok=True)
+		except PermissionError:
+			self.server_logger.exception(
+				"Failed to create the socket directory. Please provide a directory where the current user has write permissions!")
+			exit(1)
 		# init asyncio stuff
 		self._asyncio_loop = asyncio.get_event_loop()
 		self._server_task = self._asyncio_loop.create_task(self._init_server())
 
-		self.cmd_to_callback = {}   # type: Dict[int, Callable]
+		self.cmd_to_callback = {}   # type: Dict[enum.Enum, Callable]
 
 	async def _init_server(self):
 		'''Initialise the underlying socket server, to allow communication between monitor/scraper.'''

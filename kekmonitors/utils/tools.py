@@ -5,16 +5,15 @@ import logging
 import logging.handlers
 import os
 from datetime import timezone
-from typing import Optional
+from typing import List
 
-from configs.config import ERRORS
+from kekmonitors.config import ERRORS, Config, LogConfig
+from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 
-from utils.server.msg import Cmd, Response, badResponse, okResponse
 
-
-def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_level: int = logging.DEBUG, file_level: int = logging.DEBUG):
+def get_logger(config: LogConfig):
 	'''Get preconfigured logger'''
-	logger = logging.getLogger(name)
+	logger = logging.getLogger(config.name)
 	logger.propagate = False
 	logger.setLevel(logging.DEBUG)
 	formatter = logging.Formatter(
@@ -23,18 +22,20 @@ def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_leve
 	while logger.handlers:
 		logger.handlers.pop()
 
-	splitted_name = name.split(".")
-	os.makedirs(os.path.sep.join(["logs", *splitted_name[:2]]), exist_ok=True)
+	splitted_name = config.name.split(".")
+	log_path = Config().log_path
+	os.makedirs(os.path.sep.join(
+		[log_path, *splitted_name[:2]]), exist_ok=True)
 	file_handler = logging.handlers.TimedRotatingFileHandler(filename=os.path.sep.join(
-		["logs", *splitted_name[:2], "".join([splitted_name[-1], ".log"])]), when="midnight", interval=1, backupCount=7)
-	file_handler.setLevel(file_level)
+		[log_path, *splitted_name[:2], "".join([splitted_name[-1], ".log"])]), when="midnight", interval=1, backupCount=7)
+	file_handler.setLevel(config.file_level)
 	file_handler.setFormatter(formatter)
 
 	logger.addHandler(file_handler)
 
-	if add_stream_handler:
+	if config.add_stream_handler:
 		stream_handler = logging.StreamHandler()
-		stream_handler.setLevel(stream_level)
+		stream_handler.setLevel(config.stream_level)
 		stream_handler.setFormatter(formatter)
 		logger.addHandler(stream_handler)
 
@@ -78,11 +79,11 @@ def chunks(lst, n):
 		yield lst[i:i + n]
 
 
-def make_default_executable(class_name, default_delay: int = 5):
+def make_default_executable(_class, config: Config = Config()):
 	parser = argparse.ArgumentParser(
-            description=f"Default executable for {class_name.__name__}, generated from utils.tools.make_default_executable")
-	parser.add_argument("-d", "--delay", default=default_delay, type=int,
-                     help=f"Specify a delay for the loop. (default: {default_delay})")
+            description=f"Default executable for {_class.__name__}, generated from utils.tools.make_default_executable")
+	parser.add_argument("-d", "--delay", default=config.loop_delay, type=int,
+                     help=f"Specify a delay for the loop. (default: {config.loop_delay})")
 	parser.add_argument("--output", action=argparse.BooleanOptionalAction,
                      default=True,
                      help="Specify wether you want log output to the console or not. (note: this does not disable file log)",)
@@ -90,7 +91,9 @@ def make_default_executable(class_name, default_delay: int = 5):
 	if args.delay < 0:
 		print(f"Cannot have a negative delay")
 		return
-	class_name(args.output).start(args.delay)
+	config.add_stream_handler = args.output
+	config.loop_delay = args.delay
+	_class(config).start(args.delay)
 
 
 def dump_error(logger: logging.Logger, response: Response):
@@ -125,3 +128,23 @@ async def make_request(socket_path: str, cmd: Cmd, expect_response=True) -> Resp
 	r = badResponse()
 	r.error = ERRORS.SOCKET_DOESNT_EXIST
 	return r
+
+
+def list_contains_find_item(l: List[str], s: str):
+	for item in l:
+		if item.find(s) != -1:
+			return True
+	else:
+		False
+
+
+def get_file_if_exist_else_create(filename_path, content) -> str:
+	filename_directory_path = filename_path[:filename_path.rfind(os.path.sep)]
+	os.makedirs(filename_directory_path, exist_ok=True)
+	if os.path.isfile(filename_path):
+		with open(filename_path, "r") as rf:
+			return rf.read()
+	else:
+		with open(filename_path, "w") as wf:
+			wf.write(content)
+		return content
