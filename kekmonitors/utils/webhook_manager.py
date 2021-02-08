@@ -1,16 +1,15 @@
 import json
 import time
 from datetime import datetime
+from logging import Logger
 from queue import Queue
 from threading import Event, Thread
 from typing import Any, Dict, List, Tuple
 
 import requests
 from discord import Embed
-
-from kekmonitors.utils.tools import get_logger
 from kekmonitors.config import Config, LogConfig
-from logging import Logger
+from kekmonitors.utils.tools import get_logger
 
 
 class WebhookSender(Thread):

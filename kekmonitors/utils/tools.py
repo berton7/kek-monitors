@@ -8,7 +8,6 @@ from datetime import timezone
 from typing import List
 
 from kekmonitors.config import ERRORS, Config, LogConfig
-
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 
 

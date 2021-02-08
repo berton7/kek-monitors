@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from discord import Embed
-
 from kekmonitors.utils import shoe_stuff
 from kekmonitors.utils.shoe_stuff import Shoe
 

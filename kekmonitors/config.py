@@ -1,7 +1,7 @@
-import enum
-import os
 import configparser
+import enum
 import logging
+import os
 
 
 @enum.unique
@@ -88,7 +88,6 @@ def get_file_if_exist_else_create(filename_path, content) -> str:
 		with open(filename_path, "w") as wf:
 			wf.write(content)
 		return content
-
 
 
 class Config(object):

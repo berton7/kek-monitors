@@ -1,11 +1,8 @@
-from kekmonitors.config import Config
-import logging
 from typing import Any, Dict, List
 
 import pymongo
-
+from kekmonitors.config import Config
 from kekmonitors.utils.shoe_stuff import Shoe
-from kekmonitors.utils.tools import get_logger
 
 
 def _change_keys(d, _from, _to):

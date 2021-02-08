@@ -1,6 +1,7 @@
-from kekmonitors.config import Config
 from pprint import pprint
+
 import pymongo
+from kekmonitors.config import Config
 
 if __name__ == "__main__":
 	config = Config()

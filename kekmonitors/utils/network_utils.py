@@ -1,13 +1,12 @@
 import asyncio
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
-import tornado.httpclient
-from tornado.curl_httpclient import CurlError
-from typing import Dict
 import pycurl
-from kekmonitors.utils.tools import get_logger
+import tornado.httpclient
 from kekmonitors.config import LogConfig
+from kekmonitors.utils.tools import get_logger
+from tornado.curl_httpclient import CurlError
 
 
 class NetworkUtils(object):

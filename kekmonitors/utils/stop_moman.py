@@ -1,6 +1,6 @@
-from kekmonitors.utils.server.msg import Cmd
-from kekmonitors.monitor_manager_cli import send
 from kekmonitors.config import COMMANDS
+from kekmonitors.monitor_manager_cli import send
+from kekmonitors.utils.server.msg import Cmd
 
 if __name__ == "__main__":
 	cmd = Cmd()

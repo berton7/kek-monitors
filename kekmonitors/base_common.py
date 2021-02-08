@@ -4,14 +4,14 @@ import os
 from json.decoder import JSONDecodeError
 from typing import Any, Dict, List, Optional
 
-from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
-
-from kekmonitors.utils.server.msg import Cmd, Response, okResponse, badResponse
-from kekmonitors.utils.server.server import Server
-from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
 import __main__
 import pymongo
 from pymongo.collection import Collection
+
+from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
+from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.utils.server.server import Server
+from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
 
 
 def mark_as(_type: str, name: str, path: str, client: Collection):

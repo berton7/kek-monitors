@@ -1,7 +1,6 @@
 import asyncio
 import sys
 from pprint import pprint
-from typing import List, Optional
 
 from kekmonitors.config import COMMANDS, Config
 from kekmonitors.utils.server.msg import Cmd
