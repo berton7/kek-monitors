@@ -52,9 +52,9 @@ class WebhookSender(Thread):
 						"timestamp_format", self.config.timestamp_format)
 					ts = now.strftime(timestamp_format)
 					icon_url = webhook_values["custom"].get(
-						"icon_url", self.self.config.provider_icon)
+						"icon_url", self.config.provider_icon)
 					color = webhook_values["custom"].get(
-						"color", self.self.config.embed_color)
+						"color", self.config.embed_color)
 
 					embed.set_footer(text=" | ".join([provider, ts]), icon_url=icon_url)
 					embed.color = color
@@ -62,8 +62,8 @@ class WebhookSender(Thread):
 					ts = now.strftime(self.config.timestamp_format)
 
 					embed.set_footer(text=f"{self.config.provider} | {ts}",
-					                 icon_url=self.self.config.provider_icon)
-					embed.color = self.self.config.embed_color
+					                 icon_url=self.config.provider_icon)
+					embed.color = self.config.embed_color
 
 				embed.timestamp = Embed.Empty
 				data = {"embeds": [embed.to_dict()]}
