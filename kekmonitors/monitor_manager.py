@@ -11,7 +11,7 @@ import tornado.httpclient
 from watchdog import observers
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
-from kekmonitors.config import COMMANDS, ERRORS, Config
+from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 from kekmonitors.utils.server.server import Server
 import kekmonitors.utils.tools
@@ -31,11 +31,11 @@ class MonitorManager(Server, FileSystemEventHandler):
 		self.config = config
 
 		logger_name = "Executable.MonitorManager"
-		super().__init__(logger_name, True,
-                   f"{self.config.socket_path}/MonitorManager")
+		super().__init__(config, f"{self.config.socket_path}/MonitorManager")
 		super(Server).__init__()
-		self.general_logger = kekmonitors.utils.tools.get_logger(
-			logger_name + ".General")
+		logconfig = LogConfig(self.config)
+		logconfig.name += ".General"
+		self.general_logger = kekmonitors.utils.tools.get_logger(logconfig)
 		self.cmd_to_callback[COMMANDS.MM_STOP_MONITOR_MANAGER] = self._stop_serving
 		self.cmd_to_callback[COMMANDS.MM_ADD_MONITOR] = self.on_add_monitor
 		self.cmd_to_callback[COMMANDS.MM_ADD_SCRAPER] = self.on_add_scraper
@@ -489,14 +489,14 @@ class MonitorManager(Server, FileSystemEventHandler):
 	async def add_monitor(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):
 		if class_name in self.monitor_processes:
 			self.general_logger.debug(
-				f"Tried to add an already existing monitor ({filename}.{class_name})")
+				f"Tried to add an already existing monitor ({class_name} ({filename}))")
 			return False, "Monitor already started."
 
 		cmd = f"nohup python {filename} --no-output"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
-		self.general_logger.debug(f"Starting {filename}.{class_name}...")
+		self.general_logger.debug(f"Starting {class_name} ({filename})...")
 		monitor = subprocess.Popen(shlex.split(
 			cmd), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -504,9 +504,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		if monitor.poll() is not None:
 			success = False
-			msg = f"Failed to start monitor {filename}.{class_name}"
+			msg = f"Failed to start monitor {class_name} ({filename})"
 			self.general_logger.warning(
-				f"Tried to start {filename}.{class_name} but failed")
+				f"Tried to start {class_name} ({filename}) but failed")
 		else:
 			self.general_logger.info(
 				f"Added monitor {class_name} with pid {monitor.pid}")
@@ -521,14 +521,14 @@ class MonitorManager(Server, FileSystemEventHandler):
 	async def add_scraper(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):
 		if class_name in self.scraper_processes:
 			self.general_logger.debug(
-				f"Tried to add an already existing scraper ({filename}.{class_name})")
+				f"Tried to add an already existing scraper ({class_name} ({filename}))")
 			return False, "Scraper already started."
 
 		cmd = f"nohup python {filename} --no-output"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
-		self.general_logger.debug(f"Starting {filename}.{class_name}...")
+		self.general_logger.debug(f"Starting {class_name} ({filename})...")
 		scraper = subprocess.Popen(shlex.split(
 			cmd), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -536,9 +536,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		if scraper.poll() is not None:
 			success = False
-			msg = f"Failed to start scraper {filename}.{class_name}"
+			msg = f"Failed to start scraper {class_name} ({filename})"
 			self.general_logger.warning(
-				f"Tried to start {filename}.{class_name} but failed")
+				f"Tried to start {class_name} ({filename}) but failed")
 		else:
 			self.general_logger.info(
 				f"Added scraper {class_name} with pid {scraper.pid}")

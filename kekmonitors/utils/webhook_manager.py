@@ -9,7 +9,7 @@ import requests
 from discord import Embed
 
 from kekmonitors.utils.tools import get_logger
-from kekmonitors.config import Config
+from kekmonitors.config import Config, LogConfig
 from logging import Logger
 
 
@@ -97,8 +97,9 @@ class WebhookSender(Thread):
 class WebhookManager():
 	def __init__(self, config: Config):
 		self.config = config
-		self.logger = get_logger(
-			self.config.name + ".WebhookManager", self.config.add_stream_handler)
+		logconfig = LogConfig(self.config)
+		logconfig.name += ".WebhookManager"
+		self.logger = get_logger(logconfig)
 		self.webhook_senders = {}  # type: Dict[str, WebhookSender]
 		self.add_event = Event()
 		self.logger.debug("Started webhook manager")

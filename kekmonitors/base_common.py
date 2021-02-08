@@ -4,7 +4,7 @@ import os
 from json.decoder import JSONDecodeError
 from typing import Any, Dict, List, Optional
 
-from kekmonitors.config import COMMANDS, ERRORS, Config
+from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 
 from kekmonitors.utils.server.msg import Cmd, Response, okResponse, badResponse
 from kekmonitors.utils.server.server import Server
@@ -28,15 +28,17 @@ class Common(Server):
 	def __init__(self, config: Config):
 		self.config = config
 
-		self.general_logger = get_logger(
-			config.name + ".General", config.add_stream_handler)
-		self.client_logger = get_logger(
-			config.name + ".Client", config.add_stream_handler)
+		log_config = LogConfig(config)
+
+		log_config.name += ".General"
+		self.general_logger = get_logger(log_config)
+		log_config.name = self.config.name + ".Client"
+		self.client_logger = get_logger(log_config)
 
 		self.class_name = self.get_class_name()
 
-		super().__init__(config.name,
-                   config.add_stream_handler, os.path.sep.join([self.config.socket_path, config.name]))
+		super().__init__(config, os.path.sep.join(
+			[self.config.socket_path, config.name]))
 
 		self.db_client = pymongo.MongoClient(self.config.db_path)[
                     self.config.db_name]["register"]

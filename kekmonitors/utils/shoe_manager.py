@@ -44,19 +44,12 @@ def unsanitize(d: Dict[str, Any]) -> Dict[str, Any]:
 class ShoeManager(object):
 	'''Manages the database. Mostly a MongoDB wrapper.'''
 
-	def __init__(self, logger: logging.Logger):
-		# get a new logger if not provided
-		if not logger:
-			self._logger = get_logger("ShoeManager")
-		else:
-			self._logger = logger
-
+	def __init__(self):
 		config = Config()
 		self.db_name = config.db_name
 		self.db_path = config.db_path
 
 		self._db = pymongo.MongoClient(self.db_path)[self.db_name]["items"]
-		self._logger.debug("Database initialized.")
 
 	def add_shoe(self, shoe: Shoe):
 		'''Add this shoe to the database'''

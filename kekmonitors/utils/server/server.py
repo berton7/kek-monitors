@@ -4,13 +4,15 @@ import enum
 from typing import Callable, Dict
 from kekmonitors.utils.tools import get_logger
 from kekmonitors.utils.server.msg import Cmd, Response, okResponse, badResponse
-from kekmonitors.config import ERRORS
+from kekmonitors.config import Config, ERRORS, LogConfig
 import os
 
 
 class Server(object):
-	def __init__(self, logger_name: str, add_stream_handler, server_path: str):
-		self.server_logger = get_logger(logger_name + ".Server", add_stream_handler)
+	def __init__(self, config: Config, server_path: str):
+		logconfig = LogConfig(config)
+		logconfig.name += ".Server"
+		self.server_logger = get_logger(logconfig)
 		self.server_path = server_path
 		# init asyncio stuff
 		self._asyncio_loop = asyncio.get_event_loop()

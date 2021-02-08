@@ -7,6 +7,7 @@ from tornado.curl_httpclient import CurlError
 from typing import Dict
 import pycurl
 from kekmonitors.utils.tools import get_logger
+from kekmonitors.config import LogConfig
 
 
 class NetworkUtils(object):
@@ -30,7 +31,9 @@ class NetworkUtils(object):
 		else:
 			self._has_brotli = False
 
-		self.network_logger = get_logger(logger_name + ".NetworkUtils")
+		config = LogConfig()
+		config.name += ".NetworkUtils"
+		self.network_logger = get_logger(config)
 		self.network_logger.debug(f"Has brotli: {self._has_brotli}")
 
 	async def fetch(self, url: str, use_cache=True, attempts=3, delay=2, *args, **kwargs) -> Tuple[Optional[tornado.httpclient.HTTPResponse], str]:

@@ -40,7 +40,7 @@ class BaseMonitor(Common, NetworkUtils):
 		self.links = []  # type: List[str]
 		self.shoes = []  # type: List[Shoe]
 
-		self.shoe_manager = ShoeManager(logger=self.general_logger)
+		self.shoe_manager = ShoeManager()
 		self.webhook_manager = WebhookManager(config)
 
 		# website-specific variables should be declared here

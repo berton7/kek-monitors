@@ -7,14 +7,14 @@ import os
 from datetime import timezone
 from typing import List, Optional
 
-from kekmonitors.config import ERRORS, Config
+from kekmonitors.config import ERRORS, Config, LogConfig
 
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 
 
-def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_level: int = logging.DEBUG, file_level: int = logging.DEBUG):
+def get_logger(config: LogConfig):
 	'''Get preconfigured logger'''
-	logger = logging.getLogger(name)
+	logger = logging.getLogger(config.name)
 	logger.propagate = False
 	logger.setLevel(logging.DEBUG)
 	formatter = logging.Formatter(
@@ -23,20 +23,20 @@ def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_leve
 	while logger.handlers:
 		logger.handlers.pop()
 
-	splitted_name = name.split(".")
+	splitted_name = config.name.split(".")
 	log_path = Config().log_path
 	os.makedirs(os.path.sep.join(
 		[log_path, *splitted_name[:2]]), exist_ok=True)
 	file_handler = logging.handlers.TimedRotatingFileHandler(filename=os.path.sep.join(
 		[log_path, *splitted_name[:2], "".join([splitted_name[-1], ".log"])]), when="midnight", interval=1, backupCount=7)
-	file_handler.setLevel(file_level)
+	file_handler.setLevel(config.file_level)
 	file_handler.setFormatter(formatter)
 
 	logger.addHandler(file_handler)
 
-	if add_stream_handler:
+	if config.add_stream_handler:
 		stream_handler = logging.StreamHandler()
-		stream_handler.setLevel(stream_level)
+		stream_handler.setLevel(config.stream_level)
 		stream_handler.setFormatter(formatter)
 		logger.addHandler(stream_handler)
 

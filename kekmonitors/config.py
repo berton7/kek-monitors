@@ -1,6 +1,7 @@
 import enum
 import os
 import configparser
+import logging
 
 
 @enum.unique
@@ -99,3 +100,15 @@ class Config(object):
 		self.add_stream_handler = parser.get(
 			"DefaultBaseConfig", "add_stream_handler")
 		self.loop_delay = parser.get("DefaultBaseConfig", "loop_delay")
+
+
+class LogConfig(Config):
+	def __init__(self, config: Config = None):
+		if config is not None:
+			for key in config.__dict__:
+				self.__dict__[key] = config.__dict__[key]
+		else:
+			super().__init__()
+
+		self.stream_level = logging.DEBUG
+		self.file_level = logging.DEBUG
