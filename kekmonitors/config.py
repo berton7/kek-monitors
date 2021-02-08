@@ -126,10 +126,10 @@ loop_delay = 5\n"
 		self.provider = parser.get("DefaultBaseConfig", "provider")
 		self.provider_icon = parser.get("DefaultBaseConfig", "provider_icon")
 		self.timestamp_format = parser.get("DefaultBaseConfig", "timestamp_format")
-		self.embed_color = parser.get("DefaultBaseConfig", "embed_color")
+		self.embed_color = int(parser.get("DefaultBaseConfig", "embed_color"))
 		self.add_stream_handler = parser.get(
 			"DefaultBaseConfig", "add_stream_handler")
-		self.loop_delay = parser.get("DefaultBaseConfig", "loop_delay")
+		self.loop_delay = int(parser.get("DefaultBaseConfig", "loop_delay"))
 
 
 class LogConfig(Config):
