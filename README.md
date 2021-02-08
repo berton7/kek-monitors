@@ -63,7 +63,7 @@ You can see the available endpoints by navigating to the root endpoint (by defau
 
 However **in this way they will only read the configs at start and will not refresh them.**
 ## Configuration
-Static configuration, like commands and global variables (```socket_path```), is contained in ```~/.config/kekmonitors/config.cfg``` by default (the default file is [default_config.cfg](https://github.com/berton7/kek-monitors/blob/master/kekmonitors/configs/default_config.cfg)); the "dynamic" configuration files instead, by default, are stored in ```~/.config/kekmonitors/monitors``` and ```~/.config/kekmonitors/scrapers```; every scraper and monitor looks for its corresponding entry in `blacklist.json`, `whitelist.json`, and a general not-yet-used `configs.json`. Here's an example blacklists.json:
+Static configuration, like commands and global variables (```socket_path```), is contained in ```~/.config/kekmonitors/config.cfg``` by default (the default file is hardcoded in [config.py](https://github.com/berton7/kek-monitors/blob/master/kekmonitors/configs/config.py)); the "dynamic" configuration files instead, by default, are stored in ```~/.config/kekmonitors/monitors``` and ```~/.config/kekmonitors/scrapers```; every scraper and monitor looks for its corresponding entry in `blacklist.json`, `whitelist.json`, and a general not-yet-used `configs.json`. Here's an example blacklists.json:
 
 ```json
 {
