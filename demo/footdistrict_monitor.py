@@ -77,12 +77,12 @@ class Footdistrict(BaseMonitor):
 		self.network_logger.debug("Got all links")
 
 		for link, page, response in zip(self.links, pages, responses):
-			text = await response.text()
-
 			if not response.ok:
 				self.general_logger.debug(
 					f"{link}: skipping parsing on code {response.code}")
 				continue
+
+			text = await response.text()
 
 			if len(text) < 1000:
 				self.general_logger.warning(
@@ -116,7 +116,7 @@ class Footdistrict(BaseMonitor):
 
 				else:
 					self.general_logger.warning(
-						"Couldn't find name meta property -- skipping.")
+						"Couldn't find script -- skipping.")
 
 			else:
 				self.general_logger.warning(
