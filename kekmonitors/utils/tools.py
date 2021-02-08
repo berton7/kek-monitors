@@ -5,9 +5,9 @@ import logging
 import logging.handlers
 import os
 from datetime import timezone
-from typing import Optional
+from typing import List, Optional
 
-from kekmonitors.config import ERRORS, BaseConfig
+from kekmonitors.config import ERRORS, Config
 
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 
@@ -24,10 +24,11 @@ def get_logger(name: str, add_stream_handler: Optional[bool] = True, stream_leve
 		logger.handlers.pop()
 
 	splitted_name = name.split(".")
+	log_path = Config().log_path
 	os.makedirs(os.path.sep.join(
-		["/var/log/kekmonitors", *splitted_name[:2]]), exist_ok=True)
+		[log_path, *splitted_name[:2]]), exist_ok=True)
 	file_handler = logging.handlers.TimedRotatingFileHandler(filename=os.path.sep.join(
-		["/var/log/kekmonitors", *splitted_name[:2], "".join([splitted_name[-1], ".log"])]), when="midnight", interval=1, backupCount=7)
+		[log_path, *splitted_name[:2], "".join([splitted_name[-1], ".log"])]), when="midnight", interval=1, backupCount=7)
 	file_handler.setLevel(file_level)
 	file_handler.setFormatter(formatter)
 
@@ -79,7 +80,7 @@ def chunks(lst, n):
 		yield lst[i:i + n]
 
 
-def make_default_executable(_class, config: BaseConfig = BaseConfig()):
+def make_default_executable(_class, config: Config = Config()):
 	parser = argparse.ArgumentParser(
             description=f"Default executable for {_class.__name__}, generated from utils.tools.make_default_executable")
 	parser.add_argument("-d", "--delay", default=config.loop_delay, type=int,
@@ -128,3 +129,11 @@ async def make_request(socket_path: str, cmd: Cmd, expect_response=True) -> Resp
 	r = badResponse()
 	r.error = ERRORS.SOCKET_DOESNT_EXIST
 	return r
+
+
+def list_contains_find_item(l: List[str], s: str):
+	for item in l:
+		if item.find(s) != -1:
+			return True
+	else:
+		False

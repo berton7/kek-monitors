@@ -1,7 +1,7 @@
 import os
-from kekmonitors.config import GlobalConfig
 import subprocess
 import shlex
+from kekmonitors.config import Config
 
 
 def create_files(p, files):
@@ -19,15 +19,25 @@ def create_config(p):
 
 
 if __name__ == "__main__":
-	create_files(GlobalConfig.socket_path, [])
-	print(f"Successfully created socket path {GlobalConfig.socket_path}")
+	config_path = f"{os.environ['HOME']}/.config/kekmonitors/config.cfg"
+	ret = subprocess.call(shlex.split(
+		f"cp {__file__.replace('init.py', 'default_config.cfg')} {config_path}"))
+	if ret:
+		print(f"Failed to create static configuration file (exit code: {ret})")
+		exit(1)
+	print(f"Successfully created static config at {config_path}")
 
-	cm_path = f"{GlobalConfig.config_path}/monitors"
-	cs_path = f"{GlobalConfig.config_path}/scrapers"
+	config = Config()
+	create_files(config.socket_path, [])
+	print(
+		f"Successfully created socket path {config.socket_path}")
+
+	cm_path = f"{config.config_path}/monitors"
+	cs_path = f"{config.config_path}/scrapers"
 	create_config(cm_path)
-	print(f"Successfully created monitors configs at :{cm_path}")
+	print(f"Successfully created monitors configs at: {cm_path}")
 	create_config(cs_path)
-	print(f"Successfully created scrapers configs at :{cs_path}")
+	print(f"Successfully created scrapers configs at: {cs_path}")
 
 	ret = subprocess.call(shlex.split("sudo mkdir -p /var/log/kekmonitors"))
 	if ret:
@@ -40,4 +50,4 @@ if __name__ == "__main__":
 		exit(1)
 	print(f"Successfully created log directory")
 
-	print("Successfully initialized")
+	print("\nSuccessfully initialized")

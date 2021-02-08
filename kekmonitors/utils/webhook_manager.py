@@ -9,7 +9,7 @@ import requests
 from discord import Embed
 
 from kekmonitors.utils.tools import get_logger
-from kekmonitors.config import BaseConfig
+from kekmonitors.config import Config
 from logging import Logger
 
 
@@ -17,7 +17,7 @@ class WebhookSender(Thread):
 	'''This handles sending embeds to one specific webhook. Obviously being a thread sub-class you should not add too many webhooks (in the order of the hundreds) for the same monitor.\n
 	You should not use this directly, but `WebhookManager` instead'''
 
-	def __init__(self, webhook: str, config: BaseConfig):
+	def __init__(self, webhook: str, config: Config):
 		self.config = config
 		self.webhook = webhook
 		self.logger = Logger(self.config.name)
@@ -95,7 +95,7 @@ class WebhookSender(Thread):
 
 
 class WebhookManager():
-	def __init__(self, config: BaseConfig):
+	def __init__(self, config: Config):
 		self.config = config
 		self.logger = get_logger(
 			self.config.name + ".WebhookManager", self.config.add_stream_handler)

@@ -1,10 +1,27 @@
 import asyncio
 import sys
 from pprint import pprint
+from typing import List, Optional
 
-from kekmonitors.config import COMMANDS, GlobalConfig
-from kekmonitors.utils.server.msg import *
+from kekmonitors.config import COMMANDS, Config
+from kekmonitors.utils.server.msg import Cmd
 from kekmonitors.utils.tools import make_request
+
+
+def send(cmd: Cmd):
+	print(f"Command: {cmd.cmd}")
+	print(f"Payload: {cmd.payload}")
+	print("Executing request...")
+	response = asyncio.run(make_request(
+		f"{Config().socket_path}/MonitorManager", cmd, True))
+
+	print("E:", response.error.name)
+	if response.info:
+		print("Info:", response.info)
+	if response.payload is not None:
+		print("Payload:", end="")
+		pprint(response.payload)
+
 
 if __name__ == "__main__":
 	args = sys.argv
@@ -40,15 +57,4 @@ if __name__ == "__main__":
 	command = Cmd()
 	command.cmd = cmd
 	command.payload = payload
-	print(f"Command: {command.cmd}")
-	print(f"Payload: {command.payload}")
-	print("Executing request...")
-	response = asyncio.run(make_request(
-		f"{GlobalConfig.socket_path}/MonitorManager", command, True))
-
-	print("E:", response.error.name)
-	if response.info:
-		print("Info:", response.info)
-	if response.payload is not None:
-		print("Payload:", end="")
-		pprint(response.payload)
+	send(command)

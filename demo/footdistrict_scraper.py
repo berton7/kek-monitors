@@ -1,3 +1,9 @@
+if __name__ == "__main__":
+	import sys
+	import os
+	sys.path.insert(0, os.path.abspath(
+		os.path.join(os.path.dirname(__file__), '..')))
+
 import asyncio
 from typing import List
 
@@ -9,7 +15,7 @@ from pyppeteer.page import Page
 from kekmonitors.utils.tools import make_default_executable
 
 from kekmonitors.base_scraper import BaseScraper
-from kekmonitors.config import BaseConfig
+from kekmonitors.config import Config
 
 
 class Footdistrict(BaseScraper):
@@ -112,6 +118,6 @@ class Footdistrict(BaseScraper):
 
 
 if __name__ == "__main__":
-	custom_config = BaseConfig()
+	custom_config = Config()
 	custom_config.crash_webhook = "your-crash-webhook-here"
 	make_default_executable(Footdistrict)

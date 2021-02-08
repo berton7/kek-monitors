@@ -4,7 +4,7 @@ import os
 from json.decoder import JSONDecodeError
 from typing import Any, Dict, List, Optional
 
-from kekmonitors.config import COMMANDS, ERRORS, GlobalConfig, BaseConfig
+from kekmonitors.config import COMMANDS, ERRORS, Config
 
 from kekmonitors.utils.server.msg import Cmd, Response, okResponse, badResponse
 from kekmonitors.utils.server.server import Server
@@ -25,7 +25,9 @@ def mark_as(_type: str, name: str, path: str, client: Collection):
 
 
 class Common(Server):
-	def __init__(self, config: BaseConfig, is_monitor: bool):
+	def __init__(self, config: Config):
+		self.config = config
+
 		self.general_logger = get_logger(
 			config.name + ".General", config.add_stream_handler)
 		self.client_logger = get_logger(
@@ -34,13 +36,12 @@ class Common(Server):
 		self.class_name = self.get_class_name()
 
 		super().__init__(config.name,
-                   config.add_stream_handler, os.path.sep.join([GlobalConfig.socket_path, config.name]))
+                   config.add_stream_handler, os.path.sep.join([self.config.socket_path, config.name]))
 
-		self.db_client = pymongo.MongoClient(GlobalConfig.db_path)[
-                    GlobalConfig.db_name]["register"]
+		self.db_client = pymongo.MongoClient(self.config.db_path)[
+                    self.config.db_name]["register"]
 
 		self._loop_lock = asyncio.Lock()
-		#self._stop_event = asyncio.Event()
 
 		self.cmd_to_callback[COMMANDS.SET_WHITELIST] = self.on_set_whitelist
 		self.cmd_to_callback[COMMANDS.SET_BLACKLIST] = self.on_set_blacklist
@@ -51,29 +52,21 @@ class Common(Server):
 		self.cmd_to_callback[COMMANDS.GET_WEBHOOKS] = self.on_get_webhooks
 		self.cmd_to_callback[COMMANDS.GET_CONFIG] = self.on_get_config
 
-		if is_monitor:
-			self.whitelist_filepath = os.path.sep.join(
-				[GlobalConfig.config_path, "monitors/whitelists.json"])
-			self.blacklist_filepath = os.path.sep.join(
-				[GlobalConfig.config_path, "monitors/blacklists.json"])
-			self.config_filepath = os.path.sep.join(
-				[GlobalConfig.config_path, "monitors/configs.json"])
-			self.webhooks_filepath = os.path.sep.join(
-				[GlobalConfig.config_path, "monitors/webhooks.json"])
-		else:
-			self.whitelist_filepath = os.path.sep.join(
-				[GlobalConfig.config_path, "scrapers/whitelists.json"])
-			self.blacklist_filepath = os.path.sep.join(
-				[GlobalConfig.config_path, "scrapers/blacklists.json"])
-			self.config_filepath = os.path.sep.join(
-				[GlobalConfig.config_path, "scrapers/configs.json"])
-			self.webhooks_filepath = os.path.sep.join(
-				[GlobalConfig.config_path, "scrapers/webhooks.json"])
+		is_monitor = config.name.startswith("Monitor.")
+		pre_conf_path = self.config.config_path
+		self.whitelist_json_filepath = os.path.sep.join(
+			[pre_conf_path, "monitors" if is_monitor else "scrapers", "whitelists.json"])
+		self.blacklist_json_filepath = os.path.sep.join(
+			[pre_conf_path, "monitors" if is_monitor else "scrapers", "blacklists.json"])
+		self.webhooks_json_filepath = os.path.sep.join(
+			[pre_conf_path, "monitors" if is_monitor else "scrapers", "webhooks.json"])
+		self.config_json_filepath = os.path.sep.join(
+			[pre_conf_path, "monitors" if is_monitor else "scrapers", "configs.json"])
 
-		self.whitelist = self.load_config(self.whitelist_filepath)
-		self.blacklist = self.load_config(self.blacklist_filepath)
-		self.webhooks = self.load_config(self.webhooks_filepath)
-		self.config = self.load_config(self.config_filepath)
+		self.whitelist_json = self.load_config(self.whitelist_json_filepath)
+		self.blacklist_json = self.load_config(self.blacklist_json_filepath)
+		self.webhooks_json = self.load_config(self.webhooks_json_filepath)
+		self.config_json = self.load_config(self.config_json_filepath)
 
 		self._new_whitelist = None  # type: Optional[List[str]]
 		self._new_blacklist = None  # type: Optional[List[str]]
@@ -126,19 +119,19 @@ class Common(Server):
 	def update_local_config(self):
 		if self._new_blacklist is not None:
 			self.general_logger.info(f"New blacklist: {self._new_blacklist}")
-			self.blacklist = self._new_blacklist
+			self.blacklist_json = self._new_blacklist
 			self._new_blacklist = None
 		if self._new_whitelist is not None:
 			self.general_logger.info(f"New whitelist: {self._new_whitelist}")
-			self.whitelist = self._new_whitelist
+			self.whitelist_json = self._new_whitelist
 			self._new_whitelist = None
 		if self._new_webhooks is not None:
 			self.general_logger.info(f"New webhooks: {self._new_webhooks}")
-			self.webhooks = self._new_webhooks
+			self.webhooks_json = self._new_webhooks
 			self._new_webhooks = None
 		if self._new_config is not None:
 			self.general_logger.info(f"New config: {self._new_config}")
-			self.config = self._new_config
+			self.config_json = self._new_config
 			self._new_config = None
 
 	async def on_set_whitelist(self, cmd: Cmd) -> Response:
@@ -199,22 +192,22 @@ class Common(Server):
 
 	async def on_get_config(self, cmd: Cmd) -> Response:
 		r = okResponse()
-		r.payload = self.config
+		r.payload = self.config_json
 		return r
 
 	async def on_get_whitelist(self, cmd: Cmd) -> Response:
 		r = okResponse()
-		r.payload = self.whitelist
+		r.payload = self.whitelist_json
 		return r
 
 	async def on_get_blacklist(self, cmd: Cmd) -> Response:
 		r = okResponse()
-		r.payload = self.blacklist
+		r.payload = self.blacklist_json
 		return r
 
 	async def on_get_webhooks(self, cmd: Cmd) -> Response:
 		r = okResponse()
-		r.payload = self.webhooks
+		r.payload = self.webhooks_json
 		return r
 
 	async def main(self):

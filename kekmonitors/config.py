@@ -1,5 +1,6 @@
 import enum
 import os
+import configparser
 
 
 @enum.unique
@@ -75,20 +76,26 @@ class ERRORS(enum.Enum):
 	UNKNOWN_ERROR = enum.auto()
 
 
-class GlobalConfig(object):
-	socket_path = "/tmp/kekmonitors"
-	config_path = f"{os.getenv('HOME')}/.config/kekmonitors"
-	db_name = "kekmonitors"
-	db_path = "mongodb://localhost:27017/"
-
-
-class BaseConfig(object):
+class Config(object):
 	def __init__(self):
-		self.name = ""
-		self.crash_webhook = ""
-		self.provider = "KekMonitors"
-		self.provider_icon = "https://avatars0.githubusercontent.com/u/11823129?s=400&u=3e617374871087e64b5fde0df668260f2671b076&v=4"
-		self.timestamp_format = "%d %b %Y, %H:%M:%S.%f"
-		self.embed_color = 255
-		self.add_stream_handler = True
-		self.loop_delay = 5
+		path = os.path.sep.join([os.environ['HOME'], ".config", "kekmonitors"])
+		config_path = os.path.sep.join([path, "config.cfg"])
+		parser = configparser.RawConfigParser()
+		parser.read(config_path)
+		parser.set("GlobalConfig", "config_path", path)
+		
+		self.config_path = parser.get("GlobalConfig", "config_path")
+		self.socket_path = parser.get("GlobalConfig", "socket_path")
+		self.log_path = parser.get("GlobalConfig", "log_path")
+		self.db_name = parser.get("GlobalConfig", "db_name")
+		self.db_path = parser.get("GlobalConfig", "db_path")
+
+		self.name = parser.get("DefaultBaseConfig", "name")
+		self.crash_webhook = parser.get("DefaultBaseConfig", "crash_webhook")
+		self.provider = parser.get("DefaultBaseConfig", "provider")
+		self.provider_icon = parser.get("DefaultBaseConfig", "provider_icon")
+		self.timestamp_format = parser.get("DefaultBaseConfig", "timestamp_format")
+		self.embed_color = parser.get("DefaultBaseConfig", "embed_color")
+		self.add_stream_handler = parser.get(
+			"DefaultBaseConfig", "add_stream_handler")
+		self.loop_delay = parser.get("DefaultBaseConfig", "loop_delay")

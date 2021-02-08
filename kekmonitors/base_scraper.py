@@ -2,11 +2,10 @@ import asyncio
 import copy
 import json
 import traceback
-from typing import List, Optional
-from kekmonitors.utils.tools import make_default_executable
+from typing import List
 
-from kekmonitors.config import COMMANDS, GlobalConfig, BaseConfig
-from kekmonitors.utils.common_base import Common
+from kekmonitors.config import COMMANDS, Config
+from kekmonitors.base_common import Common
 from kekmonitors.utils.network_utils import NetworkUtils
 from kekmonitors.utils.server.msg import Cmd, Message, Response, okResponse
 from kekmonitors.utils.server.server import Server
@@ -14,13 +13,16 @@ from kekmonitors.utils.tools import dump_error
 
 
 class BaseScraper(Common, NetworkUtils):
-	def __init__(self, config: BaseConfig = BaseConfig()):
+	def __init__(self, config: Config = Config()):
 		if not config.name:
 			config.name = f"Scraper.{self.get_class_name()}"
+		elif not config.name.startswith("Scraper."):
+			raise Exception(
+				f"You must start the scraper name with \"Scraper.\"! Currently: {config.name}")
 		self.crash_webhook = config.crash_webhook
 		# init some internal variables (logger, links)
 
-		super().__init__(config, False)
+		super().__init__(config)
 		super(Server, self).__init__(config.name)
 
 		self._mark_as_scraper()
@@ -82,7 +84,7 @@ class BaseScraper(Common, NetworkUtils):
 
 	async def _set_links(self):
 		'''Connect to the corresponding monitor, if available, and tell it to set the new links.'''
-		socket_path = f"{GlobalConfig.socket_path}/Monitor.{self.class_name}"
+		socket_path = f"{self.config.socket_path}/Monitor.{self.class_name}"
 		cmd = Cmd()
 		cmd.cmd = COMMANDS.SET_LINKS
 		cmd.payload = self.links
@@ -92,7 +94,7 @@ class BaseScraper(Common, NetworkUtils):
 
 	async def _add_links(self):
 		'''Connect to the corresponding monitor, if available, and send it the new links.'''
-		socket_path = f"{GlobalConfig.socket_path}/Monitor.{self.class_name}"
+		socket_path = f"{self.config.socket_path}/Monitor.{self.class_name}"
 		cmd = Cmd()
 		cmd.cmd = COMMANDS.ADD_LINKS
 		cmd.payload = self.links

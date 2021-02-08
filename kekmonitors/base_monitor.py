@@ -3,11 +3,10 @@ import copy
 import json
 import traceback
 from typing import List, Optional
-from kekmonitors.utils.tools import make_default_executable
 
-from kekmonitors.config import COMMANDS, ERRORS, GlobalConfig, BaseConfig
+from kekmonitors.config import COMMANDS, ERRORS, Config
 from kekmonitors.utils import discord_embeds, shoe_stuff
-from kekmonitors.utils.common_base import Common
+from kekmonitors.base_common import Common
 from kekmonitors.utils.network_utils import NetworkUtils
 from kekmonitors.utils.server.msg import Cmd, Response, okResponse, badResponse
 from kekmonitors.utils.server.server import Server
@@ -18,13 +17,15 @@ from kekmonitors.utils.webhook_manager import WebhookManager
 
 
 class BaseMonitor(Common, NetworkUtils):
-	def __init__(self, config: BaseConfig = BaseConfig()):
+	def __init__(self, config: Config = Config()):
 		if not config.name:
 			config.name = f"Monitor.{self.get_class_name()}"
+		elif not config.name.startswith("Monitor."):
+			raise Exception(
+				f"You must start the monitor name with \"Monitor.\"! Currently: {config.name}")
 		self.crash_webhook = config.crash_webhook
-		# init some internal variables (logger, links)
 
-		super().__init__(config, True)
+		super().__init__(config)
 		super(Server, self).__init__(config.name)
 
 		self._mark_as_monitor()
@@ -99,7 +100,7 @@ class BaseMonitor(Common, NetworkUtils):
 		return okResponse()
 
 	async def _get_links(self):
-		socket_path = f"{GlobalConfig.socket_path}/Scraper.{self.class_name}"
+		socket_path = f"{self.config.socket_path}/Scraper.{self.class_name}"
 		self.client_logger.debug("Getting links...")
 
 		cmd = Cmd()
@@ -156,7 +157,7 @@ class BaseMonitor(Common, NetworkUtils):
 			returned = self.set_reason_and_update_shoe(shoe)
 			if returned:
 				embed = discord_embeds.get_default_embed(returned)
-				self.webhook_manager.add_to_queue(embed, self.webhooks)
+				self.webhook_manager.add_to_queue(embed, self.webhooks_json)
 
 	def set_reason_and_update_shoe(self, shoe: Shoe) -> Optional[Shoe]:
 		"""Check shoe against db. If present in db check if there are new sizes;\n

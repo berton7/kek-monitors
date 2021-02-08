@@ -1,3 +1,4 @@
+from kekmonitors.config import Config
 import logging
 from typing import Any, Dict, List
 
@@ -5,7 +6,6 @@ import pymongo
 
 from kekmonitors.utils.shoe_stuff import Shoe
 from kekmonitors.utils.tools import get_logger
-from kekmonitors.config import GlobalConfig
 
 
 def _change_keys(d, _from, _to):
@@ -51,8 +51,9 @@ class ShoeManager(object):
 		else:
 			self._logger = logger
 
-		self.db_name = GlobalConfig.db_name
-		self.db_path = GlobalConfig.db_path
+		config = Config()
+		self.db_name = config.db_name
+		self.db_path = config.db_path
 
 		self._db = pymongo.MongoClient(self.db_path)[self.db_name]["items"]
 		self._logger.debug("Database initialized.")
