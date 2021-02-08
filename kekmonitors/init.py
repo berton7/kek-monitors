@@ -19,18 +19,21 @@ def create_config(p):
 
 
 if __name__ == "__main__":
-	config_path = f"{os.environ['HOME']}/.config/kekmonitors/config.cfg"
+	config_path = f"{os.environ['HOME']}/.config/kekmonitors"
+	config_cfg_path = os.path.sep.join([config_path, "config.cfg"])
+	os.makedirs(config_path, exist_ok=True)
 	ret = subprocess.call(shlex.split(
-		f"cp {__file__.replace('init.py', 'default_config.cfg')} {config_path}"))
+		f"cp {__file__.replace('init.py', 'default_config.cfg')} {config_cfg_path}"))
 	if ret:
-		print(f"Failed to create static configuration file (exit code: {ret})")
+		print(
+			f"Failed to create static configuration file at {config_path} (exit code: {ret})")
 		exit(1)
-	print(f"Successfully created static config at {config_path}")
+	print(f"Successfully created static config at: {config_path}")
 
 	config = Config()
 	create_files(config.socket_path, [])
 	print(
-		f"Successfully created socket path {config.socket_path}")
+		f"Successfully created socket path at: {config.socket_path}")
 
 	cm_path = f"{config.config_path}/monitors"
 	cs_path = f"{config.config_path}/scrapers"
@@ -39,14 +42,16 @@ if __name__ == "__main__":
 	create_config(cs_path)
 	print(f"Successfully created scrapers configs at: {cs_path}")
 
-	ret = subprocess.call(shlex.split("sudo mkdir -p /var/log/kekmonitors"))
+	ret = subprocess.call(shlex.split(f"sudo mkdir -p {config.log_path}"))
 	if ret:
-		print(f"Failed to create log directory (exit code: {ret})")
+		print(
+			f"Failed to create log directory at {config.log_path} (exit code: {ret})")
 		exit(1)
 	ret = subprocess.call(shlex.split(
-		f"sudo chown -R {os.environ['USER']} /var/log/kekmonitors"))
+		f"sudo chown -R {os.environ['USER']} {config.log_path}"))
 	if ret:
-		print(f"Failed to change log directory permissions (exit code: {ret})")
+		print(
+			f"Failed to change log directory permissions at {config.log_path} (exit code: {ret})")
 		exit(1)
 	print(f"Successfully created log directory")
 
