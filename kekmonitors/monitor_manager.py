@@ -29,9 +29,11 @@ class MonitorManager(Server, FileSystemEventHandler):
 	'''This can be used to manage monitors/scrapers with an external api.'''
 
 	def __init__(self, config: Config = Config()):
+		if not config.name:
+			config.name = f"Executable.MonitorManager"
+
 		self.config = config
 
-		logger_name = "Executable.MonitorManager"
 		super().__init__(config, f"{self.config.socket_path}/MonitorManager")
 		super(Server).__init__()
 		logconfig = LogConfig(self.config)
