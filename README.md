@@ -17,7 +17,10 @@ Here scrapers and actual monitors are separated and working asynchronously, comm
 python3 -m venv venv
 source ./venv/bin/activate
 
-# install the package from source (will be uploaded to the PyPI some time in the future, as soon as I feel comfortable with it)
+# to install the package from the PyPI:
+python3 -m pip install kekmonitors
+
+# to install the package from source:
 python3 -m pip install .
 
 # if you want to try the examples:
