@@ -99,10 +99,10 @@ class Common(Server):
 		return type(self).__name__
 
 	def _mark_as_monitor(self):
-		mark_as("Monitors", self.class_name, __main__.__file__, self.db_client)
+		mark_as("monitors", self.class_name, __main__.__file__, self.db_client)
 
 	def _mark_as_scraper(self):
-		mark_as("Scrapers", self.class_name, __main__.__file__, self.db_client)
+		mark_as("scrapers", self.class_name, __main__.__file__, self.db_client)
 
 	def load_config(self, path):
 		content = get_file_if_exist_else_create(path, "{}")
