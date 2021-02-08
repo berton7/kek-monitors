@@ -16,7 +16,7 @@ if __name__ == "__main__":
 	root_db = pymongo.MongoClient(config.db_path)
 	db = root_db[config.db_name]
 	db["items"].drop()
-	db["register"]["Monitors"].drop()
-	db["register"]["Scrapers"].drop()
+	db["register"]["monitors"].drop()
+	db["register"]["scrapers"].drop()
 
 	print("Done!")

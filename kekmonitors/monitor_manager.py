@@ -351,7 +351,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.add_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			db_monitor = self.db["Monitors"].find_one({"name": payload["name"]})
+			db_monitor = self.db["monitors"].find_one({"name": payload["name"]})
 			if db_monitor:
 				success, reason = await self.add_monitor(
 					db_monitor["path"], payload["name"], payload.get("delay", None))
@@ -373,7 +373,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		success, missing = cmd.has_valid_args(self.add_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
-			db_scraper = self.db["Scrapers"].find_one({"name": payload["name"]})
+			db_scraper = self.db["scrapers"].find_one({"name": payload["name"]})
 			if db_scraper:
 				success, reason = await self.add_scraper(
 					db_scraper["path"], payload["name"], payload.get("delay", None))
