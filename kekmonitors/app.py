@@ -1,19 +1,20 @@
 # This is an incomplete web app to access the monitor manager from the browser
 
-import asyncio
 import json
 
 import tornado.ioloop
 import tornado.web
 
-from configs.config import *
-from utils.server.msg import Cmd, Response, badResponse, okResponse
-from utils.tools import make_request
+from kekmonitors.config import COMMANDS, Config
+from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.utils.tools import make_request
+
+config = Config()
 
 
 async def send_to_moman(cmd: Cmd):
 	'''Send a command to the monitor manager'''
-	return await make_request(f"{SOCKET_PATH}/MonitorManager", cmd)
+	return await make_request(f"{config.socket_path}/MonitorManager", cmd)
 
 
 class RootHandler(tornado.web.RequestHandler):
