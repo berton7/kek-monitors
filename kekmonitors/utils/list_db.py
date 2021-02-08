@@ -1,16 +1,22 @@
-from kekmonitors.config import LogConfig
-from kekmonitors.utils.shoe_manager import ShoeManager
-from kekmonitors.utils.tools import get_logger
+from kekmonitors.config import Config
 from pprint import pprint
+import pymongo
 
 if __name__ == "__main__":
-	config = LogConfig()
-	config.name = "Lister"
-	l = get_logger(config)
-	s = ShoeManager()
+	config = Config()
 
-	if s.db_name in s._client.list_database_names():
-		for item in s._db.find({}, {"_id": 0}):
+	db = pymongo.MongoClient(config.db_path)
+	if config.db_name in db.list_database_names():
+		print("Saved items:")
+		for item in db["kekmonitors"]["items"].find({}, {"_id": 0}):
 			pprint(item)
+
+		print("Registered monitors:")
+		for m in db["kekmonitors"]["register"]["monitors"].find({}, {"_id": 0}):
+			pprint(m)
+
+		print("Registered scrapers:")
+		for m in db["kekmonitors"]["register"]["scrapers"].find({}, {"_id": 0}):
+			pprint(m)
 	else:
 		print("Database does not exist")
