@@ -5,14 +5,17 @@ import logging
 import logging.handlers
 import os
 from datetime import timezone
-from typing import List
+from typing import List, Type, Union
+
 
 from kekmonitors.config import ERRORS, Config, LogConfig
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 
 
 def get_logger(config: LogConfig):
-	'''Get preconfigured logger'''
+	'''
+	Get preconfigured logger.
+	'''
 	logger = logging.getLogger(config.name)
 	logger.propagate = False
 	logger.setLevel(logging.DEBUG)
@@ -42,17 +45,22 @@ def get_logger(config: LogConfig):
 	return logger
 
 
-# https://stackoverflow.com/questions/31818050/round-number-to-nearest-integer
 def proper_round(num, dec=0):
+	'''
+	Properly rounds a number.
+	See https://stackoverflow.com/questions/31818050/round-number-to-nearest-integer
+	'''
 	num = str(num)[:str(num).index('.') + dec + 2]
 	if num[-1] >= '5':
 		return int(float(num[:-2 - (not dec)] + str(int(num[-2 - (not dec)]) + 1)))
 	return int(float(num[:-1]))
 
 
-def is_in_whitelist(full_name, whitelist, separator=","):
-	'''For each string in whitelist, separate the string using separator and check if all splitted items are contained in full_name.\n
-	This way for example you can check if either `air jordan 13` and/or `air high jordan 13` are in the whitelist=['air, jordan 13']'''
+def is_in_whitelist(full_name: str, whitelist: str, separator: str = ",") -> bool:
+	'''
+	For each string in whitelist, separate the string using separator and check if all splitted items are contained in full_name.
+	This way for example you can check if either `air jordan 13` and/or `air high jordan 13` are in the `whitelist = ['air, jordan 13']`
+	'''
 	if whitelist == []:
 		return True
 	for shoe_whitelist in whitelist:
@@ -68,18 +76,27 @@ def is_in_whitelist(full_name, whitelist, separator=","):
 
 
 def utc_to_local(utc_dt):
-	'''https://stackoverflow.com/questions/4563272/convert-a-python-utc-datetime-to-a-local-datetime-using-only-python-standard-lib'''
+	'''
+	Convert a utc timezone in a local timezone. Previously used in cache 
+	https://stackoverflow.com/questions/4563272/convert-a-python-utc-datetime-to-a-local-datetime-using-only-python-standard-lib
+	'''
 	return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
 
 
 def chunks(lst, n):
-	"""https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks?noredirect=1&lq=1\n
-	Yield successive n-sized chunks from lst."""
+	'''
+	Yield successive n-sized chunks from lst.
+	https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks?noredirect=1&lq=1
+	'''
 	for i in range(0, len(lst), n):
 		yield lst[i:i + n]
 
 
 def make_default_executable(_class, config: Config = Config()):
+	'''
+	Start the specified class with an optional config, adding support to default cli options
+	(needed for the monitor manager). ***Needs to be inside `if __name__=="__main__":`***
+	'''
 	parser = argparse.ArgumentParser(
             description=f"Default executable for {_class.__name__}, generated from utils.tools.make_default_executable")
 	parser.add_argument("-d", "--delay", default=config.loop_delay, type=int,
@@ -97,6 +114,9 @@ def make_default_executable(_class, config: Config = Config()):
 
 
 def dump_error(logger: logging.Logger, response: Response):
+	'''
+	Checks if the response is an error and dumps a useful message to the logger.
+	'''
 	e = response.error.value
 	if e:
 		curframe = inspect.currentframe()
@@ -111,6 +131,9 @@ def dump_error(logger: logging.Logger, response: Response):
 
 
 async def make_request(socket_path: str, cmd: Cmd, expect_response=True) -> Response:
+	'''
+	Send `cmd` to `socket_path` and return the response if `expect_response` is True, else `okResponse()`.
+	'''
 	if os.path.exists(socket_path):
 		try:
 			reader, writer = await asyncio.open_unix_connection(socket_path)
@@ -130,7 +153,10 @@ async def make_request(socket_path: str, cmd: Cmd, expect_response=True) -> Resp
 	return r
 
 
-def list_contains_find_item(l: List[str], s: str):
+def list_contains_find_item(l: List[str], s: str) -> bool:
+	'''
+	Return wether the `list` contains `s` even as a substring.
+	'''
 	for item in l:
 		if item.find(s) != -1:
 			return True
@@ -139,6 +165,11 @@ def list_contains_find_item(l: List[str], s: str):
 
 
 def get_file_if_exist_else_create(filename_path, content) -> str:
+	'''
+	If the file at `filename_path` exists, simply return the content;
+	else, create the directories recursively, write `content` to `filename_path`
+	and return content.
+	'''
 	filename_directory_path = filename_path[:filename_path.rfind(os.path.sep)]
 	os.makedirs(filename_directory_path, exist_ok=True)
 	if os.path.isfile(filename_path):
