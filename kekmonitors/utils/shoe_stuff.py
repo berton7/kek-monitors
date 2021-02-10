@@ -38,7 +38,6 @@ class Shoe:
 		self.out_of_stock = False
 		self.release_method = ""
 		self.reason = OTHER
-		self.tags = {}
 		self.other = {}
 
 	@property
@@ -97,8 +96,27 @@ class Shoe:
 
 	@sizes.setter
 	def sizes(self, sizes):
+		def do_complete_check(d, kw, expected):
+			if kw in d:
+				if not isinstance(d[kw], expected):
+					raise Exception(
+						f"\"{kw}\" keyword in dict {d} was not a {expected} but rather a {type(d[kw])}")
+
 		if not isinstance(sizes, dict):
 			raise Exception("Sizes is not a dict")
+
+		for size in sizes:
+			if not isinstance(size, str):
+				raise Exception(f"A size was not a string: {size}")
+			v = sizes[size]
+			if not isinstance(v, dict):
+				raise Exception(
+					f"Size {size} did not map to a dict, but rather to a {type(v)}")
+			if "available" not in v:
+				raise Exception(f"\"available\" keyword not in size {size}")
+			do_complete_check(v, "available", bool)
+			do_complete_check(v, "atc", str)
+
 		self.__sizes = sizes
 
 	@property
@@ -159,6 +177,17 @@ class Shoe:
 	def reason(self, reason):
 		if not isinstance(reason, int):
 			raise Exception("Reason is not an int")
+		# isinstance(True/False, int) -> True: https://stackoverflow.com/questions/60769919/isinstancefalse-int-returns-true
+		if type(reason) == bool:
+			raise Exception("Reason is not an int")
 		if reason != OTHER and reason != NEW_RELEASE and reason != RESTOCK and reason != INCOMING:
 			raise Exception("Invalid reason provided")
 		self.__reason = reason
+
+	@property
+	def other(self):
+		return self.__other
+
+	@other.setter
+	def other(self, other):
+		self.__other = other
