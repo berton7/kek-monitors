@@ -1,4 +1,8 @@
 language: python
+addons:
+  apt:
+    packages:
+      - libgnutls-dev # https://github.com/tornadoweb/tornado/blob/6cdf82e927d962290165ba7c4cccb3e974b541c3/.travis.yml#L9
 python:
   - "3.6"
   - "3.7"
