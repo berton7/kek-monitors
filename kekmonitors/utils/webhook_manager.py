@@ -19,7 +19,7 @@ class WebhookSender(Thread):
 	def __init__(self, webhook: str, config: Config):
 		self.config = config
 		self.webhook = webhook
-		self.logger = Logger(self.config.name)
+		self.logger = Logger(self.config['BaseConfig']['name'])
 		self.queue = Queue()  # type: Queue[Tuple[List[Any], List[Any], datetime]]
 		# contains the webhook config, embeds and time at which they were added
 		self.add_event = Event()
@@ -47,23 +47,23 @@ class WebhookSender(Thread):
 				webhook_values, embed, now = self.queue.get()
 				if "custom" in webhook_values:
 					provider = webhook_values["custom"].get(
-						"provider", self.config.provider)
+						"provider", self.config['BaseConfig']['provider'])
 					timestamp_format = webhook_values["custom"].get(
-						"timestamp_format", self.config.timestamp_format)
+						"timestamp_format", self.config['BaseConfig']['timestamp_format'])
 					ts = now.strftime(timestamp_format)
 					icon_url = webhook_values["custom"].get(
-						"icon_url", self.config.provider_icon)
+						"icon_url", self.config['BaseConfig']['provider_icon'])
 					color = webhook_values["custom"].get(
-						"color", self.config.embed_color)
+						"color", int(self.config['BaseConfig']['embed_color']))
 
 					embed.set_footer(text=" | ".join([provider, ts]), icon_url=icon_url)
 					embed.color = color
 				else:
-					ts = now.strftime(self.config.timestamp_format)
+					ts = now.strftime(self.config['BaseConfig']['timestamp_format'])
 
-					embed.set_footer(text=f"{self.config.provider} | {ts}",
-					                 icon_url=self.config.provider_icon)
-					embed.color = self.config.embed_color
+					embed.set_footer(text=f"{self.config['BaseConfig']['provider']} | {ts}",
+					                 icon_url=self.config['BaseConfig']['provider_icon'])
+					embed.color = int(self.config['BaseConfig']['embed_color'])
 
 				embed.timestamp = Embed.Empty
 				data = {"embeds": [embed.to_dict()]}
@@ -97,7 +97,7 @@ class WebhookManager():
 	def __init__(self, config: Config):
 		self.config = config
 		logconfig = LogConfig(self.config)
-		logconfig.name += ".WebhookManager"
+		logconfig["BaseConfig"]["name"] += ".WebhookManager"
 		self.logger = get_logger(logconfig)
 		self.webhook_senders = {}  # type: Dict[str, WebhookSender]
 		self.add_event = Event()

@@ -31,7 +31,7 @@ class NetworkUtils(object):
 			self._has_brotli = False
 
 		config = LogConfig()
-		config.name = f"{logger_name}.NetworkUtils"
+		config['BaseConfig']['name'] = f"{logger_name}.NetworkUtils"
 		self.network_logger = get_logger(config)
 		self.network_logger.debug(f"Has brotli: {self._has_brotli}")
 

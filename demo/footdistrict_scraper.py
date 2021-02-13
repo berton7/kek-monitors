@@ -3,13 +3,12 @@ from typing import List
 
 from bs4 import BeautifulSoup
 from fake_headers import Headers
+from kekmonitors.base_scraper import BaseScraper
+from kekmonitors.config import Config
+from kekmonitors.utils.tools import make_default_executable
 from pyppeteer import launch
 from pyppeteer.network_manager import Response
 from pyppeteer.page import Page
-from kekmonitors.utils.tools import make_default_executable
-
-from kekmonitors.base_scraper import BaseScraper
-from kekmonitors.config import Config
 
 
 class Footdistrict(BaseScraper):
@@ -113,5 +112,5 @@ class Footdistrict(BaseScraper):
 
 if __name__ == "__main__":
 	custom_config = Config()
-	custom_config.crash_webhook = "your-crash-webhook-here"
+	custom_config["BaseConfig"]["crash_webhook"] = "your-crash-webhook-here"
 	make_default_executable(Footdistrict)

@@ -5,7 +5,7 @@ import logging
 import logging.handlers
 import os
 from datetime import timezone
-from typing import List, Type, Union
+from typing import List
 
 
 from kekmonitors.config import ERRORS, Config, LogConfig
@@ -16,7 +16,7 @@ def get_logger(config: LogConfig):
 	'''
 	Get preconfigured logger.
 	'''
-	logger = logging.getLogger(config.name)
+	logger = logging.getLogger(config['BaseConfig']['name'])
 	logger.propagate = False
 	logger.setLevel(logging.DEBUG)
 	formatter = logging.Formatter(
@@ -25,20 +25,20 @@ def get_logger(config: LogConfig):
 	while logger.handlers:
 		logger.handlers.pop()
 
-	splitted_name = config.name.split(".")
-	log_path = Config().log_path
+	splitted_name = config["BaseConfig"]["name"].split(".")
+	log_path = Config()["GlobalConfig"]["log_path"]
 	os.makedirs(os.path.sep.join(
 		[log_path, *splitted_name[:2]]), exist_ok=True)
 	file_handler = logging.handlers.TimedRotatingFileHandler(filename=os.path.sep.join(
 		[log_path, *splitted_name[:2], "".join([splitted_name[-1], ".log"])]), when="midnight", interval=1, backupCount=7)
-	file_handler.setLevel(config.file_level)
+	file_handler.setLevel(eval(config["LogConfig"]["file_level"]))
 	file_handler.setFormatter(formatter)
 
 	logger.addHandler(file_handler)
 
-	if config.add_stream_handler:
+	if config['BaseConfig']['add_stream_handler'] == "True":
 		stream_handler = logging.StreamHandler()
-		stream_handler.setLevel(config.stream_level)
+		stream_handler.setLevel(eval(config["LogConfig"]["stream_level"]))
 		stream_handler.setFormatter(formatter)
 		logger.addHandler(stream_handler)
 
@@ -99,8 +99,8 @@ def make_default_executable(_class, config: Config = Config()):
 	'''
 	parser = argparse.ArgumentParser(
             description=f"Default executable for {_class.__name__}, generated from utils.tools.make_default_executable")
-	parser.add_argument("-d", "--delay", default=config.loop_delay, type=int,
-                     help=f"Specify a delay for the loop. (default: {config.loop_delay})")
+	parser.add_argument("-d", "--delay", default=config['BaseConfig']['loop_delay'], type=int,
+                     help=f"Specify a delay for the loop. (default: {config['BaseConfig']['loop_delay']})")
 	parser.add_argument("--output", action=argparse.BooleanOptionalAction,
                      default=True,
                      help="Specify wether you want log output to the console or not. (note: this does not disable file log)",)
@@ -108,9 +108,9 @@ def make_default_executable(_class, config: Config = Config()):
 	if args.delay < 0:
 		print(f"Cannot have a negative delay")
 		return
-	config.add_stream_handler = args.output
-	config.loop_delay = args.delay
-	_class(config).start(args.delay)
+	config['BaseConfig']['add_stream_handler'] = str(args.output)
+	config['BaseConfig']['loop_delay'] = str(args.delay)
+	_class(config).start()
 
 
 def dump_error(logger: logging.Logger, response: Response):

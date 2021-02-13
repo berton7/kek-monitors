@@ -30,18 +30,19 @@ class Common(Server):
 
 		log_config = LogConfig(config)
 
-		log_config.name += ".General"
+		log_config["BaseConfig"]["name"] += ".General"
 		self.general_logger = get_logger(log_config)
-		log_config.name = self.config.name + ".Client"
+		log_config["BaseConfig"]["name"] = self.config['BaseConfig']['name'] + ".Client"
 		self.client_logger = get_logger(log_config)
 
 		self.class_name = self.get_class_name()
+		self.delay = int(config["BaseConfig"]["loop_delay"])
 
 		super().__init__(config, os.path.sep.join(
-			[self.config.socket_path, config.name]))
+			[self.config['GlobalConfig']['socket_path'], config['BaseConfig']['name']]))
 
-		self.db_client = pymongo.MongoClient(self.config.db_path)[
-                    self.config.db_name]["register"]
+		self.db_client = pymongo.MongoClient(self.config['GlobalConfig']['db_path'])[
+                    self.config['GlobalConfig']['db_name']]["register"]
 
 		self._loop_lock = asyncio.Lock()
 
@@ -54,8 +55,8 @@ class Common(Server):
 		self.cmd_to_callback[COMMANDS.GET_WEBHOOKS] = self.on_get_webhooks
 		self.cmd_to_callback[COMMANDS.GET_CONFIG] = self.on_get_config
 
-		is_monitor = config.name.startswith("Monitor.")
-		pre_conf_path = self.config.config_path
+		is_monitor = config['BaseConfig']['name'].startswith("Monitor.")
+		pre_conf_path = self.config['GlobalConfig']['config_path']
 		self.whitelist_json_filepath = os.path.sep.join(
 			[pre_conf_path, "monitors" if is_monitor else "scrapers", "whitelists.json"])
 		self.blacklist_json_filepath = os.path.sep.join(
@@ -215,9 +216,8 @@ class Common(Server):
 	async def main(self):
 		pass
 
-	def start(self, delay):
+	def start(self):
 		'''Call this to start the loop.'''
-		self.delay = delay
 		self._main_task = self._asyncio_loop.create_task(self.main())
 		self._asyncio_loop.run_forever()
 		self.general_logger.debug("Shutting down...")

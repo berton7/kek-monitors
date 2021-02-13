@@ -18,15 +18,15 @@ from kekmonitors.utils.webhook_manager import WebhookManager
 
 class BaseMonitor(Common, NetworkUtils):
 	def __init__(self, config: Config = Config()):
-		if not config.name:
-			config.name = f"Monitor.{self.get_class_name()}"
-		elif not config.name.startswith("Monitor."):
+		if not config['BaseConfig']['name']:
+			config['BaseConfig']['name'] = f"Monitor.{self.get_class_name()}"
+		elif not config['BaseConfig']['name'].startswith("Monitor."):
 			raise Exception(
-				f"You must start the monitor name with \"Monitor.\"! Currently: {config.name}")
-		self.crash_webhook = config.crash_webhook
+				f"You must start the monitor name with \"Monitor.\"! Currently: {config['BaseConfig']['name']}")
+		self.crash_webhook = config['BaseConfig']['crash_webhook']
 
 		super().__init__(config)
-		super(Server, self).__init__(config.name)
+		super(Server, self).__init__(config['BaseConfig']['name'])
 
 		self._mark_as_monitor()
 
@@ -100,7 +100,7 @@ class BaseMonitor(Common, NetworkUtils):
 		return okResponse()
 
 	async def _get_links(self):
-		socket_path = f"{self.config.socket_path}/Scraper.{self.class_name}"
+		socket_path = f"{self.config['GlobalConfig']['socket_path']}/Scraper.{self.class_name}"
 		self.client_logger.debug("Getting links...")
 
 		cmd = Cmd()
