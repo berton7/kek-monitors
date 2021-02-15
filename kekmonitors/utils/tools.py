@@ -104,7 +104,12 @@ def make_default_executable(_class, config: Config = Config()):
 	parser.add_argument("--output", action=argparse.BooleanOptionalAction,
                      default=True,
                      help="Specify wether you want log output to the console or not. (note: this does not disable file log)",)
+	parser.add_argument("-r", "--register", action="store_const", const="register",
+	                    help="Only register the monitor/scraper, without actually starting it.")
 	args = parser.parse_args()
+	if args.register:
+		_class(config)
+		exit()
 	if args.delay < 0:
 		print(f"Cannot have a negative delay")
 		return

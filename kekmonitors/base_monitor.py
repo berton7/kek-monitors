@@ -28,7 +28,7 @@ class BaseMonitor(Common, NetworkUtils):
 		super().__init__(config)
 		super(Server, self).__init__(config['BaseConfig']['name'])
 
-		self._mark_as_monitor()
+		self.register()
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
@@ -45,6 +45,9 @@ class BaseMonitor(Common, NetworkUtils):
 
 		# website-specific variables should be declared here
 		self.init()
+
+	def register(self):
+		self._mark_as_monitor()
 
 	async def on_set_links(self, msg: Cmd) -> Response:
 		response = badResponse()

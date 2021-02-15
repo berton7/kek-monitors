@@ -93,6 +93,9 @@ class Common(Server):
 	async def on_async_shutdown(self):
 		'''Override this in your website-specific monitor, if needed.'''
 		pass
+	
+	def register(self):
+		pass
 
 	def get_class_name(self):
 		'''Internal function used to get the correct filename.'''

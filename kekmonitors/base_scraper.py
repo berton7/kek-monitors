@@ -25,7 +25,7 @@ class BaseScraper(Common, NetworkUtils):
 		super().__init__(config)
 		super(Server, self).__init__(config['BaseConfig']['name'])
 
-		self._mark_as_scraper()
+		self.register()
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
@@ -35,6 +35,9 @@ class BaseScraper(Common, NetworkUtils):
 
 		# website-specific variables should be declared here
 		self.init()
+
+	def register(self):
+		self._mark_as_scraper()
 
 	async def on_server_stop(self) -> Response:
 		self.general_logger.debug("Waiting for loop to complete...")
