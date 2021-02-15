@@ -61,7 +61,6 @@ You can see the available endpoints by navigating to the root endpoint (by defau
 
 ```app.py``` is only used as an example, and you should not use it in "production" since it doesn't use any sort of authentication, so anyone who finds your server's ip address can very easily control your monitors.
 
-However **in this way they will only read the configs at start and will not refresh them.**
 ## Configuration
 Static configuration, like commands and global variables (```socket_path```), is contained in ```~/.config/kekmonitors/config.cfg``` by default (the default file is hardcoded in [config.py](https://github.com/berton7/kek-monitors/blob/master/kekmonitors/configs/config.py)); the "dynamic" configuration files instead, by default, are stored in ```~/.config/kekmonitors/monitors``` and ```~/.config/kekmonitors/scrapers```; every scraper and monitor looks for its corresponding entry in `blacklist.json`, `whitelist.json`, and a general not-yet-used `configs.json`. Here's an example blacklists.json:
 
