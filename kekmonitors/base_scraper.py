@@ -14,30 +14,20 @@ from kekmonitors.utils.tools import dump_error
 
 class BaseScraper(Common, NetworkUtils):
 	def __init__(self, config: Config = Config()):
-		if not config['BaseConfig']['name']:
-			config['BaseConfig']['name'] = f"Scraper.{self.get_class_name()}"
-		elif not config['BaseConfig']['name'].startswith("Scraper."):
-			raise Exception(
-				f"You must start the scraper name with \"Scraper.\"! Currently: {config['BaseConfig']['name']}")
-		self.crash_webhook = config['BaseConfig']['crash_webhook']
-		# init some internal variables (logger, links)
+		config['OtherConfig']['name'] = f"Scraper.{self.get_class_name()}"
 
 		super().__init__(config)
-		super(Server, self).__init__(config['BaseConfig']['name'])
-
-		self.register()
+		super(Server, self).__init__(config['OtherConfig']['name'])
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
 		self.cmd_to_callback[COMMANDS.GET_LINKS] = self.on_get_links
 		self.links = []  # type: List[str]
 		self._previous_links = []  # type: List[str]
+		self.crash_webhook = config['WebhookConfig']['crash_webhook']
 
 		# website-specific variables should be declared here
 		self.init()
-
-	def register(self):
-		self._mark_as_scraper()
 
 	async def on_server_stop(self) -> Response:
 		self.general_logger.debug("Waiting for loop to complete...")

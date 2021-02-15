@@ -11,7 +11,7 @@ from kekmonitors.utils.tools import get_logger
 class Server(object):
 	def __init__(self, config: Config, server_path: str):
 		logconfig = LogConfig(config)
-		logconfig["BaseConfig"]["name"] += ".Server"
+		logconfig["OtherConfig"]["name"] += ".Server"
 		self.server_logger = get_logger(logconfig)
 		self.server_path = server_path
 		socket_directory = self.server_path[:self.server_path.rfind(os.path.sep)]

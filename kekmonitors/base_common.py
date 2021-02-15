@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 import __main__
 import pymongo
 from pymongo.collection import Collection
+from watchdog import observers
+from watchdog.events import FileSystemEvent, FileSystemEventHandler, LoggingEventHandler
 
 from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
@@ -14,7 +16,7 @@ from kekmonitors.utils.server.server import Server
 from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
 
 
-def mark_as(_type: str, name: str, path: str, client: Collection):
+def register_as(_type: str, name: str, path: str, client: Collection):
 	existing = client[_type].find_one({"name": name})
 	if not existing:
 		client[_type].insert_one({"name": name, "path": path})
@@ -23,23 +25,22 @@ def mark_as(_type: str, name: str, path: str, client: Collection):
 			raise Exception(
 				f"Trying to register new {_type} ({name}) when it already exists in the database with a different path: {existing['path']}")
 
-
-class Common(Server):
+class Common(Server, FileSystemEventHandler):
 	def __init__(self, config: Config):
-		self.config = config
+		self.class_name = self.get_class_name()
 
+		self.config = config
 		log_config = LogConfig(config)
 
-		log_config["BaseConfig"]["name"] += ".General"
+		log_config["OtherConfig"]["name"] += ".General"
 		self.general_logger = get_logger(log_config)
-		log_config["BaseConfig"]["name"] = self.config['BaseConfig']['name'] + ".Client"
+		log_config["OtherConfig"]["name"] = self.config['OtherConfig']['name'] + ".Client"
 		self.client_logger = get_logger(log_config)
 
-		self.class_name = self.get_class_name()
-		self.delay = int(config["BaseConfig"]["loop_delay"])
+		self.delay = int(config["Options"]["loop_delay"])
 
 		super().__init__(config, os.path.sep.join(
-			[self.config['GlobalConfig']['socket_path'], config['BaseConfig']['name']]))
+			[self.config['GlobalConfig']['socket_path'], config['OtherConfig']['name']]))
 
 		self.db_client = pymongo.MongoClient(self.config['GlobalConfig']['db_path'])[
                     self.config['GlobalConfig']['db_name']]["register"]
@@ -55,7 +56,8 @@ class Common(Server):
 		self.cmd_to_callback[COMMANDS.GET_WEBHOOKS] = self.on_get_webhooks
 		self.cmd_to_callback[COMMANDS.GET_CONFIG] = self.on_get_config
 
-		is_monitor = config['BaseConfig']['name'].startswith("Monitor.")
+		is_monitor = config['OtherConfig']['name'].startswith("Monitor.")
+		self.is_monitor = is_monitor
 		pre_conf_path = self.config['GlobalConfig']['config_path']
 		self.whitelist_json_filepath = os.path.sep.join(
 			[pre_conf_path, "monitors" if is_monitor else "scrapers", "whitelists.json"])
@@ -77,6 +79,13 @@ class Common(Server):
 		self._new_config = None  # type: Optional[Dict[str, Any]]
 
 		self._has_to_quit = False
+		self.register()
+
+		if config['Options']['disable_config_watcher'] == "False":
+			observer = observers.Observer()
+			observer.schedule(self, os.path.sep.join(
+				(self.config['GlobalConfig']['config_path'], "monitors" if self.is_monitor else "scrapers")), True)
+			observer.start()
 
 	def init(self):
 		'''Override this in your website-specific monitor, if needed.'''
@@ -93,20 +102,67 @@ class Common(Server):
 	async def on_async_shutdown(self):
 		'''Override this in your website-specific monitor, if needed.'''
 		pass
-	
-	def register(self):
-		pass
 
 	def get_class_name(self):
 		'''Internal function used to get the correct filename.'''
 		'''Not necessary, but sometimes you might want to override this.'''
 		return type(self).__name__
 
-	def _mark_as_monitor(self):
-		mark_as("monitors", self.class_name, __main__.__file__, self.db_client)
+	def register(self):
+		if self.is_monitor:
+			register_as("monitors", self.class_name, __main__.__file__, self.db_client)
+		else:
+			register_as("scrapers", self.class_name, __main__.__file__, self.db_client)
 
-	def _mark_as_scraper(self):
-		mark_as("scrapers", self.class_name, __main__.__file__, self.db_client)
+	def on_modified(self, event: FileSystemEvent):
+		# called when any of the monitored files is modified.
+		# we are only interested int the configs for now.
+		filename = event.key[1]  # type: str
+
+		# if a config file is updated:
+		if filename.endswith(".json") and filename.find(self.config['GlobalConfig']['config_path']) != -1:
+			asyncio.run_coroutine_threadsafe(
+				self.update_configs(filename), self._asyncio_loop)
+
+	def on_any_event(self, event):
+		return super().on_any_event(event)
+
+	async def update_configs(self, filename: str):
+		'''Reads the provided config file and updates the variables'''
+		self.general_logger.debug(f"File {filename} has changed!")
+		if filename.endswith(".json"):
+			try:
+				with open(filename, "r") as f:
+					j = json.load(f)
+			except JSONDecodeError:
+				self.general_logger.warning(
+					f"File {filename} has changed but contains invalid json data")
+				return
+
+			splits = filename.split(os.path.sep)
+
+			# if it's from the monitors folder:
+			if self.class_name in j:
+				# we are interested in configs, whitelists, blacklists, webhooks
+				if splits[-1] == "whitelists.json":
+					r = self.on_set_whitelist
+				elif splits[-1] == "configs.json":
+					r = self.on_set_configs
+				elif splits[-1] == "blacklists.json":
+					r = self.on_set_blacklist
+				elif splits[-1] == "webhooks.json":
+					r = self.on_set_webhooks
+				else:
+					return
+
+			else:
+				self.general_logger.debug("File not useful.")
+				return
+
+			command = Cmd()
+			# send only the corresponding part to the monitor
+			command.payload = j[self.class_name]
+			await r(command)
 
 	def load_config(self, path):
 		content = get_file_if_exist_else_create(path, "{}")

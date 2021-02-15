@@ -16,7 +16,7 @@ def get_logger(config: LogConfig):
 	'''
 	Get preconfigured logger.
 	'''
-	logger = logging.getLogger(config['BaseConfig']['name'])
+	logger = logging.getLogger(config['OtherConfig']['name'])
 	logger.propagate = False
 	logger.setLevel(logging.DEBUG)
 	formatter = logging.Formatter(
@@ -25,7 +25,7 @@ def get_logger(config: LogConfig):
 	while logger.handlers:
 		logger.handlers.pop()
 
-	splitted_name = config["BaseConfig"]["name"].split(".")
+	splitted_name = config["OtherConfig"]["name"].split(".")
 	log_path = Config()["GlobalConfig"]["log_path"]
 	os.makedirs(os.path.sep.join(
 		[log_path, *splitted_name[:2]]), exist_ok=True)
@@ -36,7 +36,7 @@ def get_logger(config: LogConfig):
 
 	logger.addHandler(file_handler)
 
-	if config['BaseConfig']['add_stream_handler'] == "True":
+	if config['Options']['add_stream_handler'] == "True":
 		stream_handler = logging.StreamHandler()
 		stream_handler.setLevel(eval(config["LogConfig"]["stream_level"]))
 		stream_handler.setFormatter(formatter)
@@ -99,11 +99,13 @@ def make_default_executable(_class, config: Config = Config()):
 	'''
 	parser = argparse.ArgumentParser(
             description=f"Default executable for {_class.__name__}, generated from utils.tools.make_default_executable")
-	parser.add_argument("-d", "--delay", default=config['BaseConfig']['loop_delay'], type=int,
-                     help=f"Specify a delay for the loop. (default: {config['BaseConfig']['loop_delay']})")
+	parser.add_argument("-d", "--delay", default=config['Options']['loop_delay'], type=int,
+                     help=f"Specify a delay for the loop. (default: {config['Options']['loop_delay']})")
 	parser.add_argument("--output", action=argparse.BooleanOptionalAction,
                      default=True,
                      help="Specify wether you want log output to the console or not. (note: this does not disable file log)",)
+	parser.add_argument("--config-watcher", action=argparse.BooleanOptionalAction,
+	                    default=True, help="Specify wether you want to add a config watcher or not")
 	parser.add_argument("-r", "--register", action="store_const", const="register",
 	                    help="Only register the monitor/scraper, without actually starting it.")
 	args = parser.parse_args()
@@ -113,8 +115,9 @@ def make_default_executable(_class, config: Config = Config()):
 	if args.delay < 0:
 		print(f"Cannot have a negative delay")
 		return
-	config['BaseConfig']['add_stream_handler'] = str(args.output)
-	config['BaseConfig']['loop_delay'] = str(args.delay)
+	config['Options']['add_stream_handler'] = str(args.output)
+	config['Options']['loop_delay'] = str(args.delay)
+	config['Options']['disable_config_watcher'] = str(not bool(args.config_watcher))
 	_class(config).start()
 
 

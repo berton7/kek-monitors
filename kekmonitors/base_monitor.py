@@ -18,17 +18,10 @@ from kekmonitors.utils.webhook_manager import WebhookManager
 
 class BaseMonitor(Common, NetworkUtils):
 	def __init__(self, config: Config = Config()):
-		if not config['BaseConfig']['name']:
-			config['BaseConfig']['name'] = f"Monitor.{self.get_class_name()}"
-		elif not config['BaseConfig']['name'].startswith("Monitor."):
-			raise Exception(
-				f"You must start the monitor name with \"Monitor.\"! Currently: {config['BaseConfig']['name']}")
-		self.crash_webhook = config['BaseConfig']['crash_webhook']
+		config['OtherConfig']['name'] = f"Monitor.{self.get_class_name()}"
 
 		super().__init__(config)
-		super(Server, self).__init__(config['BaseConfig']['name'])
-
-		self.register()
+		super(Server, self).__init__(config['OtherConfig']['name'])
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
@@ -39,15 +32,13 @@ class BaseMonitor(Common, NetworkUtils):
 		self.new_links = []  # type: List[str]
 		self.links = []  # type: List[str]
 		self.shoes = []  # type: List[Shoe]
+		self.crash_webhook = config['WebhookConfig']['crash_webhook']
 
 		self.shoe_manager = ShoeManager()
 		self.webhook_manager = WebhookManager(config)
 
 		# website-specific variables should be declared here
 		self.init()
-
-	def register(self):
-		self._mark_as_monitor()
 
 	async def on_set_links(self, msg: Cmd) -> Response:
 		response = badResponse()

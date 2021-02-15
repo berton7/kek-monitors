@@ -33,8 +33,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 	def __init__(self, config: Config = Config()):
 		# set default name if not already set in config
-		if not config['BaseConfig']['name']:
-			config['BaseConfig']['name'] = f"Executable.MonitorManager"
+		if not config['OtherConfig']['name']:
+			config['OtherConfig']['name'] = f"Executable.MonitorManager"
 
 		self.config = config
 
@@ -44,7 +44,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		# create logger
 		logconfig = LogConfig(config)
-		logconfig["BaseConfig"]["name"] += ".General"
+		logconfig['OtherConfig']['name'] += ".General"
 		self.general_logger = kekmonitors.utils.tools.get_logger(logconfig)
 
 		# initialize callbacks
@@ -235,53 +235,35 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 			# if it's from the monitors folder:
 			if "monitors" in filename.split(os.path.sep):
-				# we are interested in configs, whitelists, blacklists, webhooks
-				if splits[-1] == "whitelists.json":
-					cmd = COMMANDS.SET_WHITELIST
-				elif splits[-1] == "configs.json":
-					cmd = COMMANDS.SET_CONFIG
-				elif splits[-1] == "blacklists.json":
-					cmd = COMMANDS.SET_BLACKLIST
-				elif splits[-1] == "webhooks.json":
-					cmd = COMMANDS.SET_WEBHOOKS
-				else:
-					return
-
-				# for every monitor socket
-				for name in self.monitor_sockets:
-					if name in j:
-						sock_path = self.monitor_sockets[name]
-						c = Cmd()
-						c.cmd = cmd
-						# send only the corresponding part to the monitor
-						c.payload = j[name]
-						commands.append(c)
-						sock_paths.append(sock_path)
-
+				sockets = self.monitor_sockets
 			elif "scrapers" in filename.split(os.path.sep):
-				# we are interested in configs, whitelist, blacklist
-				if splits[-1] == "whitelists.json":
-					cmd = COMMANDS.SET_WHITELIST
-				elif splits[-1] == "configs.json":
-					cmd = COMMANDS.SET_CONFIG
-				elif splits[-1] == "blacklists.json":
-					cmd = COMMANDS.SET_BLACKLIST
-				else:
-					return
-
-				# for every scraper socket
-				for name in self.scraper_sockets:
-					if name in j:
-						sock_path = self.scraper_sockets[name]
-						c = Cmd()
-						c.cmd = cmd
-						# send only the corresponding part to the scraper
-						c.payload = j[name]
-						commands.append(c)
-						sock_paths.append(sock_path)
+				sockets = self.scraper_sockets
 			else:
 				self.general_logger.debug("File not useful.")
 				return
+
+			# we are interested in configs, whitelists, blacklists, webhooks
+			if splits[-1] == "whitelists.json":
+				cmd = COMMANDS.SET_WHITELIST
+			elif splits[-1] == "configs.json":
+				cmd = COMMANDS.SET_CONFIG
+			elif splits[-1] == "blacklists.json":
+				cmd = COMMANDS.SET_BLACKLIST
+			elif splits[-1] == "webhooks.json":
+				cmd = COMMANDS.SET_WEBHOOKS
+			else:
+				return
+
+			# for every monitor socket
+			for name in sockets:
+				if name in j:
+					sock_path = sockets[name]
+					c = Cmd()
+					c.cmd = cmd
+					# send only the corresponding part to the monitor
+					c.payload = j[name]
+					commands.append(c)
+					sock_paths.append(sock_path)
 
 			# prepare to make all the async requests
 			tasks = []
@@ -351,9 +333,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 						log = f"Monitor {class_name} has stopped with code: {monitor.returncode}"
 						if monitor.returncode:
 							self.general_logger.warning(log)
-							if self.config['BaseConfig']['crash_webhook']:
+							if self.config['WebhookConfig']['crash_webhook']:
 								data = {"content": log}
-								await self.client.fetch(self.config['BaseConfig']['crash_webhook'], method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+								await self.client.fetch(self.config['WebhookConfig']['crash_webhook'], method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 						else:
 							self.general_logger.info(log)
 					else:
@@ -367,9 +349,9 @@ class MonitorManager(Server, FileSystemEventHandler):
 						log = f"Scraper {class_name} has stopped with code: {scraper.returncode}"
 						if scraper.returncode:
 							self.general_logger.warning(log)
-							if self.config['BaseConfig']['crash_webhook']:
+							if self.config['WebhookConfig']['crash_webhook']:
 								data = {"content": log}
-								await self.client.fetch(self.config['BaseConfig']['crash_webhook'], method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
+								await self.client.fetch(self.config['WebhookConfig']['crash_webhook'], method="POST", body=json.dumps(data), headers={"content-type": "application/json"}, raise_error=False)
 						else:
 							self.general_logger.info(log)
 					else:
@@ -528,7 +510,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 				f"Tried to add an already existing monitor ({class_name} ({filename}))")
 			return False, "Monitor already started."
 
-		cmd = f"nohup {sys.executable} {filename} --no-output"
+		cmd = f"nohup {sys.executable} {filename} --no-output --no-config-watcher"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 
@@ -560,7 +542,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 				f"Tried to add an already existing scraper ({class_name} ({filename}))")
 			return False, "Scraper already started."
 
-		cmd = f"nohup {sys.executable} {filename} --no-output"
+		cmd = f"nohup {sys.executable} {filename} --no-output --no-config-watcher"
 		if delay:
 			cmd += f" --delay {str(delay)}"
 

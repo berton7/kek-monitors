@@ -101,20 +101,27 @@ log_path = {os.environ['HOME']}/.kekmonitors/logs\n\
 db_name = kekmonitors\n\
 db_path = mongodb://localhost:27017/\n\
 \n\
-[BaseConfig]\n\
-name = \n\
+[WebhookConfig]\n\
 crash_webhook = \n\
 provider = KekMonitors\n\
 provider_icon = https://avatars0.githubusercontent.com/u/11823129?s=400&u=3e617374871087e64b5fde0df668260f2671b076&v=4\n\
 timestamp_format = %d %b %Y, %H:%M:%S.%f\n\
 embed_color = 255\n\
+\n\
+[OtherConfig]\n\
+name =\n\
+\n\
+[Options]\n\
 add_stream_handler = True\n\
-loop_delay = 5\n"
+disable_config_watcher = False\n\
+loop_delay = 5\n\
+"
 		get_file_if_exist_else_create(config_path, self.default_config_str)
 		parser = configparser.RawConfigParser()
 		self.parser = parser
 		parser.read(config_path)
 		self["GlobalConfig"]["config_path"] = path
+		self["OtherConfig"]["name"] = ""
 
 	def __getitem__(self, key: str) -> configparser.SectionProxy:
 		return self.parser[key]
