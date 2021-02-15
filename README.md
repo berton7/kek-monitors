@@ -33,7 +33,7 @@ python3 -m pip install -r requirements.txt
 ```
 
 ## Usage
-If you want to quickly look at how monitors look like, take a look at the sample code [footdistrict_scraper.py](https://github.com/berton7/kek-monitors/blob/master/demo/footdistrict_scraper.py) and [footdistrict_monitor.py](https://github.com/berton7/kek-monitors/blob/master/footdistrict_monitor.py)
+If you want to quickly look at how monitors look like, take a look at the sample code [footdistrict_scraper.py](https://github.com/berton7/kek-monitors/blob/master/demo/footdistrict_scraper.py) and [footdistrict_monitor.py](https://github.com/berton7/kek-monitors/blob/master/demo/footdistrict_monitor.py)
 
 Before using the ```monitor_manager``` make sure you started the monitors/scraper at least once manually (this is needed to register it in the database):
 ```bash
@@ -50,7 +50,7 @@ python3 -m kekmonitors.monitor_manager
 # in another SSH session:
 python3 -m kekmonitors.monitor_manager_cli MM_ADD_MONITOR_SCRAPER --name <name> [--monitor-delay n] [--scraper-delay n]
 ```
-The monitor manager will automatically keep track of which monitors/scrapers are available and can notify if and when they crash; it also manages the config updates (**as soon as you change a file in the configs folder (```~/.config/kekmonitors``` by default) it notifies the interested monitors/scrapers**).
+The monitor manager will automatically keep track of which monitors/scrapers are available and can notify if and when they crash; it also manages the config updates (**as soon as you change a file in the configs folder (```~/.kekmonitors/config``` by default) it notifies the interested monitors/scrapers**).
 
 There is also an ```app.py``` that "bridges" between http and the monitor manager, which allows you to use a REST api to control the monitor manager:
 ```bash
@@ -63,7 +63,7 @@ You can see the available endpoints by navigating to the root endpoint (by defau
 
 However **in this way they will only read the configs at start and will not refresh them.**
 ## Configuration
-Static configuration, like commands and global variables (```socket_path```), is contained in ```~/.config/kekmonitors/config.cfg``` by default (the default file is hardcoded in [config.py](https://github.com/berton7/kek-monitors/blob/master/kekmonitors/configs/config.py)); the "dynamic" configuration files instead, by default, are stored in ```~/.config/kekmonitors/monitors``` and ```~/.config/kekmonitors/scrapers```; every scraper and monitor looks for its corresponding entry in `blacklist.json`, `whitelist.json`, and a general not-yet-used `configs.json`. Here's an example blacklists.json:
+Static configuration, like commands and global variables (```socket_path```), is contained in ```~/.config/kekmonitors/config.cfg``` by default (the default file is hardcoded in [config.py](https://github.com/berton7/kek-monitors/blob/master/kekmonitors/config.py)); the "dynamic" configuration files instead, by default, are stored in ```~/.config/kekmonitors/monitors``` and ```~/.config/kekmonitors/scrapers```; every scraper and monitor looks for its corresponding entry in `blacklist.json`, `whitelist.json`, and a general not-yet-used `configs.json`. Here's an example blacklists.json:
 
 ```json
 {
