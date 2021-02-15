@@ -1,6 +1,6 @@
 import configparser
+import copy
 import enum
-import logging
 import os
 
 
@@ -94,51 +94,44 @@ class Config(object):
 	def __init__(self):
 		path = os.path.sep.join([os.environ['HOME'], ".kekmonitors", "config"])
 		config_path = os.path.sep.join([path, "config.cfg"])
-		default_config_str = f"\
+		self.default_config_str = f"\
 [GlobalConfig]\n\
 socket_path = {os.environ['HOME']}/.kekmonitors/sockets\n\
 log_path = {os.environ['HOME']}/.kekmonitors/logs\n\
 db_name = kekmonitors\n\
 db_path = mongodb://localhost:27017/\n\
 \n\
-[DefaultBaseConfig]\n\
-name = \n\
+[WebhookConfig]\n\
 crash_webhook = \n\
 provider = KekMonitors\n\
 provider_icon = https://avatars0.githubusercontent.com/u/11823129?s=400&u=3e617374871087e64b5fde0df668260f2671b076&v=4\n\
 timestamp_format = %d %b %Y, %H:%M:%S.%f\n\
 embed_color = 255\n\
+\n\
+[OtherConfig]\n\
+name =\n\
+\n\
+[Options]\n\
 add_stream_handler = True\n\
-loop_delay = 5\n"
-		get_file_if_exist_else_create(config_path, default_config_str)
+disable_config_watcher = False\n\
+loop_delay = 5\n\
+"
+		get_file_if_exist_else_create(config_path, self.default_config_str)
 		parser = configparser.RawConfigParser()
+		self.parser = parser
 		parser.read(config_path)
-		parser.set("GlobalConfig", "config_path", path)
+		self["GlobalConfig"]["config_path"] = path
+		self["OtherConfig"]["name"] = ""
 
-		self.config_path = parser.get("GlobalConfig", "config_path")
-		self.socket_path = parser.get("GlobalConfig", "socket_path")
-		self.log_path = parser.get("GlobalConfig", "log_path")
-		self.db_name = parser.get("GlobalConfig", "db_name")
-		self.db_path = parser.get("GlobalConfig", "db_path")
-
-		self.name = parser.get("DefaultBaseConfig", "name")
-		self.crash_webhook = parser.get("DefaultBaseConfig", "crash_webhook")
-		self.provider = parser.get("DefaultBaseConfig", "provider")
-		self.provider_icon = parser.get("DefaultBaseConfig", "provider_icon")
-		self.timestamp_format = parser.get("DefaultBaseConfig", "timestamp_format")
-		self.embed_color = int(parser.get("DefaultBaseConfig", "embed_color"))
-		self.add_stream_handler = parser.get(
-			"DefaultBaseConfig", "add_stream_handler")
-		self.loop_delay = int(parser.get("DefaultBaseConfig", "loop_delay"))
+	def __getitem__(self, key: str) -> configparser.SectionProxy:
+		return self.parser[key]
 
 
 class LogConfig(Config):
 	def __init__(self, config: Config = None):
-		if config is not None:
-			for key in config.__dict__:
-				self.__dict__[key] = config.__dict__[key]
-		else:
-			super().__init__()
-
-		self.stream_level = logging.DEBUG
-		self.file_level = logging.DEBUG
+		super().__init__()
+		if config:
+			self.parser = copy.deepcopy(config.parser)
+		self.parser.add_section("LogConfig")
+		self["LogConfig"]["stream_level"] = "logging.DEBUG"
+		self["LogConfig"]["file_level"] = "logging.DEBUG"

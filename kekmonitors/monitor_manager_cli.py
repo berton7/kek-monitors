@@ -12,7 +12,7 @@ def send(cmd: Cmd):
 	print(f"Payload: {cmd.payload}")
 	print("Executing request...")
 	response = asyncio.run(make_request(
-		f"{Config().socket_path}/MonitorManager", cmd, True))
+		f"{Config()['GlobalConfig']['socket_path']}/MonitorManager", cmd, True))
 
 	print("E:", response.error.name)
 	if response.info:

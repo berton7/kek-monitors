@@ -6,8 +6,8 @@ from kekmonitors.config import Config
 if __name__ == "__main__":
 	config = Config()
 
-	db = pymongo.MongoClient(config.db_path)
-	if config.db_name in db.list_database_names():
+	db = pymongo.MongoClient(config['GlobalConfig']['db_path'])
+	if config['GlobalConfig']['db_name'] in db.list_database_names():
 		print("Saved items:")
 		for item in db["kekmonitors"]["items"].find({}, {"_id": 0}):
 			pprint(item)

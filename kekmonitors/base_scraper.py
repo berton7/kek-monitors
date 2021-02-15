@@ -14,24 +14,17 @@ from kekmonitors.utils.tools import dump_error
 
 class BaseScraper(Common, NetworkUtils):
 	def __init__(self, config: Config = Config()):
-		if not config.name:
-			config.name = f"Scraper.{self.get_class_name()}"
-		elif not config.name.startswith("Scraper."):
-			raise Exception(
-				f"You must start the scraper name with \"Scraper.\"! Currently: {config.name}")
-		self.crash_webhook = config.crash_webhook
-		# init some internal variables (logger, links)
+		config['OtherConfig']['name'] = f"Scraper.{self.get_class_name()}"
 
 		super().__init__(config)
-		super(Server, self).__init__(config.name)
-
-		self._mark_as_scraper()
+		super(Server, self).__init__(config['OtherConfig']['name'])
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
 		self.cmd_to_callback[COMMANDS.GET_LINKS] = self.on_get_links
 		self.links = []  # type: List[str]
 		self._previous_links = []  # type: List[str]
+		self.crash_webhook = config['WebhookConfig']['crash_webhook']
 
 		# website-specific variables should be declared here
 		self.init()
@@ -84,7 +77,7 @@ class BaseScraper(Common, NetworkUtils):
 
 	async def _set_links(self):
 		'''Connect to the corresponding monitor, if available, and tell it to set the new links.'''
-		socket_path = f"{self.config.socket_path}/Monitor.{self.class_name}"
+		socket_path = f"{self.config['GlobalConfig']['socket_path']}/Monitor.{self.class_name}"
 		cmd = Cmd()
 		cmd.cmd = COMMANDS.SET_LINKS
 		cmd.payload = self.links
@@ -94,7 +87,7 @@ class BaseScraper(Common, NetworkUtils):
 
 	async def _add_links(self):
 		'''Connect to the corresponding monitor, if available, and send it the new links.'''
-		socket_path = f"{self.config.socket_path}/Monitor.{self.class_name}"
+		socket_path = f"{self.config['GlobalConfig']['socket_path']}/Monitor.{self.class_name}"
 		cmd = Cmd()
 		cmd.cmd = COMMANDS.ADD_LINKS
 		cmd.payload = self.links
