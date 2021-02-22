@@ -112,5 +112,5 @@ class Footdistrict(BaseScraper):
 
 if __name__ == "__main__":
 	custom_config = Config()
-	custom_config["BaseConfig"]["crash_webhook"] = "your-crash-webhook-here"
+	custom_config["WebhookConfig"]["crash_webhook"] = "your-crash-webhook-here"
 	make_default_executable(Footdistrict)
