@@ -68,10 +68,10 @@ class Common(Server, FileSystemEventHandler):
 		self.config_json_filepath = os.path.sep.join(
 			[pre_conf_path, "monitors" if is_monitor else "scrapers", "configs.json"])
 
-		self.whitelist_json = self.load_config(self.whitelist_json_filepath)
-		self.blacklist_json = self.load_config(self.blacklist_json_filepath)
-		self.webhooks_json = self.load_config(self.webhooks_json_filepath)
-		self.config_json = self.load_config(self.config_json_filepath)
+		self.whitelist_json = self.load_config(self.whitelist_json_filepath, []) # type: List[str]
+		self.blacklist_json = self.load_config(self.blacklist_json_filepath, []) # type: List[str]
+		self.webhooks_json = self.load_config(self.webhooks_json_filepath, {}) # type: Dict[str, Any]
+		self.config_json = self.load_config(self.config_json_filepath, {}) # type: Dict[str, Any]
 
 		self._new_whitelist = None  # type: Optional[List[str]]
 		self._new_blacklist = None  # type: Optional[List[str]]
@@ -164,7 +164,7 @@ class Common(Server, FileSystemEventHandler):
 			command.payload = j[self.class_name]
 			await r(command)
 
-	def load_config(self, path):
+	def load_config(self, path, default_value):
 		content = get_file_if_exist_else_create(path, "{}")
 		try:
 			j = json.loads(content)
@@ -174,7 +174,7 @@ class Common(Server, FileSystemEventHandler):
 		if self.class_name not in j:
 			self.general_logger.warning(
 				f"{self.class_name} not in {path}, continuing with empty entry.")
-			return {}
+			return default_value
 		else:
 			return j[self.class_name]
 
