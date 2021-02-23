@@ -35,12 +35,13 @@ class NetworkUtils(object):
 		self.network_logger = get_logger(config)
 		self.network_logger.debug(f"Has brotli: {self._has_brotli}")
 
-	async def fetch(self, url: str, use_cache=True, attempts=3, delay=2, *args, **kwargs) -> Tuple[Optional[tornado.httpclient.HTTPResponse], str]:
+	async def fetch(self, url: str, use_cache=True, attempts=3, delay=2, retry_on_404=True, *args, **kwargs) -> Optional[tornado.httpclient.HTTPResponse]:
 		'''Asynchronously fetch the url using a tornado client. If you want to fetch more urls at once use asyncio.gather(*tasks).\n
 		You can pass arguments to client.fetch() using *args and **kwargs (e.g. if you need proxies you can call self.fetch like this:\n
 		`self.fetch(url, headers=headers, proxy_host={your-proxy-host}, proxy_port={your-proxy-port})`'''
 		total_attempts = attempts
 		headers = kwargs.get("headers", {})
+		response = None
 		# keep retrying the connection until we run out of attempts
 		while attempts > 0:
 			try:
@@ -66,31 +67,33 @@ class NetworkUtils(object):
 				headers.pop("Pragma", None)
 
 				self.network_logger.debug(f"Getting {url}...")
-				r = await self.client.fetch(url, if_modified_since=if_mod_since, raise_error=False, *args, **kwargs)
-				self.network_logger.info(f"Got {url} with code {r.code}")
-				if r.code == 599:
+				response = await self.client.fetch(url, if_modified_since=if_mod_since, raise_error=False, *args, **kwargs)
+				self.network_logger.info(f"Got {url} with code {response.code}")
+				if response.code == 599:
 					self.network_logger.warning(
-						f"Something happened while fetching {url}: {r.reason}")
+						f"Something happened while fetching {url}: {response.reason}")
 					attempts -= 1
 					if attempts:
 						# sleep delay before retrying
 						await asyncio.sleep(delay)
 						continue
-				elif r.code == 404:
+				elif response.code == 404:
+					if retry_on_404:
+						continue
 					# usually this is what we want to do
 					self.network_logger.debug("Not retrying on 404.")
-					return r, r.body.decode()
+					return response
 				else:
 					if use_cache:
 						# if page was cached update it or just return it
-						if r.code < 400 and r.code != 304:
-							self._cached_pages[url] = r.body.decode()
+						if response.code < 400 and response.code != 304:
+							self._cached_pages[url] = response.body.decode()
 							self._last_modified_datetimes[url] = datetime.utcnow()
-							if "etag" in r.headers:
-								self._etags[url] = r.headers["etag"]
-						return r, self._cached_pages[url]
+							if "etag" in response.headers:
+								self._etags[url] = response.headers["etag"]
+						return response
 					else:
-						return r, r.body.decode()
+						return response
 
 			except CurlError:
 				self.network_logger.exception(f"Timed out while fetching {url}.")
@@ -110,4 +113,4 @@ class NetworkUtils(object):
 		self.network_logger.warning(
 			f"Tried {total_attempts} but couldn't fetch {url}.")
 
-		return self.__dict__.get("r", None), ""
+		return response
