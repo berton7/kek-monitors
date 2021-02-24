@@ -13,10 +13,10 @@ from kekmonitors.utils.tools import dump_error
 
 
 class BaseScraper(Common, NetworkUtils):
-	def __init__(self, config: Config = Config()):
+	def __init__(self, config: Config = Config(), **kwargs):
 		config['OtherConfig']['name'] = f"Scraper.{self.get_class_name()}"
 
-		super().__init__(config)
+		super().__init__(config, **kwargs)
 		super(Server, self).__init__(config['OtherConfig']['name'])
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
@@ -25,9 +25,6 @@ class BaseScraper(Common, NetworkUtils):
 		self.links = []  # type: List[str]
 		self._previous_links = []  # type: List[str]
 		self.crash_webhook = config['WebhookConfig']['crash_webhook']
-
-		# website-specific variables should be declared here
-		self.init()
 
 	async def on_server_stop(self) -> Response:
 		self.general_logger.debug("Waiting for loop to complete...")

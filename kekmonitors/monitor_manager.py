@@ -367,8 +367,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 			db_monitor = self.register_db["monitors"].find_one(
 				{"name": payload["name"]})
 			if db_monitor:
-				success, reason = await self.add_monitor(
-					db_monitor["path"], payload["name"], payload.get("delay", None))
+				success, reason = await self.add_monitor(db_monitor["path"], payload)
 				if success:
 					r = okResponse()
 				else:
@@ -390,8 +389,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 			db_scraper = self.register_db["scrapers"].find_one(
 				{"name": payload["name"]})
 			if db_scraper:
-				success, reason = await self.add_scraper(
-					db_scraper["path"], payload["name"], payload.get("delay", None))
+				success, reason = await self.add_scraper(db_scraper["path"], payload)
 				if success:
 					r = okResponse()
 				else:
@@ -504,15 +502,21 @@ class MonitorManager(Server, FileSystemEventHandler):
 			"monitors": msp, "scrapers": ssp}
 		return response
 
-	async def add_monitor(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):
+	async def add_monitor(self, filename: str, kwargs: dict[str, str]):
+		class_name = kwargs.pop("name")
+
 		if class_name in self.monitor_processes:
 			self.general_logger.debug(
 				f"Tried to add an already existing monitor ({class_name} ({filename}))")
 			return False, "Monitor already started."
 
-		cmd = f"nohup {sys.executable} {filename} --no-output --no-config-watcher"
-		if delay:
-			cmd += f" --delay {str(delay)}"
+		first_part_cmd = f"nohup {sys.executable} {filename} --no-output --no-config-watcher"
+
+		args = []
+		for key in kwargs:
+			args.append(f"--{key} {kwargs[key]}")
+
+		cmd = " ".join((first_part_cmd, *args))
 
 		self.general_logger.debug(f"Starting {class_name} ({filename})...")
 		monitor = subprocess.Popen(shlex.split(
@@ -536,15 +540,21 @@ class MonitorManager(Server, FileSystemEventHandler):
 			msg = ""
 		return success, msg
 
-	async def add_scraper(self, filename: str, class_name: str, delay: Optional[Union[int, float]]):
-		if class_name in self.scraper_processes:
+	async def add_scraper(self, filename: str, kwargs: dict[str, str]):
+		class_name = kwargs.pop("name")
+
+		if class_name in self.monitor_processes:
 			self.general_logger.debug(
 				f"Tried to add an already existing scraper ({class_name} ({filename}))")
 			return False, "Scraper already started."
 
-		cmd = f"nohup {sys.executable} {filename} --no-output --no-config-watcher"
-		if delay:
-			cmd += f" --delay {str(delay)}"
+		first_part_cmd = f"nohup {sys.executable} {filename} --no-output --no-config-watcher"
+
+		args = []
+		for key in kwargs:
+			args.append(f"--{key} {kwargs[key]}")
+
+		cmd = " ".join((first_part_cmd, " ".join(args)))
 
 		self.general_logger.debug(f"Starting {class_name} ({filename})...")
 		scraper = subprocess.Popen(shlex.split(

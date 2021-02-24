@@ -4,15 +4,14 @@ import inspect
 import logging
 import logging.handlers
 import os
-from datetime import timezone
-from typing import List
 import sys
-
+from datetime import timezone
+from typing import Dict, List
 
 from kekmonitors.config import ERRORS, Config, LogConfig
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 
-if sys.version_info[2] < 9:
+if sys.version_info[1] < 9:
 	class BooleanOptionalAction(argparse.Action):
 		def __init__(self,
 					option_strings,
@@ -139,10 +138,10 @@ def make_default_executable(_class, config: Config = Config()):
 	Start the specified class with an optional config, adding support to default cli options
 	(needed for the monitor manager). ***Needs to be inside `if __name__=="__main__":`***
 	'''
-	if sys.version_info[2] < 9:
-		boolAction = argparse.BooleanOptionalAction
+	if sys.version_info[1] < 9:
+		boolAction = BooleanOptionalAction  # type: ignore
 	else:
-		boolAction = BooleanOptionalAction # type: ignore
+		boolAction = argparse.BooleanOptionalAction
 	parser = argparse.ArgumentParser(
             description=f"Default executable for {_class.__name__}, generated from utils.tools.make_default_executable")
 	parser.add_argument("-d", "--delay", default=config['Options']['loop_delay'], type=int,
@@ -154,17 +153,28 @@ def make_default_executable(_class, config: Config = Config()):
 	                    default=True, help="Specify wether you want to add a config watcher or not")
 	parser.add_argument("-r", "--register", action="store_const", const="register",
 	                    help="Only register the monitor/scraper, without actually starting it.")
-	args = parser.parse_args()
-	if args.register:
+	parser_args, unknown = parser.parse_known_args()
+	if parser_args.register:
 		_class(config)
 		exit()
-	if args.delay < 0:
+	if parser_args.delay < 0:
 		print(f"Cannot have a negative delay")
 		return
-	config['Options']['add_stream_handler'] = str(args.output)
-	config['Options']['loop_delay'] = str(args.delay)
-	config['Options']['disable_config_watcher'] = str(not bool(args.config_watcher))
-	_class(config).start()
+	config['Options']['add_stream_handler'] = str(parser_args.output)
+	config['Options']['loop_delay'] = str(parser_args.delay)
+	config['Options']['disable_config_watcher'] = str(not bool(parser_args.config_watcher))
+	kwargs = {} # type: Dict[str, str]
+	if len(unknown) % 2:
+		print("Incorrect number of kwargs")
+		exit(1)
+	for index, term in enumerate(unknown):
+		if not index % 2:
+			if not term.startswith("--"):
+				print("You must start every kwargs key with \"--\"")
+				exit(1)
+			kwargs[term[2:]] = unknown[1 + index]
+
+	_class(config, **kwargs).start()
 
 
 def dump_error(logger: logging.Logger, response: Response):

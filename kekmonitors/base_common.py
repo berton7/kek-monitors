@@ -26,10 +26,11 @@ def register_as(_type: str, name: str, path: str, client: Collection):
 				f"Trying to register new {_type} ({name}) when it already exists in the database with a different path: {existing['path']}")
 
 class Common(Server, FileSystemEventHandler):
-	def __init__(self, config: Config):
+	def __init__(self, config: Config, **kwargs):
 		self.class_name = self.get_class_name()
 
 		self.config = config
+		self.kwargs = kwargs
 		log_config = LogConfig(config)
 
 		log_config["OtherConfig"]["name"] += ".General"
@@ -87,7 +88,7 @@ class Common(Server, FileSystemEventHandler):
 				(self.config['GlobalConfig']['config_path'], "monitors" if self.is_monitor else "scrapers")), True)
 			observer.start()
 
-	def init(self):
+	def init(self, **kwargs):
 		'''Override this in your website-specific monitor, if needed.'''
 		pass
 
@@ -277,6 +278,7 @@ class Common(Server, FileSystemEventHandler):
 
 	def start(self):
 		'''Call this to start the loop.'''
+		self.init(**self.kwargs)
 		self._main_task = self._asyncio_loop.create_task(self.main())
 		self._asyncio_loop.run_forever()
 		self.general_logger.debug("Shutting down...")
