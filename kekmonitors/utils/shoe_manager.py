@@ -41,8 +41,7 @@ def unsanitize(d: Dict[str, Any]) -> Dict[str, Any]:
 class ShoeManager(object):
 	'''Manages the database. Mostly a MongoDB wrapper.'''
 
-	def __init__(self):
-		config = Config()
+	def __init__(self, config):
 		self.db_name = config['GlobalConfig']['db_name']
 		self.db_path = config['GlobalConfig']['db_path']
 

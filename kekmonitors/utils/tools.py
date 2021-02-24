@@ -153,6 +153,7 @@ def make_default_executable(_class, config: Config = Config()):
 	                    default=True, help="Specify wether you want to add a config watcher or not")
 	parser.add_argument("-r", "--register", action="store_const", const="register",
 	                    help="Only register the monitor/scraper, without actually starting it.")
+	parser.add_argument("--webhooks", action = boolAction, default=True, help="Enable sending webhooks")
 	parser_args, unknown = parser.parse_known_args()
 	if parser_args.register:
 		_class(config)
@@ -163,6 +164,7 @@ def make_default_executable(_class, config: Config = Config()):
 	config['Options']['add_stream_handler'] = str(parser_args.output)
 	config['Options']['loop_delay'] = str(parser_args.delay)
 	config['Options']['disable_config_watcher'] = str(not bool(parser_args.config_watcher))
+	config['Options']['enable_webhooks'] = str(bool(parser_args.webhooks))
 	kwargs = {} # type: Dict[str, str]
 	if len(unknown) % 2:
 		print("Incorrect number of kwargs")

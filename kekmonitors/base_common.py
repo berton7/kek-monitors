@@ -43,7 +43,7 @@ class Common(Server, FileSystemEventHandler):
 		super().__init__(config, os.path.sep.join(
 			[self.config['GlobalConfig']['socket_path'], config['OtherConfig']['name']]))
 
-		self.db_client = pymongo.MongoClient(self.config['GlobalConfig']['db_path'])[
+		self.register_db = pymongo.MongoClient(self.config['GlobalConfig']['db_path'])[
                     self.config['GlobalConfig']['db_name']]["register"]
 
 		self._loop_lock = asyncio.Lock()
@@ -111,9 +111,9 @@ class Common(Server, FileSystemEventHandler):
 
 	def register(self):
 		if self.is_monitor:
-			register_as("monitors", self.class_name, __main__.__file__, self.db_client)
+			register_as("monitors", self.class_name, __main__.__file__, self.register_db)
 		else:
-			register_as("scrapers", self.class_name, __main__.__file__, self.db_client)
+			register_as("scrapers", self.class_name, __main__.__file__, self.register_db)
 
 	def on_modified(self, event: FileSystemEvent):
 		# called when any of the monitored files is modified.

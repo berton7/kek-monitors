@@ -4,12 +4,17 @@ import json
 import traceback
 from typing import List
 
+import pymongo
+
 from kekmonitors.base_common import Common
 from kekmonitors.config import COMMANDS, Config
+from kekmonitors.utils.discord_embeds import get_scraper_embed
 from kekmonitors.utils.network_utils import NetworkUtils
 from kekmonitors.utils.server.msg import Cmd, Message, Response, okResponse
 from kekmonitors.utils.server.server import Server
+from kekmonitors.utils.shoe_stuff import Shoe
 from kekmonitors.utils.tools import dump_error
+from kekmonitors.utils.webhook_manager import WebhookManager
 
 
 class BaseScraper(Common, NetworkUtils):
@@ -25,6 +30,9 @@ class BaseScraper(Common, NetworkUtils):
 		self.links = []  # type: List[str]
 		self._previous_links = []  # type: List[str]
 		self.crash_webhook = config['WebhookConfig']['crash_webhook']
+		self.links_db = pymongo.MongoClient(
+			config['GlobalConfig']['db_path'])[config['GlobalConfig']['db_name']]["links"][config["OtherConfig"]["name"]]
+		self.webhook_manager = WebhookManager(config)
 
 	async def on_server_stop(self) -> Response:
 		self.general_logger.debug("Waiting for loop to complete...")
@@ -33,6 +41,8 @@ class BaseScraper(Common, NetworkUtils):
 		self.general_logger.debug("Loop is completed, starting shutdown...")
 		await self.on_async_shutdown()
 		self._asyncio_loop.stop()
+		self.general_logger.debug("Shutting down webhook manager...")
+		self.webhook_manager.quit()
 		self.on_shutdown()
 		return okResponse()
 
@@ -66,6 +76,13 @@ class BaseScraper(Common, NetworkUtils):
 	async def update_links(self):
 		'''This is called just after self.loop. Checks if any of the links have been modified and sends them to the corresponding monitor.'''
 		if self.links != self._previous_links:
+			for link in self.links:
+				if not self.db.find_one({"link": link}):
+					self.links_db.insert_one({"link": link})
+					if self.config["Options"]["enable_webhooks"] == "True":
+						shoe = Shoe()
+						shoe.link = link
+						self.webhook_manager.add_to_queue(get_scraper_embed(shoe), self.webhooks_json)
 			await self._set_links()
 			self._previous_links = copy.deepcopy(self.links)
 

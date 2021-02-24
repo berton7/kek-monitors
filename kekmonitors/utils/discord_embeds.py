@@ -17,6 +17,25 @@ def add_link(s: str, link: str) -> str:
 	return "[" + s + "](" + link + ")"
 
 
+def get_scraper_embed(shoe: Shoe, friendly_website_name = ""):
+	embed = get_empty_embed()
+
+	embed.title = "New item scraped"
+	if friendly_website_name:
+		embed.title += " on " + friendly_website_name
+	if shoe.name:
+		embed.title += f": {shoe.name}"
+	embed.url = shoe.link
+
+	if shoe.img_link:
+		embed.set_thumbnail(url=shoe.img_link)
+
+	if shoe.price != "Not available":
+		embed.add_field(name="Price", value=shoe.price, inline=False)
+
+	return embed
+
+
 def get_default_embed(shoe: Shoe, allow_unavailable_sizes=False, show_website=False):
 	'''Do you really need help to understand this?'''
 	embed = get_empty_embed()

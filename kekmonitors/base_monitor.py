@@ -34,7 +34,7 @@ class BaseMonitor(Common, NetworkUtils):
 		self.shoes = []  # type: List[Shoe]
 		self.crash_webhook = config['WebhookConfig']['crash_webhook']
 
-		self.shoe_manager = ShoeManager()
+		self.shoe_manager = ShoeManager(config)
 		self.webhook_manager = WebhookManager(config)
 
 	async def on_set_links(self, msg: Cmd) -> Response:
@@ -146,7 +146,7 @@ class BaseMonitor(Common, NetworkUtils):
 			You probably want to override this function to set custom embeds.'''
 		for shoe in self.shoes:
 			returned = self.set_reason_and_update_shoe(shoe)
-			if returned:
+			if returned and self.config['Options']['enable_webhooks']:
 				embed = discord_embeds.get_default_embed(returned)
 				self.webhook_manager.add_to_queue(embed, self.webhooks_json)
 
