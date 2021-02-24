@@ -31,7 +31,7 @@ class BaseScraper(Common, NetworkUtils):
 		self._previous_links = []  # type: List[str]
 		self.crash_webhook = config['WebhookConfig']['crash_webhook']
 		self.links_db = pymongo.MongoClient(
-			config['GlobalConfig']['db_path'])[config['GlobalConfig']['db_name']]["links"][config["OtherConfig"]["name"]]
+			config['GlobalConfig']['db_path'])[config['GlobalConfig']['db_name']]["links"][self.class_name]
 		self.webhook_manager = WebhookManager(config)
 
 	async def on_server_stop(self) -> Response:
@@ -77,7 +77,7 @@ class BaseScraper(Common, NetworkUtils):
 		'''This is called just after self.loop. Checks if any of the links have been modified and sends them to the corresponding monitor.'''
 		if self.links != self._previous_links:
 			for link in self.links:
-				if not self.db.find_one({"link": link}):
+				if not self.links_db.find_one({"link": link}):
 					self.links_db.insert_one({"link": link})
 					if self.config["Options"]["enable_webhooks"] == "True":
 						shoe = Shoe()
