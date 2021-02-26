@@ -550,7 +550,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 	async def add_scraper(self, filename: str, kwargs: dict[str, str]):
 		class_name = kwargs.pop("name")
 
-		if class_name in self.monitor_processes:
+		if class_name in self.scraper_processes:
 			self.general_logger.debug(
 				f"Tried to add an already existing scraper ({class_name} ({filename}))")
 			return False, "Scraper already started."

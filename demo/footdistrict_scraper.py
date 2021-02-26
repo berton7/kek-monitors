@@ -99,6 +99,7 @@ class Footdistrict(BaseScraper):
 					if link not in self.shoes:
 						shoe = Shoe()
 						shoe.link = link
+						self.links.append(link)
 						self.shoes.append(shoe)
 						self.general_logger.info(f"Found {link}")
 				else:
