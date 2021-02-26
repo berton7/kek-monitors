@@ -16,10 +16,10 @@ class WebhookSender(Thread):
 	'''This handles sending embeds to one specific webhook. Obviously being a thread sub-class you should not add too many webhooks (in the order of the hundreds) for the same monitor.\n
 	You should not use this directly, but `WebhookManager` instead'''
 
-	def __init__(self, webhook: str, config: Config):
-		self.config = config
+	def __init__(self, webhook: str, logconfig: LogConfig):
+		self.config = logconfig
 		self.webhook = webhook
-		self.logger = Logger(self.config['OtherConfig']['name'])
+		self.logger = get_logger(logconfig)
 		self.queue = Queue()  # type: Queue[Tuple[List[Any], List[Any], datetime]]
 		# contains the webhook config, embeds and time at which they were added
 		self.add_event = Event()
@@ -83,11 +83,13 @@ class WebhookSender(Thread):
 					if remaining_requests == "0":
 						delay = int(r.headers["x-rateLimit-reset-after"])
 						self.logger.debug(
-							f"No available requests reminaing for {self.webhook}, waiting {delay} secs")
+							f"No available requests reminaing for {self.webhook}, waiting {str(delay)} secs")
 						time.sleep(delay)
+						continue
 					if r.status_code == 429:
-						delay = r.headers["x-rateLimit-reset-after"]
-						self.logger.debug(f"Got 429 for {self.webhook}, waiting {delay} secs")
+						delay = int(r.headers["x-rateLimit-reset-after"])
+						self.logger.debug(
+							f"Got 429 for {self.webhook}, waiting {str(delay)} secs")
 						time.sleep(delay)
 						continue
 					break
@@ -96,8 +98,8 @@ class WebhookSender(Thread):
 
 class WebhookManager():
 	def __init__(self, config: Config):
-		self.config = config
-		logconfig = LogConfig(self.config)
+		logconfig = LogConfig(config)
+		self.config = logconfig
 		logconfig["OtherConfig"]["name"] += ".WebhookManager"
 		self.logger = get_logger(logconfig)
 		self.webhook_senders = {}  # type: Dict[str, WebhookSender]
@@ -108,9 +110,10 @@ class WebhookManager():
 		self.logger.debug("Starting shutdown...")
 		for w in self.webhook_senders:
 			ws = self.webhook_senders[w]
-			self.logger.debug(f"Stopping {ws.webhook}...")
+			self.logger.debug(f"Waiting {ws.webhook}...")
 			while not ws.is_done():
 				time.sleep(0.5)
+			self.logger.debug(f"Stopping {ws.webhook}...")
 			ws.quit()
 
 		for w in self.webhook_senders:
