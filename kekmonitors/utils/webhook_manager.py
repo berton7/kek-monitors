@@ -42,6 +42,7 @@ class WebhookSender(Thread):
 		while True:
 			self.add_event.wait()
 			if self.has_to_quit:
+				self.add_event.clear()
 				break
 			while not self.queue.empty():
 				webhook_values, embed, now = self.queue.get()
@@ -107,11 +108,14 @@ class WebhookManager():
 		self.logger.debug("Starting shutdown...")
 		for w in self.webhook_senders:
 			ws = self.webhook_senders[w]
+			self.logger.debug(f"Stopping {ws.webhook}...")
 			while not ws.is_done():
 				time.sleep(0.5)
 			ws.quit()
 
 		for w in self.webhook_senders:
+			ws = self.webhook_senders[w]
+			self.logger.debug(f"Cleaning up {ws.webhook}...")
 			ws = self.webhook_senders[w]
 			ws.join()
 		self.logger.debug("Shut down...")
