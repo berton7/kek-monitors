@@ -26,11 +26,13 @@ class BaseScraper(Common, NetworkUtils):
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
-		self.cmd_to_callback[COMMANDS.GET_LINKS] = self.on_get_links
+		self.cmd_to_callback[COMMANDS.GET_SHOES] = self.on_get_shoes
 		self.links = []  # type: List[str]
-		self._previous_links = []  # type: List[str]
+		self.shoes = []  # type: List[Shoe]
+		self._previous_links = []  # type: List[Shoe]
+		self._previous_shoes = []  # type: List[Shoe]
 		self.crash_webhook = config['WebhookConfig']['crash_webhook']
-		self.links_db = pymongo.MongoClient(
+		self.shoes_db = pymongo.MongoClient(
 			config['GlobalConfig']['db_path'])[config['GlobalConfig']['db_name']]["links"][self.class_name]
 		self.webhook_manager = WebhookManager(config)
 
@@ -46,9 +48,9 @@ class BaseScraper(Common, NetworkUtils):
 		self.on_shutdown()
 		return okResponse()
 
-	async def on_get_links(self, cmd: Cmd) -> Message:
+	async def on_get_shoes(self, cmd: Cmd) -> Message:
 		response = okResponse()
-		response.payload = self.links
+		response.payload = [shoe.__dict__ for shoe in self.shoes]
 		return response
 
 	async def main(self):
@@ -75,36 +77,35 @@ class BaseScraper(Common, NetworkUtils):
 
 	async def update_links(self):
 		'''This is called just after self.loop. Checks if any of the links have been modified and sends them to the corresponding monitor.'''
-		if self.links != self._previous_links:
-			for link in self.links:
-				if not self.links_db.find_one({"link": link}):
-					self.links_db.insert_one({"link": link})
+		if self.shoes != self._previous_shoes:
+			for shoe in self.shoes:
+				if not self.shoe_manager.find_shoe({"link": shoe.link}):
+					self.shoe_manager.add_shoe(shoe)
 					if self.config["Options"]["enable_webhooks"] == "True":
-						shoe = Shoe()
-						shoe.link = link
-						self.webhook_manager.add_to_queue(get_scraper_embed(shoe), self.webhooks_json)
-			await self._set_links()
-			self._previous_links = copy.deepcopy(self.links)
+						self.webhook_manager.add_to_queue(
+							get_scraper_embed(shoe), self.webhooks_json)
+			await self._set_shoes()
+			self._previous_shoes = copy.copy(self.shoes)  # allows to perform ==
 
 	async def _on_ping(self, cmd: Cmd) -> Response:
 		return okResponse()
 
-	async def _set_links(self):
+	async def _set_shoes(self):
 		'''Connect to the corresponding monitor, if available, and tell it to set the new links.'''
 		socket_path = f"{self.config['GlobalConfig']['socket_path']}/Monitor.{self.class_name}"
 		cmd = Cmd()
-		cmd.cmd = COMMANDS.SET_LINKS
-		cmd.payload = self.links
+		cmd.cmd = COMMANDS.SET_SHOES
+		cmd.payload = [shoe.__dict__ for shoe in self.shoes]
 		response = await self.make_request(socket_path, cmd)
 		if response.error.value:
 			dump_error(self.client_logger, response)
 
-	async def _add_links(self):
+	async def _add_shoes(self):
 		'''Connect to the corresponding monitor, if available, and send it the new links.'''
 		socket_path = f"{self.config['GlobalConfig']['socket_path']}/Monitor.{self.class_name}"
 		cmd = Cmd()
-		cmd.cmd = COMMANDS.ADD_LINKS
-		cmd.payload = self.links
+		cmd.cmd = COMMANDS.ADD_SHOES
+		cmd.payload = [shoe.__dict__ for shoe in self.shoes]
 		response = await self.make_request(socket_path, cmd)
 		if response.error.value:
 			dump_error(self.client_logger, response)

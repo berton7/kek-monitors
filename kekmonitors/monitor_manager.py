@@ -39,7 +39,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 		self.config = config
 
 		super().__init__(
-			config, f"{self.config['GlobalConfig']['socket_path']}/MonitorManager")	# Server init
+			config, f"{self.config['GlobalConfig']['socket_path']}/MonitorManager")  # Server init
 		super(Server).__init__()									# FileSystemEventHandler init
 
 		# create logger
@@ -106,8 +106,10 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		# watches the config folder for any change. calls on_modified when any monitored file is modified
 		self.config_watcher = observers.Observer()
-		self.config_watcher.schedule(self, self.config['GlobalConfig']['config_path'], True)
-		self.config_watcher.schedule(self, self.config['GlobalConfig']['socket_path'], True)
+		self.config_watcher.schedule(
+			self, self.config['GlobalConfig']['config_path'], True)
+		self.config_watcher.schedule(
+			self, self.config['GlobalConfig']['socket_path'], True)
 
 		# needed for proper shutdown
 		self.has_to_quit = False
@@ -123,13 +125,13 @@ class MonitorManager(Server, FileSystemEventHandler):
 		filename = event.key[1]  # type: str
 
 		# if a config file is updated:
-		if filename.endswith(".json") and filename.find(self.config['GlobalConfig']['config_path'])!=-1:
+		if filename.endswith(".json") and filename.find(self.config['GlobalConfig']['config_path']) != -1:
 			asyncio.run_coroutine_threadsafe(
 				self.update_configs(filename), self._asyncio_loop)
 
 	def on_created(self, event: FileSystemEvent):
 		filename = event.key[1]  # type: str
-		
+
 		# if a socket was created:
 		if filename.find(self.config['GlobalConfig']['socket_path']) != -1:
 			asyncio.run_coroutine_threadsafe(self.on_add_sockets(), self._asyncio_loop)
@@ -139,7 +141,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 		# if a socket was deleted:
 		if filename.find(self.config['GlobalConfig']['socket_path']) != -1:
-			asyncio.run_coroutine_threadsafe(self.on_delete_sockets(), self._asyncio_loop)
+			asyncio.run_coroutine_threadsafe(
+				self.on_delete_sockets(), self._asyncio_loop)
 
 	async def on_add_sockets(self):
 		'''
@@ -231,7 +234,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 			splits = filename.split(os.path.sep)
 			commands = []  # List[Cmd]
-			sock_paths = [] # type: List[str]
+			sock_paths = []  # type: List[str]
 
 			# if it's from the monitors folder:
 			if "monitors" in filename.split(os.path.sep):
@@ -307,7 +310,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 					if r.error.value:
 						# if the socket was not used remove it
 						if r.error == ERRORS.SOCKET_COULDNT_CONNECT:
-							os.remove(os.path.sep.join([self.config['GlobalConfig']['socket_path'], sockname]))
+							os.remove(os.path.sep.join(
+								[self.config['GlobalConfig']['socket_path'], sockname]))
 							self.general_logger.info(
 								f"{self.config['GlobalConfig']['socket_path']}{os.path.sep}{sockname} was removed because unavailable")
 						# else something else happened, dont do anything
@@ -406,7 +410,10 @@ class MonitorManager(Server, FileSystemEventHandler):
 
 	async def on_add_monitor_scraper(self, cmd: Cmd) -> Response:
 		r = Response()
-		r1, r2 = await asyncio.gather(self.on_add_monitor(cmd), self.on_add_scraper(cmd))
+		cmd1 = cmd
+		cmd2 = copy.copy(cmd)
+		cmd2.payload = copy.deepcopy(cmd1.payload)
+		r1, r2 = await asyncio.gather(self.on_add_monitor(cmd1), self.on_add_scraper(cmd2))
 		r.error = ERRORS.OK if not r1.error.value and not r2.error.value else ERRORS.MM_COULDNT_ADD_MONITOR_SCRAPER
 		r.info = f"Monitor: {r1.error.name}, Scraper: {r2.error.name}"
 		if r.error.value and r.error:

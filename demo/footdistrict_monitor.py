@@ -57,52 +57,50 @@ class Footdistrict(BaseMonitor):
 		return response
 
 	async def loop(self):
-		# current links are contained in self.links
-		if not self.links:
-			self.links = [
-				"https://footdistrict.com/nike-air-max-95-ndstrkt-cz3591-001.html"]
-		self.general_logger.debug(f"Links are: {self.links}")
+		# current links are contained in self.shoes
+		if not self.shoes:
+			shoe = Shoe()
+			shoe.link = "https://footdistrict.com/nike-air-max-95-ndstrkt-cz3591-001.html"
+			self.shoes = [shoe]
 
 		# tasks will contain asynchronous tasks to be executed at once asynchronously
 		# in this case, they will contain the requests to the links
 		tasks = []
 		pages = []  # type: List[Page]
-		for link in self.links:
+		for shoe in self.shoes:
 			page = await self.context.newPage()
 			pages.append(page)
-			tasks.append(self.get_fd_page(link, page))
+			tasks.append(self.get_fd_page(shoe.link, page))
 
 		# gather, execute all tasks
 		responses = await asyncio.gather(*tasks)  # type: List[Response]
 		self.network_logger.debug("Got all links")
 
-		for link, page, response in zip(self.links, pages, responses):
+		for shoe, page, response in zip(self.shoes, pages, responses):
 			if not response.ok:
 				self.general_logger.debug(
-					f"{link}: skipping parsing on code {response.code}")
+					f"{shoe.link}: skipping parsing on code {response.code}")
 				continue
 
 			text = await response.text()
 
 			if len(text) < 1000:
 				self.general_logger.warning(
-					f"Failed to get {link} (len of response: {len(text)})")
+					f"Failed to get {shoe.link} (len of response: {len(text)})")
 				continue
 
 			# BeautifulSoup can be used to parse html pages in a very convenient way
 			soup = BeautifulSoup(text, "lxml")
 
 			# create a Shoe object to hold information
-			s = Shoe()
 			# parse all the page. for simplicity here we only get the name
 			n = soup.find("meta", {"property": "og:title"})
 			if n:
-				s.name = n.get("content")
-				s.link = link
+				shoe.name = n.get("content")
 				# https://footdistrict.com/media/resize/500x333/catalog/product/p/r/producto_02_10_2063_4/adidas-rivalry-hi-x-star-wars-chewbacca-fx9290-0.webp
 				# s.img_link = soup.find("div", {"id": "productos-ficha-item"}).find(
 				#	"img", {"class": "img-responsive lazyloaded"}).get("src")
-				s.img_link = "https://i.imgur.com/UKwBVpg.png"
+				shoe.img_link = "https://i.imgur.com/UKwBVpg.png"
 				for script in soup.find_all("script", {"type": "text/x-magento-init"}):
 					script_text = script.string
 					if script_text.find("jsonConfig") != -1:
@@ -111,8 +109,7 @@ class Footdistrict(BaseMonitor):
 						for opt in options:
 							sizename = opt["label"]
 							available = bool(opt["products"])
-							s.sizes[sizename] = {"available": available}
-						self.shoes.append(s)
+							shoe.sizes[sizename] = {"available": available}
 						break
 
 				else:

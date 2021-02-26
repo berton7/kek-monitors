@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from fake_headers import Headers
 from kekmonitors.base_scraper import BaseScraper
 from kekmonitors.config import Config
+from kekmonitors.utils.shoe_stuff import Shoe
 from kekmonitors.utils.tools import make_default_executable
 from pyppeteer import launch
 from pyppeteer.network_manager import Response
@@ -95,12 +96,11 @@ class Footdistrict(BaseScraper):
 				count += 1
 				if count <= self.max_links:
 					link = prod.a.get("href")
-					if link not in self.links:
-						self.links.append(link)
+					if link not in self.shoes:
+						shoe = Shoe()
+						shoe.link = link
+						self.shoes.append(shoe)
 						self.general_logger.info(f"Found {link}")
-						# if you want to send every link immediately (not recommended):
-						# self.links = [link]
-						# await self.add_links()
 				else:
 					break
 

@@ -8,9 +8,9 @@ import os
 class COMMANDS(enum.Enum):
 	PING = enum.auto()
 	STOP = enum.auto()
-	SET_LINKS = enum.auto()
-	ADD_LINKS = enum.auto()
-	GET_LINKS = enum.auto()
+	SET_SHOES = enum.auto()
+	ADD_SHOES = enum.auto()
+	GET_SHOES = enum.auto()
 	SET_CONFIG = enum.auto()
 	GET_CONFIG = enum.auto()
 	SET_WHITELIST = enum.auto()

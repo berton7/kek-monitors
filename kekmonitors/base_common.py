@@ -8,11 +8,12 @@ import __main__
 import pymongo
 from pymongo.collection import Collection
 from watchdog import observers
-from watchdog.events import FileSystemEvent, FileSystemEventHandler, LoggingEventHandler
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
 from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 from kekmonitors.utils.server.server import Server
+from kekmonitors.utils.shoe_manager import ShoeManager
 from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
 
 
@@ -24,6 +25,7 @@ def register_as(_type: str, name: str, path: str, client: Collection):
 		if existing["path"] != path:
 			raise Exception(
 				f"Trying to register new {_type} ({name}) when it already exists in the database with a different path: {existing['path']}")
+
 
 class Common(Server, FileSystemEventHandler):
 	def __init__(self, config: Config, **kwargs):
@@ -69,10 +71,14 @@ class Common(Server, FileSystemEventHandler):
 		self.config_json_filepath = os.path.sep.join(
 			[pre_conf_path, "monitors" if is_monitor else "scrapers", "configs.json"])
 
-		self.whitelist_json = self.load_config(self.whitelist_json_filepath, []) # type: List[str]
-		self.blacklist_json = self.load_config(self.blacklist_json_filepath, []) # type: List[str]
-		self.webhooks_json = self.load_config(self.webhooks_json_filepath, {}) # type: Dict[str, Any]
-		self.config_json = self.load_config(self.config_json_filepath, {}) # type: Dict[str, Any]
+		self.whitelist_json = self.load_config(
+			self.whitelist_json_filepath, [])  # type: List[str]
+		self.blacklist_json = self.load_config(
+			self.blacklist_json_filepath, [])  # type: List[str]
+		self.webhooks_json = self.load_config(
+			self.webhooks_json_filepath, {})  # type: Dict[str, Any]
+		self.config_json = self.load_config(
+			self.config_json_filepath, {})  # type: Dict[str, Any]
 
 		self._new_whitelist = None  # type: Optional[List[str]]
 		self._new_blacklist = None  # type: Optional[List[str]]
@@ -80,6 +86,7 @@ class Common(Server, FileSystemEventHandler):
 		self._new_config = None  # type: Optional[Dict[str, Any]]
 
 		self._has_to_quit = False
+		self.shoe_manager = ShoeManager(config)
 		self.register()
 
 		if config['Options']['disable_config_watcher'] == "False":
@@ -111,9 +118,11 @@ class Common(Server, FileSystemEventHandler):
 
 	def register(self):
 		if self.is_monitor:
-			register_as("monitors", self.class_name, __main__.__file__, self.register_db)
+			register_as("monitors", self.class_name,
+			            __main__.__file__, self.register_db)
 		else:
-			register_as("scrapers", self.class_name, __main__.__file__, self.register_db)
+			register_as("scrapers", self.class_name,
+			            __main__.__file__, self.register_db)
 
 	def on_modified(self, event: FileSystemEvent):
 		# called when any of the monitored files is modified.

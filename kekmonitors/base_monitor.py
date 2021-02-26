@@ -25,24 +25,26 @@ class BaseMonitor(Common, NetworkUtils):
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
-		self.cmd_to_callback[COMMANDS.SET_LINKS] = self.on_set_links
-		self.cmd_to_callback[COMMANDS.ADD_LINKS] = self.on_add_links
+		self.cmd_to_callback[COMMANDS.SET_SHOES] = self.on_set_shoes
+		self.cmd_to_callback[COMMANDS.ADD_SHOES] = self.on_add_shoes
 
-		self.buffer_links = []  # type: List[str]
-		self.new_links = []  # type: List[str]
-		self.links = []  # type: List[str]
+		self.buffer_shoes = []  # type: List[Shoe]
+		self.new_shoes = []  # type: List[Shoe]
 		self.shoes = []  # type: List[Shoe]
 		self.crash_webhook = config['WebhookConfig']['crash_webhook']
 
-		self.shoe_manager = ShoeManager(config)
 		self.webhook_manager = WebhookManager(config)
 
-	async def on_set_links(self, msg: Cmd) -> Response:
+	async def on_set_shoes(self, msg: Cmd) -> Response:
 		response = badResponse()
 		p = msg.payload
 		if p is not None:
 			if isinstance(p, list):
-				self.new_links = p
+				self.shoes = []
+				for s in p:
+					shoe = Shoe()
+					shoe.__dict__ = s
+					self.shoes.append(shoe)
 				response.error = ERRORS.OK
 			else:
 				self.client_logger.warning(
@@ -56,12 +58,15 @@ class BaseMonitor(Common, NetworkUtils):
 			response.error = ERRORS.MISSING_PAYLOAD
 		return response
 
-	async def on_add_links(self, msg: Cmd) -> Response:
+	async def on_add_shoes(self, msg: Cmd) -> Response:
 		response = badResponse()
 		p = msg.payload
 		if p is not None:
 			if isinstance(p, list):
-				self.buffer_links = p
+				for s in p:
+					shoe = Shoe()
+					shoe.__dict__ = s
+					self.buffer_shoes.append(shoe)
 				response.error = ERRORS.OK
 			else:
 				self.general_logger.warning(
@@ -90,16 +95,20 @@ class BaseMonitor(Common, NetworkUtils):
 	async def _on_ping(self, cmd: Cmd) -> Response:
 		return okResponse()
 
-	async def _get_links(self):
+	async def _get_shoes(self):
 		socket_path = f"{self.config['GlobalConfig']['socket_path']}/Scraper.{self.class_name}"
 		self.client_logger.debug("Getting links...")
 
 		cmd = Cmd()
-		cmd.cmd = COMMANDS.GET_LINKS
+		cmd.cmd = COMMANDS.GET_SHOES
 		response = await self.make_request(socket_path, cmd)
 		if not response.error.value:
 			if response.payload:
-				self.links = response.payload
+				self.shoes = []
+				for s in response.payload:
+					shoe = Shoe()
+					shoe.__dict__ = s
+					self.shoes.append(shoe)
 			else:
 				self.client_logger.warning("Tried to get links but payload was invalid.")
 				dump_error(self.client_logger, response)
@@ -111,20 +120,19 @@ class BaseMonitor(Common, NetworkUtils):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
 		await self.async_init()
 		# Try to get a set of links as soon as the monitor starts.
-		await self._get_links()
+		await self._get_shoes()
 		while True:
 			async with self._loop_lock:
 				self.update_local_config()
-				if self.new_links:
-					self.general_logger.info(f"Received new set of links: {self.new_links}")
-					self.links = self.new_links
-					self.new_links = []
-				if self.buffer_links:
-					self.general_logger.info(f"Adding new set of links: {self.buffer_links}")
-					self.links += self.buffer_links
-					self.buffer_links = []
+				if self.new_shoes:
+					self.general_logger.info(f"Received new set of links: {self.new_shoes}")
+					self.shoes = self.new_shoes
+					self.new_shoes = []
+				if self.buffer_shoes:
+					self.general_logger.info(f"Adding new set of links: {self.buffer_shoes}")
+					self.shoes += self.buffer_shoes
+					self.buffer_shoes = []
 				try:
-					self.shoes = []
 					await self.loop()
 					self.shoe_check()
 				except:
