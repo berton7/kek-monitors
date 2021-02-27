@@ -4,11 +4,12 @@ import json
 import traceback
 from typing import List
 
+import discord
 import pymongo
 
 from kekmonitors.base_common import Common
 from kekmonitors.config import COMMANDS, Config
-from kekmonitors.utils.discord_embeds import get_scraper_embed
+from kekmonitors.utils import discord_embeds
 from kekmonitors.utils.network_utils import NetworkUtils
 from kekmonitors.utils.server.msg import Cmd, Message, Response, okResponse
 from kekmonitors.utils.server.server import Server
@@ -35,6 +36,9 @@ class BaseScraper(Common, NetworkUtils):
 		self.shoes_db = pymongo.MongoClient(
 			config['GlobalConfig']['db_path'])[config['GlobalConfig']['db_name']]["links"][self.class_name]
 		self.webhook_manager = WebhookManager(config)
+
+	def get_embed(self, shoe: Shoe) -> discord.Embed:
+		return discord_embeds.get_scraper_embed(shoe)
 
 	async def on_server_stop(self) -> Response:
 		self.general_logger.debug("Waiting for loop to complete...")
@@ -83,7 +87,7 @@ class BaseScraper(Common, NetworkUtils):
 					self.shoe_manager.add_shoe(shoe)
 					if self.config["Options"]["enable_webhooks"] == "True":
 						self.webhook_manager.add_to_queue(
-							get_scraper_embed(shoe), self.webhooks_json)
+							self.get_embed(shoe), self.webhooks_json)
 			await self._set_shoes()
 			self._previous_shoes = copy.copy(self.shoes)  # allows to perform ==
 

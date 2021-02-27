@@ -1,10 +1,12 @@
 import asyncio
 import json
+from kekmonitors.utils.shoe_stuff import Shoe
 import os
 from json.decoder import JSONDecodeError
 from typing import Any, Dict, List, Optional
 
 import __main__
+import discord
 import pymongo
 from pymongo.collection import Collection
 from watchdog import observers
@@ -281,6 +283,9 @@ class Common(Server, FileSystemEventHandler):
 		r = okResponse()
 		r.payload = self.webhooks_json
 		return r
+
+	def get_embed(self, shoe: Shoe) -> discord.Embed:
+		return discord.Embed()
 
 	async def main(self):
 		pass

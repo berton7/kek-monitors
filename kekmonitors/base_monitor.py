@@ -4,6 +4,8 @@ import json
 import traceback
 from typing import List, Optional
 
+import discord
+
 from kekmonitors.base_common import Common
 from kekmonitors.config import COMMANDS, ERRORS, Config
 from kekmonitors.utils import discord_embeds, shoe_stuff
@@ -34,6 +36,9 @@ class BaseMonitor(Common, NetworkUtils):
 		self.crash_webhook = config['WebhookConfig']['crash_webhook']
 
 		self.webhook_manager = WebhookManager(config)
+
+	def get_embed(self, shoe: Shoe) -> discord.Embed:
+		return discord_embeds.get_default_embed(shoe)
 
 	async def on_set_shoes(self, msg: Cmd) -> Response:
 		response = badResponse()
@@ -155,7 +160,7 @@ class BaseMonitor(Common, NetworkUtils):
 		for shoe in self.shoes:
 			returned = self.set_reason_and_update_shoe(shoe)
 			if returned and self.config['Options']['enable_webhooks']:
-				embed = discord_embeds.get_default_embed(returned)
+				embed = self.get_embed(returned)
 				self.webhook_manager.add_to_queue(embed, self.webhooks_json)
 
 	def set_reason_and_update_shoe(self, shoe: Shoe) -> Optional[Shoe]:
