@@ -159,7 +159,7 @@ class BaseMonitor(Common, NetworkUtils):
 			You probably want to override this function to set custom embeds.'''
 		for shoe in self.shoes:
 			returned = self.set_reason_and_update_shoe(shoe)
-			if returned and self.config['Options']['enable_webhooks']:
+			if returned and self.config['Options']['enable_webhooks'] == "True":
 				embed = self.get_embed(returned)
 				self.webhook_manager.add_to_queue(embed, self.webhooks_json)
 
