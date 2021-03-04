@@ -509,7 +509,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 			"monitors": msp, "scrapers": ssp}
 		return response
 
-	async def add_monitor(self, filename: str, kwargs: dict[str, str]):
+	async def add_monitor(self, filename: str, kwargs: Dict[str, str]):
 		class_name = kwargs.pop("name")
 
 		if class_name in self.monitor_processes:
@@ -547,7 +547,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 			msg = ""
 		return success, msg
 
-	async def add_scraper(self, filename: str, kwargs: dict[str, str]):
+	async def add_scraper(self, filename: str, kwargs: Dict[str, str]):
 		class_name = kwargs.pop("name")
 
 		if class_name in self.scraper_processes:
