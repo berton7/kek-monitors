@@ -1,6 +1,5 @@
 import asyncio
 import json
-from kekmonitors.utils.shoe_stuff import Shoe
 import os
 from json.decoder import JSONDecodeError
 from typing import Any, Dict, List, Optional
@@ -16,10 +15,12 @@ from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
 from kekmonitors.utils.server.server import Server
 from kekmonitors.utils.shoe_manager import ShoeManager
+from kekmonitors.utils.shoe_stuff import Shoe
 from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
 
 
 def register_as(_type: str, name: str, path: str, client: Collection):
+	path = os.path.abspath(path)
 	existing = client[_type].find_one({"name": name})
 	if not existing:
 		client[_type].insert_one({"name": name, "path": path})
