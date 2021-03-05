@@ -30,7 +30,6 @@ class BaseScraper(Common, NetworkUtils):
 		self.cmd_to_callback[COMMANDS.GET_SHOES] = self.on_get_shoes
 		self.links = []  # type: List[str]
 		self.shoes = []  # type: List[Shoe]
-		self._previous_links = []  # type: List[Shoe]
 		self._previous_shoes = []  # type: List[Shoe]
 		self.crash_webhook = config['WebhookConfig']['crash_webhook']
 		self.shoes_db = pymongo.MongoClient(
@@ -62,10 +61,11 @@ class BaseScraper(Common, NetworkUtils):
 		await self.async_init()
 		while True:
 			async with self._loop_lock:
-				self.update_local_config()
+				changed = self.update_local_config()
 				try:
 					await self.loop()
-					await self.update_links()
+					if self.shoes != self._previous_shoes or changed:
+						await self.update_links()
 				except:
 					self.general_logger.exception("")
 					if self.crash_webhook:
@@ -80,16 +80,15 @@ class BaseScraper(Common, NetworkUtils):
 		await asyncio.sleep(1)
 
 	async def update_links(self):
-		'''This is called just after self.loop. Checks if any of the links have been modified and sends them to the corresponding monitor.'''
-		if self.shoes != self._previous_shoes:
-			for shoe in self.shoes:
-				if not self.shoe_manager.find_shoe({"link": shoe.link}):
-					self.shoe_manager.add_shoe(shoe)
-					if self.config["Options"]["enable_webhooks"] == "True":
-						self.webhook_manager.add_to_queue(
-							self.get_embed(shoe), self.webhooks_json)
-			await self._set_shoes()
-			self._previous_shoes = copy.copy(self.shoes)  # allows to perform ==
+		'''This is called just after self.loop. Sends the shoes to the corresponding monitor.'''
+		for shoe in self.shoes:
+			if not self.shoe_manager.find_shoe({"link": shoe.link}):
+				self.shoe_manager.add_shoe(shoe)
+				if self.config["Options"]["enable_webhooks"] == "True":
+					self.webhook_manager.add_to_queue(
+						self.get_embed(shoe), self.webhooks_json)
+		await self._set_shoes()
+		self._previous_shoes = copy.copy(self.shoes)  # allows to perform ==
 
 	async def _on_ping(self, cmd: Cmd) -> Response:
 		return okResponse()
