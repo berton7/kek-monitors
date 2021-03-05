@@ -191,23 +191,29 @@ class Common(Server, FileSystemEventHandler):
 		else:
 			return j[self.class_name]
 
-	def update_local_config(self):
+	def update_local_config(self) -> List[str]:
+		changed = []
 		if self._new_blacklist is not None:
 			self.general_logger.info(f"New blacklist: {self._new_blacklist}")
 			self.blacklist_json = self._new_blacklist
 			self._new_blacklist = None
+			changed.append("blacklist")
 		if self._new_whitelist is not None:
 			self.general_logger.info(f"New whitelist: {self._new_whitelist}")
 			self.whitelist_json = self._new_whitelist
 			self._new_whitelist = None
+			changed.append("whitelist")
 		if self._new_webhooks is not None:
 			self.general_logger.info(f"New webhooks: {self._new_webhooks}")
 			self.webhooks_json = self._new_webhooks
 			self._new_webhooks = None
+			changed.append("webhooks")
 		if self._new_config is not None:
 			self.general_logger.info(f"New config: {self._new_config}")
 			self.config_json = self._new_config
 			self._new_config = None
+			changed.append("config")
+		return changed
 
 	async def on_set_whitelist(self, cmd: Cmd) -> Response:
 		r = badResponse()
