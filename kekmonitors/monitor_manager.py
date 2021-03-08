@@ -117,9 +117,7 @@ class MonitorManager(Server, FileSystemEventHandler):
             COMMANDS.MM_SET_SCRAPER_WEBHOOKS
         ] = self.on_set_scraper_webhooks
         self.cmd_to_callback[COMMANDS.MM_GET_SCRAPER_SHOES] = self.on_get_scraper_shoes
-        self.cmd_to_callback[COMMANDS.MM_SET_SCRAPER_SHOES] = self.on_set_scraper_shoes
         self.cmd_to_callback[COMMANDS.MM_GET_MONITOR_SHOES] = self.on_get_monitor_shoes
-        self.cmd_to_callback[COMMANDS.MM_SET_MONITOR_SHOES] = self.on_set_monitor_shoes
 
         # initialize variables
         self.monitor_processes = {}  # type: Dict[str, Dict[str, Any]]
