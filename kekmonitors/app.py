@@ -9,12 +9,12 @@ from kekmonitors.config import COMMANDS, Config
 from kekmonitors.utils.server.msg import Cmd
 from kekmonitors.utils.tools import make_request
 
-config = Config()
-
 
 async def send_to_moman(cmd: Cmd):
     """Send a command to the monitor manager"""
-    return await make_request(f"{config.socket_path}/MonitorManager", cmd)
+    return await make_request(
+        f"{config['GlobalConfig']['socket_path']}/MonitorManager", cmd
+    )
 
 
 class RootHandler(tornado.web.RequestHandler):
@@ -133,6 +133,7 @@ endpoints = [
 ]
 
 if __name__ == "__main__":
+    config = Config()
     app = tornado.web.Application(endpoints)
     app.listen(8888)
 
