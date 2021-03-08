@@ -35,20 +35,20 @@ python3 -m pip install -r requirements.txt
 ## Usage
 If you want to quickly look at how monitors look like, take a look at the sample code [footdistrict_scraper.py](https://github.com/berton7/kek-monitors/blob/master/demo/footdistrict_scraper.py) and [footdistrict_monitor.py](https://github.com/berton7/kek-monitors/blob/master/demo/footdistrict_monitor.py)
 
-Before using the ```monitor_manager``` make sure you started the monitors/scraper at least once manually (this is needed to register it in the database):
+Before using the ```kekmonitors.monitor_manager``` make sure you started the monitors/scraper at least once manually (this is needed to register it in the database):
 ```bash
 # in a SSH screen session:
 python3 <filename> [--delay n] --[[no-]output]
 ```
 
-The recommended way to start and control monitors is via ```monitor_manager```.
+The recommended way to start and control monitors is via ```kekmonitors.monitor_manager```.
 Assuming you are remotely working on a server via SSH and you want to start both a scraper and a monitor:
 ```bash
 # in a SSH screen session:
 python3 -m kekmonitors.monitor_manager
 
-# in another SSH session:
-python3 -m kekmonitors.monitor_manager_cli MM_ADD_MONITOR_SCRAPER --name <name> [--monitor-delay n] [--scraper-delay n]
+# in another SSH screen session:
+python3 -m kekmonitors.monitor_manager_cli MM_ADD_MONITOR_SCRAPER --name <name> [--delay n] [other keyword arguments required by the monitor/scraper]
 ```
 The monitor manager will automatically keep track of which monitors/scrapers are available and can notify if and when they crash; it also manages the config updates (**as soon as you change a file in the configs folder (```~/.kekmonitors/config``` by default) it notifies the interested monitors/scrapers**).
 
@@ -118,3 +118,4 @@ Anyway you can turn off this behavior with `use_cache=False` on each request, re
 * [monitor_manager_cli.py](https://github.com/berton7/kek-monitors/blob/master/kekmonitors/monitor_manager_cli.py): allows you to issue commands to the monitor manager
 * [utils/list_db.py](https://github.com/berton7/kek-monitors/blob/master/kekmonitors/utils/list_db.py): lists available items in the ```kekmonitors``` database
 * [utils/reset_db.py](https://github.com/berton7/kek-monitors/blob/master/kekmonitors/utils/reset_db.py): resets the ```kekmonitors``` database
+* [utils/stop_moman.py](https://github.com/berton7/kek-monitors/blob/master/kekmonitors/utils/stop_moman.py): stops ```kekmonitors.monitor_manager```
