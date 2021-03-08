@@ -74,6 +74,10 @@ class MonitorManager(Server, FileSystemEventHandler):
 		self.cmd_to_callback[COMMANDS.MM_SET_SCRAPER_BLACKLIST] = self.on_set_scraper_blacklist
 		self.cmd_to_callback[COMMANDS.MM_GET_SCRAPER_WEBHOOKS] = self.on_get_scraper_webhooks
 		self.cmd_to_callback[COMMANDS.MM_SET_SCRAPER_WEBHOOKS] = self.on_set_scraper_webhooks
+		self.cmd_to_callback[COMMANDS.MM_GET_SCRAPER_SHOES] = self.on_get_scraper_shoes
+		self.cmd_to_callback[COMMANDS.MM_SET_SCRAPER_SHOES] = self.on_set_scraper_shoes
+		self.cmd_to_callback[COMMANDS.MM_GET_MONITOR_SHOES] = self.on_get_monitor_shoes
+		self.cmd_to_callback[COMMANDS.MM_SET_MONITOR_SHOES] = self.on_set_monitor_shoes
 
 		# initialize variables
 		self.monitor_processes = {}  # type: Dict[str, Dict[str, Any]]
@@ -91,8 +95,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 		# mandatory arguments, needed in the command
 		self.add_args = ["name"]
 		self.stop_args = ["name"]
-		self.getter_configs_args = ["name"]
-		self.setter_configs_args = ["name", "payload"]
+		self.getter_args = ["name"]
+		self.setter_args = ["name", "payload"]
 
 		self.shutdown_all_on_exit = True   # you might wanna change this
 
@@ -633,13 +637,19 @@ class MonitorManager(Server, FileSystemEventHandler):
 	async def on_set_scraper_webhooks(self, cmd: Cmd) -> Response:
 		return await self.setter_config(cmd, COMMANDS.SET_WEBHOOKS, False)
 
+	async def on_get_scraper_shoes(self, cmd: Cmd) -> Response:
+		return await self.getter_config(cmd, COMMANDS.GET_SHOES, False)
+
+	async def on_get_monitor_shoes(self, cmd: Cmd) -> Response:
+		return await self.getter_config(cmd, COMMANDS.GET_SHOES, True)
+
 	async def getter_config(self, cmd: Cmd, command: COMMANDS, is_monitor: bool):
-		success, missing = cmd.has_valid_args(self.getter_configs_args)
+		success, missing = cmd.has_valid_args(self.getter_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
 			c = Cmd()
 			c.cmd = command
-			r = await self.make_request(f"{self.config['GlobalConfig']['socket_path']}/{'Monitor' if is_monitor else 'Scraper'}.{payload['class_name']}", c)
+			r = await self.make_request(f"{self.config['GlobalConfig']['socket_path']}/{'Monitor' if is_monitor else 'Scraper'}.{payload['name']}", c)
 			return r
 		else:
 			r = badResponse()
@@ -648,19 +658,20 @@ class MonitorManager(Server, FileSystemEventHandler):
 			return r
 
 	async def setter_config(self, cmd: Cmd, command: COMMANDS, is_monitor: bool):
-		success, missing = cmd.has_valid_args(self.setter_configs_args)
+		success, missing = cmd.has_valid_args(self.setter_args)
 		if success:
 			payload = cast(Dict[str, Any], cmd.payload)
 			c = Cmd()
 			c.cmd = command
 			c.payload = payload["payload"]
-			r = await self.make_request(f"{self.config['GlobalConfig']['socket_path']}/{'Monitor' if is_monitor else 'Scraper'}.{payload['class_name']}", c)
+			r = await self.make_request(f"{self.config['GlobalConfig']['socket_path']}/{'Monitor' if is_monitor else 'Scraper'}.{payload['name']}", c)
 			return r
 		else:
 			r = badResponse()
 			r.error = ERRORS.MISSING_PAYLOAD_ARGS
 			r.info = f"{missing}"
 			return r
+
 
 
 if __name__ == "__main__":

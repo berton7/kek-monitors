@@ -46,6 +46,8 @@ class COMMANDS(enum.Enum):
 	MM_GET_SCRAPER_BLACKLIST = enum.auto()
 	MM_SET_SCRAPER_WEBHOOKS = enum.auto()
 	MM_GET_SCRAPER_WEBHOOKS = enum.auto()
+	MM_GET_MONITOR_SHOES = enum.auto()
+	MM_GET_SCRAPER_SHOES = enum.auto()
 
 
 @enum.unique

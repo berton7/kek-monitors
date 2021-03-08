@@ -61,6 +61,7 @@ class Common(Server, FileSystemEventHandler):
 		self.cmd_to_callback[COMMANDS.GET_BLACKLIST] = self.on_get_blacklist
 		self.cmd_to_callback[COMMANDS.GET_WEBHOOKS] = self.on_get_webhooks
 		self.cmd_to_callback[COMMANDS.GET_CONFIG] = self.on_get_config
+		self.cmd_to_callback[COMMANDS.GET_SHOES] = self.on_get_shoes
 
 		is_monitor = config['OtherConfig']['name'].startswith("Monitor.")
 		self.is_monitor = is_monitor
@@ -290,6 +291,11 @@ class Common(Server, FileSystemEventHandler):
 		r = okResponse()
 		r.payload = self.webhooks_json
 		return r
+
+	async def on_get_shoes(self, cmd: Cmd) -> Response:
+		response = okResponse()
+		response.payload = [shoe.__dict__ for shoe in self.shoes]
+		return response
 
 	def get_embed(self, shoe: Shoe) -> discord.Embed:
 		return discord.Embed()

@@ -27,7 +27,6 @@ class BaseScraper(Common, NetworkUtils):
 
 		self.cmd_to_callback[COMMANDS.PING] = self._on_ping
 		self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
-		self.cmd_to_callback[COMMANDS.GET_SHOES] = self.on_get_shoes
 		self.links = []  # type: List[str]
 		self.shoes = []  # type: List[Shoe]
 		self._previous_shoes = []  # type: List[Shoe]
@@ -51,10 +50,6 @@ class BaseScraper(Common, NetworkUtils):
 		self.on_shutdown()
 		return okResponse()
 
-	async def on_get_shoes(self, cmd: Cmd) -> Message:
-		response = okResponse()
-		response.payload = [shoe.__dict__ for shoe in self.shoes]
-		return response
 
 	async def main(self):
 		'''Main loop. Updates configs, runs user-defined loop and performs links/shoes updates for the user'''
