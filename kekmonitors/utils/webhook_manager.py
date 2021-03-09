@@ -91,21 +91,24 @@ class WebhookSender(Thread):
                     self.logger.debug(
                         f"Posted to {self.webhook} with code {r.status_code}"
                     )
-                    remaining_requests = r.headers["x-rateLimit-remaining"]
-                    if remaining_requests == "0":
-                        delay = int(r.headers["x-rateLimit-reset-after"])
-                        self.logger.debug(
-                            f"No available requests reminaing for {self.webhook}, waiting {str(delay)} secs"
-                        )
-                        time.sleep(delay)
-                        continue
-                    if r.status_code == 429:
-                        delay = int(r.headers["x-rateLimit-reset-after"])
-                        self.logger.debug(
-                            f"Got 429 for {self.webhook}, waiting {str(delay)} secs"
-                        )
-                        time.sleep(delay)
-                        continue
+                    if "x-rateLimit-remaining" in r.headers:
+                        remaining_requests = r.headers["x-rateLimit-remaining"]
+                        if remaining_requests == "0":
+                            delay = int(r.headers["x-rateLimit-reset-after"])
+                            self.logger.debug(
+                                f"No available requests reminaing for {self.webhook}, waiting {str(delay)} secs"
+                            )
+                            time.sleep(delay)
+                            continue
+                        if r.status_code == 429:
+                            delay = int(r.headers["x-rateLimit-reset-after"])
+                            self.logger.debug(
+                                f"Got 429 for {self.webhook}, waiting {str(delay)} secs"
+                            )
+                            time.sleep(delay)
+                            continue
+                    else:
+                        self.logger.warning(f"Attention: {self.webhook} posted with {r.status_code} but it doesnt contain the rateLimit header; are you sure the webhook is correct???")
                     break
             self.add_event.clear()
 
@@ -133,7 +136,6 @@ class WebhookManager:
         for w in self.webhook_senders:
             ws = self.webhook_senders[w]
             self.logger.debug(f"Cleaning up {ws.webhook}...")
-            ws = self.webhook_senders[w]
             ws.join()
         self.logger.debug("Shut down...")
 
