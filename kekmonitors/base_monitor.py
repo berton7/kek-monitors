@@ -29,8 +29,8 @@ class BaseMonitor(Common, NetworkUtils):
         self.cmd_to_callback[COMMANDS.SET_SHOES] = self.on_set_shoes
         self.cmd_to_callback[COMMANDS.ADD_SHOES] = self.on_add_shoes
 
-        self.buffer_shoes = []  # type: List[Shoe]
-        self.new_shoes = []  # type: List[Shoe]
+        self._new_set_shoes = []  # type: List[Shoe]
+        self._new_add_shoes = []  # type: List[Shoe]
         self.shoes = []  # type: List[Shoe]
         self.crash_webhook = config["WebhookConfig"]["crash_webhook"]
 
@@ -44,11 +44,11 @@ class BaseMonitor(Common, NetworkUtils):
         p = msg.payload
         if p is not None:
             if isinstance(p, list):
-                self.shoes = []
+                self._new_set_shoes = []
                 for s in p:
                     shoe = Shoe()
                     shoe.__dict__ = s
-                    self.shoes.append(shoe)
+                    self._new_set_shoes.append(shoe)
                 response.error = ERRORS.OK
             else:
                 self.client_logger.warning(
@@ -70,7 +70,7 @@ class BaseMonitor(Common, NetworkUtils):
                 for s in p:
                     shoe = Shoe()
                     shoe.__dict__ = s
-                    self.buffer_shoes.append(shoe)
+                    self._new_add_shoes.append(shoe)
                 response.error = ERRORS.OK
             else:
                 self.general_logger.warning(
@@ -132,18 +132,18 @@ class BaseMonitor(Common, NetworkUtils):
         while True:
             async with self._loop_lock:
                 self.update_local_config()
-                if self.new_shoes:
+                if self._new_set_shoes:
                     self.general_logger.info(
-                        f"Received new set of links: {self.new_shoes}"
+                        f"Received new set of shoes: {self._new_set_shoes}"
                     )
-                    self.shoes = self.new_shoes
-                    self.new_shoes = []
-                if self.buffer_shoes:
+                    self.shoes = self._new_set_shoes
+                    self._new_set_shoes = []
+                if self._new_add_shoes:
                     self.general_logger.info(
-                        f"Adding new set of links: {self.buffer_shoes}"
+                        f"Adding new set of shoes: {self._new_add_shoes}"
                     )
-                    self.shoes += self.buffer_shoes
-                    self.buffer_shoes = []
+                    self.shoes += self._new_add_shoes
+                    self._new_add_shoes = []
                 try:
                     await self.loop()
                     self.shoe_check()
