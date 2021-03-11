@@ -41,21 +41,21 @@ class BaseMonitor(Common, NetworkUtils):
 
     async def on_set_shoes(self, msg: Cmd) -> Response:
         response = badResponse()
-        p = msg.payload
-        if p is not None:
-            if isinstance(p, list):
+        payload = msg.payload
+        if payload is not None:
+            if isinstance(payload, list):
                 self._new_set_shoes = []
-                for s in p:
+                for shoe_dict in payload:
                     shoe = Shoe()
-                    shoe.__dict__ = s
+                    shoe.__dict__ = shoe_dict
                     self._new_set_shoes.append(shoe)
                 response.error = ERRORS.OK
             else:
                 self.client_logger.warning(
-                    "Received new set of links, but payload was not a list: ", p
+                    "Received new set of links, but payload was not a list: ", payload
                 )
                 response.error = ERRORS.BAD_PAYLOAD
-                response.info = f"Invalid links (expected list, got {type(p)}"
+                response.info = f"Invalid links (expected list, got {type(payload)}"
 
         else:
             self.client_logger.warning("Missing payload; msg: ", msg.get_json())
@@ -64,20 +64,24 @@ class BaseMonitor(Common, NetworkUtils):
 
     async def on_add_shoes(self, msg: Cmd) -> Response:
         response = badResponse()
-        p = msg.payload
-        if p is not None:
-            if isinstance(p, list):
-                for s in p:
+        payload = msg.payload
+        if payload is not None:
+            if isinstance(payload, list):
+                shoe_links = [shoe.link for shoe in self.shoes]
+                for shoe_dict in payload:
                     shoe = Shoe()
-                    shoe.__dict__ = s
-                    self._new_add_shoes.append(shoe)
+                    shoe.__dict__ = shoe_dict
+                    if shoe.link not in shoe_links:
+                        self._new_add_shoes.append(shoe)
+                    else:
+                        self.general_logger.info(f"Received shoe {shoe.link} but it was already being monitored.")
                 response.error = ERRORS.OK
             else:
                 self.general_logger.warning(
-                    "Received new added links, but payload was not a list: ", p
+                    "Received new added links, but payload was not a list: ", payload
                 )
                 response.error = ERRORS.BAD_PAYLOAD
-                response.info = f"Invalid links (expected list, got {type(p)}"
+                response.info = f"Invalid links (expected list, got {type(payload)}"
 
         else:
             self.general_logger.warning("Missing payload; msg: ", msg.get_json())

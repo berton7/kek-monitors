@@ -103,7 +103,7 @@ class BaseScraper(Common, NetworkUtils):
             f"{self.config['GlobalConfig']['socket_path']}/Monitor.{self.class_name}"
         )
         cmd = Cmd()
-        cmd.cmd = COMMANDS.SET_SHOES
+        cmd.cmd = COMMANDS.ADD_SHOES
         cmd.payload = [shoe.__dict__ for shoe in self.shoes]
         response = await self.make_request(socket_path, cmd)
         if response.error.value:
