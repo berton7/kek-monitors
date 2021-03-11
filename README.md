@@ -5,6 +5,8 @@ Here scrapers and actual monitors are separated and working asynchronously, comm
 
 ***NOTE: THERE ARE NO IMPORTANT ENDPOINTS IN THE CODE! THERE IS ONLY ONE SEMI-WORKING MONITOR PROVIDED AS AN EXAMPLE!***
 
+If you have any questions please join the Discord server: https://discord.gg/76r8GJyeZZ
+
 ## Pre-requisites
 * `Python 3` > 3.6
 * `linux`: the monitors have been tested on Arch Linux and Ubuntu, but they should work on any other linux distro/WSL without any problem.
