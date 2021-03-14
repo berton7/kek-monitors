@@ -131,6 +131,7 @@ class BaseScraper(Common, NetworkUtils):
         cmd.payload = [
             shoe.__dict__ for shoe in self.shoes if shoe not in self._previous_shoes
         ]
-        response = await self.make_request(socket_path, cmd)
-        if response.error.value:
-            dump_error(self.client_logger, response)
+        if cmd.payload:
+            response = await self.make_request(socket_path, cmd)
+            if response.error.value:
+                dump_error(self.client_logger, response)
