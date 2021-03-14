@@ -57,9 +57,11 @@ class BaseScraper(Common, NetworkUtils):
         while True:
             async with self._loop_lock:
                 changed = self.update_local_config()
+                if changed:
+                    await self.on_config_change(changed)
                 try:
                     await self.loop()
-                    if self.shoes != self._previous_shoes or changed:
+                    if self.shoes != self._previous_shoes:
                         await self.update_links()
                 except:
                     self.general_logger.exception("")

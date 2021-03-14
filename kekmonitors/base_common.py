@@ -227,29 +227,36 @@ class Common(Server, FileSystemEventHandler):
         else:
             return j[self.class_name]
 
-    def update_local_config(self) -> List[str]:
-        changed = []
+    def update_local_config(self) -> Dict[str, Any]:
+        changed = {} # type: Dict[str, Any]
         if self._new_blacklist is not None:
             self.general_logger.info(f"New blacklist: {self._new_blacklist}")
+            old = self.blacklist_json
             self.blacklist_json = self._new_blacklist
             self._new_blacklist = None
-            changed.append("blacklist")
+            changed["blacklist"] = {"old": old, "new": self.blacklist_json}
         if self._new_whitelist is not None:
+            old = self.whitelist_json
             self.general_logger.info(f"New whitelist: {self._new_whitelist}")
             self.whitelist_json = self._new_whitelist
             self._new_whitelist = None
-            changed.append("whitelist")
+            changed["whitelist"] = {"old": old, "new": self.whitelist_json}
         if self._new_webhooks is not None:
+            old = self.webhooks_json # type: ignore
             self.general_logger.info(f"New webhooks: {self._new_webhooks}")
             self.webhooks_json = self._new_webhooks
             self._new_webhooks = None
-            changed.append("webhooks")
+            changed["webhooks"] = {"old": old, "new": self.webhooks_json}
         if self._new_config is not None:
+            old = self.config_json # type: ignore
             self.general_logger.info(f"New config: {self._new_config}")
             self.config_json = self._new_config
             self._new_config = None
-            changed.append("config")
+            changed["config"] = {"old": old, "new": self.config_json}
         return changed
+
+    async def on_config_change(self, changed: Dict[str, Any]):
+        pass
 
     async def on_set_whitelist(self, cmd: Cmd) -> Response:
         r = badResponse()

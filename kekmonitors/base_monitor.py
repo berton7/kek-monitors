@@ -135,7 +135,7 @@ class BaseMonitor(Common, NetworkUtils):
         await self._get_shoes()
         while True:
             async with self._loop_lock:
-                self.update_local_config()
+                changed = self.update_local_config()
                 if self._new_set_shoes:
                     self.general_logger.info(
                         f"Received new set of shoes: {list(shoe.link for shoe in self._new_set_shoes)}"
@@ -148,6 +148,8 @@ class BaseMonitor(Common, NetworkUtils):
                     )
                     self.shoes += self._new_add_shoes
                     self._new_add_shoes = []
+                if changed:
+                    await self.on_config_change(changed)
                 try:
                     await self.loop()
                     self.shoe_check()
