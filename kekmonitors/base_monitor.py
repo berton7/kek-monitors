@@ -138,13 +138,13 @@ class BaseMonitor(Common, NetworkUtils):
                 self.update_local_config()
                 if self._new_set_shoes:
                     self.general_logger.info(
-                        f"Received new set of shoes: {self._new_set_shoes}"
+                        f"Received new set of shoes: {list(shoe.link for shoe in self._new_set_shoes)}"
                     )
                     self.shoes = self._new_set_shoes
                     self._new_set_shoes = []
                 if self._new_add_shoes:
                     self.general_logger.info(
-                        f"Adding new set of shoes: {self._new_add_shoes}"
+                        f"Adding new set of shoes: {list(shoe.link for shoe in self._new_add_shoes)}"
                     )
                     self.shoes += self._new_add_shoes
                     self._new_add_shoes = []
