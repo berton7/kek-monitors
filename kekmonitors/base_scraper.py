@@ -91,7 +91,7 @@ class BaseScraper(Common, NetworkUtils):
                     self.webhook_manager.add_to_queue(
                         self.get_embed(shoe), self.webhooks_json
                     )
-        await self._set_shoes()
+        await self._add_new_shoes()
         self._previous_shoes = copy.copy(self.shoes)  # allows to perform ==
 
     async def _on_ping(self, cmd: Cmd) -> Response:
@@ -103,7 +103,7 @@ class BaseScraper(Common, NetworkUtils):
             f"{self.config['GlobalConfig']['socket_path']}/Monitor.{self.class_name}"
         )
         cmd = Cmd()
-        cmd.cmd = COMMANDS.ADD_SHOES
+        cmd.cmd = COMMANDS.SET_SHOES
         cmd.payload = [shoe.__dict__ for shoe in self.shoes]
         response = await self.make_request(socket_path, cmd)
         if response.error.value:
@@ -117,6 +117,20 @@ class BaseScraper(Common, NetworkUtils):
         cmd = Cmd()
         cmd.cmd = COMMANDS.ADD_SHOES
         cmd.payload = [shoe.__dict__ for shoe in self.shoes]
+        response = await self.make_request(socket_path, cmd)
+        if response.error.value:
+            dump_error(self.client_logger, response)
+
+    async def _add_new_shoes(self):
+        """Connect to the corresponding monitor, if available, and send it only the new shoes."""
+        socket_path = (
+            f"{self.config['GlobalConfig']['socket_path']}/Monitor.{self.class_name}"
+        )
+        cmd = Cmd()
+        cmd.cmd = COMMANDS.ADD_SHOES
+        cmd.payload = [
+            shoe.__dict__ for shoe in self.shoes if shoe not in self._previous_shoes
+        ]
         response = await self.make_request(socket_path, cmd)
         if response.error.value:
             dump_error(self.client_logger, response)
