@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.abspath(
 	os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
-from kekmonitors.utils.shoe_stuff import *
+from kekmonitors.shoe_stuff import *
 
 from utils import get_all_types, get_non_type
 

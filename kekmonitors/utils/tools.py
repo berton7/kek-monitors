@@ -9,7 +9,7 @@ from datetime import timezone
 from typing import Dict, List
 
 from kekmonitors.config import ERRORS, Config, LogConfig
-from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
 
 if sys.version_info[1] < 9:
 
@@ -163,13 +163,13 @@ def make_default_executable(_class, config: Config = Config()):
     parser.add_argument(
         "--output",
         action=boolAction,
-        default=True,
+        default=True if config["Options"]["add_stream_handler"] == "True" else False,
         help="Specify wether you want log output to the console or not. (note: this does not disable file log)",
     )
     parser.add_argument(
         "--config-watcher",
         action=boolAction,
-        default=True,
+        default=True if config["Options"]["enable_config_watcher"] == "True" else False,
         help="Specify wether you want to add a config watcher or not",
     )
     parser.add_argument(
@@ -180,7 +180,17 @@ def make_default_executable(_class, config: Config = Config()):
         help="Only register the monitor/scraper, without actually starting it.",
     )
     parser.add_argument(
-        "--webhooks", action=boolAction, default=True, help="Enable sending webhooks"
+        "--webhooks",
+        action=boolAction,
+        default=True if config["Options"]["enable_webhooks"] == "True" else False,
+        help="Enable sending webhooks",
+    )
+    parser.add_argument(
+        "--max-last-seen",
+        default=config["Options"]["max_last_seen"],
+        type=int,
+        help=f"Specify the max_last_seen value for shoes. (default: {config['Options']['max_last_seen']})",
+        dest="max_last_seen",
     )
     parser_args, unknown = parser.parse_known_args()
     if parser_args.register:
@@ -189,12 +199,14 @@ def make_default_executable(_class, config: Config = Config()):
     if parser_args.delay < 0:
         print(f"Cannot have a negative delay")
         return
+    if parser_args.delay < 0:
+        print("Cannot have a negative last seen")
+        return
     config["Options"]["add_stream_handler"] = str(parser_args.output)
     config["Options"]["loop_delay"] = str(parser_args.delay)
-    config["Options"]["disable_config_watcher"] = str(
-        not bool(parser_args.config_watcher)
-    )
-    config["Options"]["enable_webhooks"] = str(bool(parser_args.webhooks))
+    config["Options"]["enable_config_watcher"] = str(parser_args.config_watcher)
+    config["Options"]["enable_webhooks"] = str(parser_args.webhooks)
+    config["Options"]["max_last_seen"] = str(parser_args.max_last_seen)
     kwargs = {}  # type: Dict[str, str]
     if len(unknown) % 2:
         print("Incorrect number of kwargs")

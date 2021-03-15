@@ -13,10 +13,10 @@ from watchdog import observers
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
 from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
-from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
-from kekmonitors.utils.server.server import Server
-from kekmonitors.utils.shoe_manager import ShoeManager
-from kekmonitors.utils.shoe_stuff import Shoe
+from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.comms.server import Server
+from kekmonitors.shoe_manager import ShoeManager
+from kekmonitors.shoe_stuff import Shoe
 from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
 
 
@@ -145,7 +145,7 @@ class Common(Server, FileSystemEventHandler):
         self.shoe_manager = ShoeManager(config)
         self.register()
 
-        if config["Options"]["disable_config_watcher"] == "False":
+        if config["Options"]["enable_config_watcher"] == "True":
             observer = observers.Observer()
             observer.schedule(
                 self,
@@ -362,6 +362,14 @@ class Common(Server, FileSystemEventHandler):
 
     async def main(self):
         pass
+
+    def check_shoe(self, shoe: Shoe):
+        """Searches the database for the given, updating it if found or adding it if not found. Also updates the last_seen timestamp.
+
+        Args:
+            shoe (Shoe): Shoe to check
+        """
+        return
 
     def start(self):
         """Call this to start the loop."""
