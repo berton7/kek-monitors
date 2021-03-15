@@ -54,7 +54,7 @@ class BaseMonitor(Common, NetworkUtils):
         await self.async_init()
         while True:
             async with self._loop_lock:
-                changed = self.update_local_config()
+                changed = self.update_config()
                 if changed:
                     await self.on_config_change(changed)
                 try:

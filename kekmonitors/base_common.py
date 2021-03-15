@@ -3,7 +3,7 @@ import copy
 import json
 import os
 from json.decoder import JSONDecodeError
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import __main__
 import discord
@@ -69,7 +69,14 @@ class Common(Server, FileSystemEventHandler):
         self.cmd_to_callback[COMMANDS.GET_BLACKLIST] = self.on_get_blacklist
         self.cmd_to_callback[COMMANDS.GET_WEBHOOKS] = self.on_get_webhooks
         self.cmd_to_callback[COMMANDS.GET_CONFIG] = self.on_get_config
-        self.cmd_to_callback[COMMANDS.GET_SHOES] = self.on_get_shoes
+        self.cmd_to_callback[COMMANDS.SET_SPECIFIC_BLACKLIST] = self.on_set_specific_blacklist
+        self.cmd_to_callback[COMMANDS.SET_SPECIFIC_WHITELIST] = self.on_set_specific_whitelist
+        self.cmd_to_callback[COMMANDS.SET_SPECIFIC_WEBHOOKS] = self.on_set_specific_webhooks
+        self.cmd_to_callback[COMMANDS.SET_SPECIFIC_CONFIG] = self.on_set_specific_config
+        self.cmd_to_callback[COMMANDS.SET_COMMON_BLACKLIST] = self.on_set_common_blacklist
+        self.cmd_to_callback[COMMANDS.SET_COMMON_WHITELIST] = self.on_set_common_whitelist
+        self.cmd_to_callback[COMMANDS.SET_COMMON_WEBHOOKS] = self.on_set_common_webhooks
+        self.cmd_to_callback[COMMANDS.SET_COMMON_CONFIG] = self.on_set_common_config
 
         is_monitor = config["OtherConfig"]["name"].startswith("Monitor.")
         self.is_monitor = is_monitor
@@ -102,26 +109,27 @@ class Common(Server, FileSystemEventHandler):
         self.specific_whitelist_json = self.load_config(
             specific_whitelist_json_filepath, []
         )  # type: List[str]
-        self.common_whitelist_json = self.load_config(
-            common_whitelist_json_filepath, []
-        )  # type: List[str]
         self.specific_blacklist_json = self.load_config(
             specific_blacklist_json_filepath, []
+        )  # type: List[str]
+        self.specific_webhooks_json = self.load_config(
+            specific_webhooks_json_filepath, {}
+        )  # type: Dict[str, Any]
+        self.specific_config_json = self.load_config(
+            specific_config_json_filepath, {}
+        )  # type: Dict[str, Any]
+
+        self.common_whitelist_json = self.load_config(
+            common_whitelist_json_filepath, []
         )  # type: List[str]
         self.common_blacklist_json = self.load_config(
             common_blacklist_json_filepath, []
         )  # type: List[str]
-        self.specific_webhooks_json = self.load_config(
-            common_webhooks_json_filepath, {}
-        )  # type: Dict[str, Any]
         self.common_webhooks_json = self.load_config(
             specific_webhooks_json_filepath, {}
         )  # type: Dict[str, Any]
-        self.specific_config_json = self.load_config(
-            common_config_json_filepath, {}
-        )  # type: Dict[str, Any]
         self.common_config_json = self.load_config(
-            specific_config_json_filepath, {}
+            common_config_json_filepath, {}
         )  # type: Dict[str, Any]
 
         self.whitelist_json = self.specific_whitelist_json + self.common_whitelist_json
@@ -290,44 +298,52 @@ class Common(Server, FileSystemEventHandler):
         else:
             return j[self.class_name]
 
-    def update_config(self) -> List[str]:
-        changed = []
+    def update_config(self) -> Dict[str, Union[Dict[str, Any], List[str]]]:
+        changed = {} # type: Dict[str, Union[Dict[str, Any], List[str]]]
         if self._new_common_blacklist is not None or self._new_specific_blacklist is not None:
-            changed.append("blacklist")
             if self._new_common_blacklist is not None:
                 self.common_blacklist_json = self._new_common_blacklist
             if self._new_specific_blacklist is not None:
                 self.specific_blacklist_json = self._new_specific_blacklist
+            changed["blacklist"] = {"old": self.blacklist_json, "new": self.common_blacklist_json + self.specific_blacklist_json}
             self.blacklist_json = self.common_blacklist_json + self.specific_blacklist_json
             self.general_logger.info(f"New blacklist: {self.blacklist_json}")
             self._new_common_blacklist = self._new_specific_blacklist = None
         if self._new_common_whitelist is not None or self._new_specific_whitelist is not None:
-            changed.append("whitelist")
             if self._new_common_whitelist is not None:
                 self.common_whitelist_json = self._new_common_whitelist
             if self._new_specific_whitelist is not None:
                 self.specific_whitelist_json = self._new_specific_whitelist
+            changed["whitelist"] = {"old": self.whitelist_json, "new": self.common_whitelist_json + self.specific_whitelist_json}
             self.whitelist_json = self.common_whitelist_json + self.specific_whitelist_json
             self.general_logger.info(f"New whitelist: {self.whitelist_json}")
             self._new_common_whitelist = self._new_specific_whitelist = None
         if self._new_common_webhooks is not None or self._new_specific_webhooks is not None:
-            changed.append("webhooks")
-            if self._new_common_webhooks is not None:
-                self.common_webhooks_json = self._new_common_webhooks
-            if self._new_specific_webhooks is not None:
-                self.specific_webhooks_json = self._new_specific_webhooks
-            self.webhooks_json = copy.copy(self.common_webhooks_json)
-            self.webhooks_json.update(self.specific_webhooks_json)
+            if self._new_specific_webhooks == {}:
+                new_webhooks = {}
+            else:
+                if self._new_common_webhooks is not None:
+                    self.common_webhooks_json = self._new_common_webhooks
+                if self._new_specific_webhooks is not None:
+                    self.specific_webhooks_json = self._new_specific_webhooks
+                new_webhooks = copy.copy(self.common_webhooks_json)
+                new_webhooks.update(self.specific_webhooks_json)
+            changed["webhooks"] = {"old": self.webhooks_json, "new": new_webhooks}
+            self.webhooks_json = new_webhooks
             self.general_logger.info(f"New webhooks: {self.webhooks_json}")
             self._new_common_webhooks = self._new_specific_webhooks = None
         if self._new_common_config is not None or self._new_specific_config is not None:
-            changed.append("config")
-            if self._new_common_config is not None:
-                self.common_config_json = self._new_common_config
-            if self._new_specific_config is not None:
-                self.specific_config_json = self._new_specific_config
-            self.config_json = copy.copy(self.common_config_json)
-            self.config_json.update(self.specific_config_json)
+            if self._new_specific_config == {}:
+                new_config = {}
+            else:
+                if self._new_common_config is not None:
+                    self.common_config_json = self._new_common_config
+                if self._new_specific_config is not None:
+                    self.specific_config_json = self._new_specific_config
+                new_config = copy.copy(self.common_config_json)
+                new_config.update(self.specific_config_json)
+            changed["config"] = {"old": self.webhooks_json, "new": new_config}
+            self.config_json = new_config
             self.general_logger.info(f"New config: {self.config_json}")
             self._new_common_config = self._new_specific_config = None
         return changed
@@ -352,10 +368,104 @@ class Common(Server, FileSystemEventHandler):
         r.payload = self.webhooks_json
         return r
 
-    async def on_get_shoes(self, cmd: Cmd) -> Response:
-        response = okResponse()
-        response.payload = [shoe.__dict__ for shoe in self.shoes]
-        return response
+    async def on_set_specific_whitelist(self, cmd: Cmd) -> Response:
+        r = badResponse()
+        if isinstance(cmd.payload, list):
+            self.general_logger.info("Received new whitelist")
+            self._new_specific_whitelist = cmd.payload
+            r = okResponse()
+        else:
+            self.general_logger.warning(f"Received new whitelist but it was of type {type(cmd.payload)}")
+            r.error = ERRORS.BAD_PAYLOAD
+            r.info = f"Expected list, got {type(cmd.payload)}"
+        return r
+
+    async def on_set_specific_blacklist(self, cmd: Cmd) -> Response:
+        r = badResponse()
+        if isinstance(cmd.payload, list):
+            self.general_logger.info("Received new blacklist")
+            self._new_specific_blacklist = cmd.payload
+            r = okResponse()
+        else:
+            self.general_logger.warning(f"Received new blacklist but it was of type {type(cmd.payload)}")
+            r.error = ERRORS.BAD_PAYLOAD
+            r.info = f"Expected list, got {type(cmd.payload)}"
+        return r
+
+    async def on_set_specific_webhooks(self, cmd: Cmd) -> Response:
+        r = badResponse()
+        if isinstance(cmd.payload, dict):
+            self.general_logger.info("Received new webhooks")
+            self._new_specific_webhooks = cmd.payload # type: ignore
+            r = okResponse()
+        else:
+            self.general_logger.warning(f"Received new webhooks but it was of type {type(cmd.payload)}")
+            r.error = ERRORS.BAD_PAYLOAD
+            r.info = f"Expected dict, got {type(cmd.payload)}"
+        return r
+
+    async def on_set_specific_config(self, cmd: Cmd) -> Response:
+        r = badResponse()
+        if isinstance(cmd.payload, dict):
+            self.general_logger.info("Received new config")
+            self._new_specific_config = cmd.payload
+            r = okResponse()
+        else:
+            self.general_logger.warning(f"Received new config but it was of type {type(cmd.payload)}")
+            r.error = ERRORS.BAD_PAYLOAD
+            r.info = f"Expected dict, got {type(cmd.payload)}"
+        return r
+
+    async def on_set_common_whitelist(self, cmd: Cmd) -> Response:
+        r = badResponse()
+        if isinstance(cmd.payload, list):
+            self.general_logger.info("Received new whitelist")
+            self._new_common_whitelist = cmd.payload
+            r = okResponse()
+        else:
+            self.general_logger.warning(f"Received new whitelist but it was of type {type(cmd.payload)}")
+            r.error = ERRORS.BAD_PAYLOAD
+            r.info = f"Expected list, got {type(cmd.payload)}"
+        return r
+
+    async def on_set_common_blacklist(self, cmd: Cmd) -> Response:
+        r = badResponse()
+        if isinstance(cmd.payload, list):
+            self.general_logger.info("Received new blacklist")
+            self._new_common_blacklist = cmd.payload
+            r = okResponse()
+        else:
+            self.general_logger.warning(f"Received new blacklist but it was of type {type(cmd.payload)}")
+            r.error = ERRORS.BAD_PAYLOAD
+            r.info = f"Expected list, got {type(cmd.payload)}"
+        return r
+
+    async def on_set_common_webhooks(self, cmd: Cmd) -> Response:
+        r = badResponse()
+        if isinstance(cmd.payload, dict):
+            self.general_logger.info("Received new webhooks")
+            self._new_common_webhooks = cmd.payload # type: ignore
+            r = okResponse()
+        else:
+            self.general_logger.warning(f"Received new webhooks but it was of type {type(cmd.payload)}")
+            r.error = ERRORS.BAD_PAYLOAD
+            r.info = f"Expected dict, got {type(cmd.payload)}"
+        return r
+
+    async def on_set_common_config(self, cmd: Cmd) -> Response:
+        r = badResponse()
+        if isinstance(cmd.payload, dict):
+            self.general_logger.info("Received new config")
+            self._new_common_config = cmd.payload
+            r = okResponse()
+        else:
+            self.general_logger.warning(f"Received new config but it was of type {type(cmd.payload)}")
+            r.error = ERRORS.BAD_PAYLOAD
+            r.info = f"Expected dict, got {type(cmd.payload)}"
+        return r
+
+    async def on_config_change(self, changed):
+        pass
 
     def get_embed(self, shoe: Shoe) -> discord.Embed:
         return discord.Embed()

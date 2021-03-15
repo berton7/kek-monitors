@@ -309,10 +309,10 @@ class MonitorManager(Server, FileSystemEventHandler):
             return
 
         splits = filename.split(os.path.sep)
-        commands = []  # List[Cmd]
-        sock_paths = []  # type: List[str]
 
         for sockets in (self.monitor_sockets, self.scraper_sockets):
+            commands = []  # List[Cmd]
+            sock_paths = []  # type: List[str]
 
             # we are interested in configs, whitelists, blacklists, webhooks
             if splits[-1] == "whitelists.json":
