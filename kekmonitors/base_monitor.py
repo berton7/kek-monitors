@@ -135,7 +135,7 @@ class BaseMonitor(Common, NetworkUtils):
         await self._get_shoes()
         while True:
             async with self._loop_lock:
-                self.update_local_config()
+                self.update_config()
                 if self._new_set_shoes:
                     self.general_logger.info(
                         f"Received new set of shoes: {self._new_set_shoes}"

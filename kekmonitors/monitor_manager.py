@@ -116,6 +116,18 @@ class MonitorManager(Server, FileSystemEventHandler):
         self.cmd_to_callback[
             COMMANDS.MM_SET_SCRAPER_WEBHOOKS
         ] = self.on_set_scraper_webhooks
+        self.cmd_to_callback[
+            COMMANDS.MM_SET_MONITOR_SCRAPER_BLACKLIST
+        ] = self.on_set_monitor_scraper_blacklist
+        self.cmd_to_callback[
+            COMMANDS.MM_SET_MONITOR_SCRAPER_WHITELIST
+        ] = self.on_set_monitor_scraper_whitelist
+        self.cmd_to_callback[
+            COMMANDS.MM_SET_MONITOR_SCRAPER_WEBHOOKS
+        ] = self.on_set_monitor_scraper_webhooks
+        self.cmd_to_callback[
+            COMMANDS.MM_SET_MONITOR_SCRAPER_CONFIG
+        ] = self.on_set_monitor_scraper_configs
         self.cmd_to_callback[COMMANDS.MM_GET_SCRAPER_SHOES] = self.on_get_scraper_shoes
         self.cmd_to_callback[COMMANDS.MM_GET_MONITOR_SHOES] = self.on_get_monitor_shoes
 
@@ -155,35 +167,37 @@ class MonitorManager(Server, FileSystemEventHandler):
         self.check_status_task = self._asyncio_loop.create_task(self.check_status())
 
         # watches the config folder for any change. calls on_modified when any monitored file is modified
-        self.config_watcher = observers.Observer()
-        self.config_watcher.schedule(
-            self, self.config["GlobalConfig"]["config_path"], True
-        )
-        self.config_watcher.schedule(
-            self, self.config["GlobalConfig"]["socket_path"], True
-        )
+        self.watcher = observers.Observer()
+        self.watcher.schedule(self, self.config["GlobalConfig"]["config_path"], True)
+        self.watcher.schedule(self, self.config["GlobalConfig"]["socket_path"], True)
 
         # needed for proper shutdown
         self.has_to_quit = False
 
     def start(self):
         """Start the Monitor Manager."""
-        self.config_watcher.start()
+        self.watcher.start()
         self._asyncio_loop.run_forever()
 
     def on_modified(self, event: FileSystemEvent):
         # called when any of the monitored files is modified.
         # we are only interested int the configs for now.
-        filename = event.key[1]  # type: str
+        filepath = event.key[1]  # type: str
 
+        if not filepath.endswith(".json"):
+            return
         # if a config file is updated:
-        if (
-            filename.endswith(".json")
-            and filename.find(self.config["GlobalConfig"]["config_path"]) != -1
-        ):
-            asyncio.run_coroutine_threadsafe(
-                self.update_configs(filename), self._asyncio_loop
-            )
+        if filepath.startswith(self.config["GlobalConfig"]["config_path"]):
+            if filepath.startswith(
+                os.path.sep.join((self.config["GlobalConfig"]["config_path"], "common"))
+            ):
+                asyncio.run_coroutine_threadsafe(
+                    self.update_common_config(filepath), self._asyncio_loop
+                )
+            else:
+                asyncio.run_coroutine_threadsafe(
+                    self.update_specific_config(filepath), self._asyncio_loop
+                )
 
     def on_created(self, event: FileSystemEvent):
         filename = event.key[1]  # type: str
@@ -282,41 +296,33 @@ class MonitorManager(Server, FileSystemEventHandler):
 
         return alive
 
-    async def update_configs(self, filename: str):
+    async def update_common_config(self, filename: str):
         """Reads the provided config file and updates the interested monitors/scrapers"""
         self.general_logger.debug(f"File {filename} has changed!")
-        if filename.endswith(".json"):
-            try:
-                with open(filename, "r") as f:
-                    j = json.load(f)
-            except JSONDecodeError:
-                self.general_logger.warning(
-                    f"File {filename} has changed but contains invalid json data"
-                )
-                return
+        try:
+            with open(filename, "r") as f:
+                j = json.load(f)
+        except JSONDecodeError:
+            self.general_logger.warning(
+                f"File {filename} has changed but contains invalid json data"
+            )
+            return
 
-            splits = filename.split(os.path.sep)
-            commands = []  # List[Cmd]
-            sock_paths = []  # type: List[str]
+        splits = filename.split(os.path.sep)
+        commands = []  # List[Cmd]
+        sock_paths = []  # type: List[str]
 
-            # if it's from the monitors folder:
-            if "monitors" in filename.split(os.path.sep):
-                sockets = self.monitor_sockets
-            elif "scrapers" in filename.split(os.path.sep):
-                sockets = self.scraper_sockets
-            else:
-                self.general_logger.debug("File not useful.")
-                return
+        for sockets in (self.monitor_sockets, self.scraper_sockets):
 
             # we are interested in configs, whitelists, blacklists, webhooks
             if splits[-1] == "whitelists.json":
-                cmd = COMMANDS.SET_WHITELIST
+                cmd = COMMANDS.SET_COMMON_WHITELIST
             elif splits[-1] == "configs.json":
-                cmd = COMMANDS.SET_CONFIG
+                cmd = COMMANDS.SET_COMMON_CONFIG
             elif splits[-1] == "blacklists.json":
-                cmd = COMMANDS.SET_BLACKLIST
+                cmd = COMMANDS.SET_COMMON_BLACKLIST
             elif splits[-1] == "webhooks.json":
-                cmd = COMMANDS.SET_WEBHOOKS
+                cmd = COMMANDS.SET_COMMON_WEBHOOKS
             else:
                 return
 
@@ -345,14 +351,76 @@ class MonitorManager(Server, FileSystemEventHandler):
                         f"Failed to update config: {response.error}"
                     )
 
+    async def update_specific_config(self, filename: str):
+        """Reads the provided config file and updates the interested monitors/scrapers"""
+        self.general_logger.debug(f"File {filename} has changed!")
+        try:
+            with open(filename, "r") as f:
+                j = json.load(f)
+        except JSONDecodeError:
+            self.general_logger.warning(
+                f"File {filename} has changed but contains invalid json data"
+            )
+            return
+
+        splits = filename.split(os.path.sep)
+        commands = []  # List[Cmd]
+        sock_paths = []  # type: List[str]
+
+        # if it's from the monitors folder:
+        if "monitors" in filename.split(os.path.sep):
+            sockets = self.monitor_sockets
+        elif "scrapers" in filename.split(os.path.sep):
+            sockets = self.scraper_sockets
+        else:
+            self.general_logger.debug("File not useful.")
+            return
+
+        # we are interested in configs, whitelists, blacklists, webhooks
+        if splits[-1] == "whitelists.json":
+            cmd = COMMANDS.SET_SPECIFIC_WHITELIST
+        elif splits[-1] == "configs.json":
+            cmd = COMMANDS.SET_SPECIFIC_CONFIG
+        elif splits[-1] == "blacklists.json":
+            cmd = COMMANDS.SET_SPECIFIC_BLACKLIST
+        elif splits[-1] == "webhooks.json":
+            cmd = COMMANDS.SET_SPECIFIC_WEBHOOKS
+        else:
+            return
+
+        # for every monitor socket
+        for name in sockets:
+            if name in j:
+                sock_path = sockets[name]
+                c = Cmd()
+                c.cmd = cmd
+                # send only the corresponding part to the monitor
+                c.payload = j[name]
+                commands.append(c)
+                sock_paths.append(sock_path)
+
+        # prepare to make all the async requests
+        tasks = []
+        for sock_path, command in zip(sock_paths, commands):
+            tasks.append(self.make_request(sock_path, command))
+
+        # send the requests
+        responses = await asyncio.gather(*tasks)  # List[Response]
+
+        for response in responses:
+            if response.error.value:
+                self.general_logger.warning(
+                    f"Failed to update config: {response.error}"
+                )
+
     async def on_server_stop(self):
         """
         Routine that runs on server stop. Shuts down the monitor manager
         """
         async with self._loop_lock:
             # stop the config watcher
-            self.config_watcher.stop()
-            self.config_watcher.join()
+            self.watcher.stop()
+            self.watcher.join()
 
             if self.shutdown_all_on_exit:
                 # get all the existing sockets
@@ -712,60 +780,68 @@ class MonitorManager(Server, FileSystemEventHandler):
         return success, msg
 
     async def on_get_monitor_config(self, cmd: Cmd) -> Response:
-        return await self.getter_config(cmd, COMMANDS.GET_CONFIG, True)
+        return await self.specific_config_getter(cmd, COMMANDS.GET_CONFIG, True)
 
     async def on_set_monitor_config(self, cmd: Cmd) -> Response:
-        return await self.setter_config(cmd, COMMANDS.SET_CONFIG, True)
+        return await self.specific_config_setter(cmd, "configs.json", True)
 
     async def on_get_monitor_whitelist(self, cmd: Cmd) -> Response:
-        return await self.getter_config(cmd, COMMANDS.GET_WHITELIST, True)
+        return await self.specific_config_getter(cmd, COMMANDS.GET_WHITELIST, True)
 
     async def on_set_monitor_whitelist(self, cmd: Cmd) -> Response:
-        return await self.setter_config(cmd, COMMANDS.SET_WHITELIST, True)
+        return await self.specific_config_setter(cmd, "whitelists.json", True)
 
     async def on_get_monitor_blacklist(self, cmd: Cmd) -> Response:
-        return await self.getter_config(cmd, COMMANDS.GET_BLACKLIST, True)
+        return await self.specific_config_getter(cmd, COMMANDS.GET_BLACKLIST, True)
 
     async def on_set_monitor_blacklist(self, cmd: Cmd) -> Response:
-        return await self.setter_config(cmd, COMMANDS.SET_BLACKLIST, True)
+        return await self.specific_config_setter(cmd, "blacklists.json", True)
 
     async def on_get_monitor_webhooks(self, cmd: Cmd) -> Response:
-        return await self.getter_config(cmd, COMMANDS.GET_WEBHOOKS, True)
+        return await self.specific_config_getter(cmd, COMMANDS.GET_WEBHOOKS, True)
 
     async def on_set_monitor_webhooks(self, cmd: Cmd) -> Response:
-        return await self.setter_config(cmd, COMMANDS.SET_WEBHOOKS, True)
+        return await self.specific_config_setter(cmd, "webhooks.json", True)
 
     async def on_get_scraper_config(self, cmd: Cmd) -> Response:
-        return await self.getter_config(cmd, COMMANDS.GET_CONFIG, False)
+        return await self.specific_config_getter(cmd, COMMANDS.GET_CONFIG, False)
 
     async def on_set_scraper_config(self, cmd: Cmd) -> Response:
-        return await self.setter_config(cmd, COMMANDS.SET_CONFIG, False)
+        return await self.specific_config_setter(cmd, "configs.json", False)
 
     async def on_get_scraper_whitelist(self, cmd: Cmd) -> Response:
-        return await self.getter_config(cmd, COMMANDS.GET_WHITELIST, False)
+        return await self.specific_config_getter(cmd, COMMANDS.GET_WHITELIST, False)
 
     async def on_set_scraper_whitelist(self, cmd: Cmd) -> Response:
-        return await self.setter_config(cmd, COMMANDS.SET_WHITELIST, False)
+        return await self.specific_config_setter(cmd, "whitelists.json", False)
 
     async def on_get_scraper_blacklist(self, cmd: Cmd) -> Response:
-        return await self.getter_config(cmd, COMMANDS.GET_BLACKLIST, False)
+        return await self.specific_config_getter(cmd, COMMANDS.GET_BLACKLIST, False)
 
     async def on_set_scraper_blacklist(self, cmd: Cmd) -> Response:
-        return await self.setter_config(cmd, COMMANDS.SET_BLACKLIST, False)
+        return await self.specific_config_setter(cmd, "blacklists.json", False)
 
     async def on_get_scraper_webhooks(self, cmd: Cmd) -> Response:
-        return await self.getter_config(cmd, COMMANDS.GET_WEBHOOKS, False)
+        return await self.specific_config_getter(cmd, COMMANDS.GET_WEBHOOKS, False)
 
     async def on_set_scraper_webhooks(self, cmd: Cmd) -> Response:
-        return await self.setter_config(cmd, COMMANDS.SET_WEBHOOKS, False)
+        return await self.specific_config_setter(cmd, "webhooks.json", False)
 
-    async def on_get_scraper_shoes(self, cmd: Cmd) -> Response:
-        return await self.getter_config(cmd, COMMANDS.GET_SHOES, False)
+    async def on_set_monitor_scraper_blacklist(self, cmd: Cmd) -> Response:
+        return await self.common_config_setter(cmd, "blacklists.json")
 
-    async def on_get_monitor_shoes(self, cmd: Cmd) -> Response:
-        return await self.getter_config(cmd, COMMANDS.GET_SHOES, True)
+    async def on_set_monitor_scraper_whitelist(self, cmd: Cmd) -> Response:
+        return await self.common_config_setter(cmd, "whitelists.json")
 
-    async def getter_config(self, cmd: Cmd, command: COMMANDS, is_monitor: bool):
+    async def on_set_monitor_scraper_webhooks(self, cmd: Cmd) -> Response:
+        return await self.common_config_setter(cmd, "webhooks.json")
+
+    async def on_set_monitor_scraper_configs(self, cmd: Cmd) -> Response:
+        return await self.common_config_setter(cmd, "configs.json")
+
+    async def specific_config_getter(
+        self, cmd: Cmd, command: COMMANDS, is_monitor: bool
+    ):
         success, missing = cmd.has_valid_args(self.getter_args)
         if success:
             payload = cast(Dict[str, Any], cmd.payload)
@@ -782,15 +858,83 @@ class MonitorManager(Server, FileSystemEventHandler):
             r.info = f"{missing}"
             return r
 
-    async def setter_config(self, cmd: Cmd, command: COMMANDS, is_monitor: bool):
+    async def specific_config_setter(self, cmd: Cmd, filename: str, is_monitor: bool):
         success, missing = cmd.has_valid_args(self.setter_args)
         if success:
             payload = cast(Dict[str, Any], cmd.payload)
+            cp = os.path.sep.join(
+                (
+                    self.config["GlobalConfig"]["config_path"],
+                    "monitors" if is_monitor else "scrapers",
+                    filename,
+                )
+            )
+            with open(
+                cp,
+                "r",
+            ) as rf:
+                f = json.load(rf)
+            f[payload["name"]] = payload["payload"]
+            with open(
+                cp,
+                "w",
+            ) as wf:
+                json.dump(f, wf)
+        else:
+            r = badResponse()
+            r.error = ERRORS.MISSING_PAYLOAD_ARGS
+            r.info = f"{missing}"
+            return r
+
+    async def common_config_setter(self, cmd: Cmd, filename: str):
+        success, missing = cmd.has_valid_args(self.setter_args)
+        if success:
+            payload = cast(Dict[str, Any], cmd.payload)
+            cp = os.path.sep.join(
+                (self.config["GlobalConfig"]["config_path"], "common", filename)
+            )
+            with open(
+                cp,
+                "r",
+            ) as rf:
+                f = json.load(rf)
+            f[payload["name"]] = payload["payload"]
+            with open(
+                cp,
+                "w",
+            ) as wf:
+                json.dump(f, wf)
+        else:
+            r = badResponse()
+            r.error = ERRORS.MISSING_PAYLOAD_ARGS
+            r.info = f"{missing}"
+            return r
+
+    async def on_get_scraper_shoes(self, cmd: Cmd) -> Response:
+        success, missing = cmd.has_valid_args(self.getter_args)
+        if success:
+            payload = cast(Dict[str, Any], cmd.payload)
             c = Cmd()
-            c.cmd = command
-            c.payload = payload["payload"]
+            c.cmd = COMMANDS.GET_SHOES
             r = await self.make_request(
-                f"{self.config['GlobalConfig']['socket_path']}/{'Monitor' if is_monitor else 'Scraper'}.{payload['name']}",
+                f"{self.config['GlobalConfig']['socket_path']}/Monitor.{payload['name']}",
+                c,
+            )
+            return r
+        else:
+            r = badResponse()
+            r.error = ERRORS.MISSING_PAYLOAD_ARGS
+            r.info = f"{missing}"
+            return r
+
+    async def on_get_monitor_shoes(self, cmd: Cmd) -> Response:
+        success, missing = cmd.has_valid_args(self.getter_args)
+        if success:
+            payload = cast(Dict[str, Any], cmd.payload)
+            c = Cmd()
+            c.cmd = COMMANDS.SET_SHOES
+            r = await self.make_request(
+                f"{self.config['GlobalConfig']['socket_path']}/Monitor.{payload['name']}",
                 c,
             )
             return r
