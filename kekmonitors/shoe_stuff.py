@@ -3,6 +3,7 @@ NEW_RELEASE = 1
 RESTOCK = 2
 INCOMING = 3
 
+from datetime import datetime
 
 class Shoe:
     def __init__(self):
@@ -38,6 +39,7 @@ class Shoe:
         self.out_of_stock = False
         self.release_method = ""
         self.reason = OTHER
+        self.last_seen=0
         self.other = {}
 
     @property
@@ -190,6 +192,18 @@ class Shoe:
         ):
             raise Exception("Invalid reason provided")
         self.__reason = reason
+
+    @property
+    def last_seen(self):
+        return self.__last_seen
+
+    @last_seen.setter
+    def last_seen(self, last_seen):
+        if not isinstance(last_seen, int) and not isinstance(last_seen, float):
+            raise Exception("Last seen is not a number")
+        if last_seen > datetime.utcnow().timestamp():
+            raise Exception("Does your shoe come from the future!? Last seen is in the future.")
+        self.__last_seen = last_seen
 
     @property
     def other(self):

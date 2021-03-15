@@ -6,7 +6,7 @@ import tornado.ioloop
 import tornado.web
 
 from kekmonitors.config import COMMANDS, Config
-from kekmonitors.utils.server.msg import Cmd
+from kekmonitors.comms.msg import Cmd
 from kekmonitors.utils.tools import make_request
 
 

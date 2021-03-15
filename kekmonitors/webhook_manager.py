@@ -108,7 +108,9 @@ class WebhookSender(Thread):
                             time.sleep(delay)
                             continue
                     else:
-                        self.logger.warning(f"Attention: {self.webhook} posted with {r.status_code} but it doesnt contain the rateLimit header; are you sure the webhook is correct???")
+                        self.logger.warning(
+                            f"Attention: {self.webhook} posted with {r.status_code} but it doesnt contain the rateLimit header; are you sure the webhook is correct???"
+                        )
                     break
             self.add_event.clear()
 

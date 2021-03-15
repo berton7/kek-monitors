@@ -1,7 +1,7 @@
 from typing import Any, Dict, List
 
 import pymongo
-from kekmonitors.utils.shoe_stuff import Shoe
+from kekmonitors.shoe_stuff import Shoe
 
 
 def _change_keys(d, _from, _to):
@@ -73,7 +73,7 @@ class ShoeManager(object):
         else:
             return None
 
-    def find_shoes(self, query: Dict[str, Any]):
+    def find_shoes(self, query: Dict[str, Any]) -> List[Shoe]:
         """Find all shoes passing ```query``` to pymongo's find_one"""
         q = {}
         for k in query:
@@ -95,3 +95,4 @@ class ShoeManager(object):
         self._db.update_many(
             {"_Shoe__link": shoe.link}, {"$set": sanitize(shoe.__dict__)}
         )
+

@@ -12,10 +12,10 @@ from watchdog import observers
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
 from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
-from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
-from kekmonitors.utils.server.server import Server
-from kekmonitors.utils.shoe_manager import ShoeManager
-from kekmonitors.utils.shoe_stuff import Shoe
+from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.comms.server import Server
+from kekmonitors.shoe_manager import ShoeManager
+from kekmonitors.shoe_stuff import Shoe
 from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
 
 
@@ -112,7 +112,7 @@ class Common(Server, FileSystemEventHandler):
         self.shoe_manager = ShoeManager(config)
         self.register()
 
-        if config["Options"]["disable_config_watcher"] == "False":
+        if config["Options"]["enable_config_watcher"] == "True":
             observer = observers.Observer()
             observer.schedule(
                 self,
@@ -228,7 +228,7 @@ class Common(Server, FileSystemEventHandler):
             return j[self.class_name]
 
     def update_local_config(self) -> Dict[str, Any]:
-        changed = {} # type: Dict[str, Any]
+        changed = {}  # type: Dict[str, Any]
         if self._new_blacklist is not None:
             self.general_logger.info(f"New blacklist: {self._new_blacklist}")
             old = self.blacklist_json
@@ -242,13 +242,13 @@ class Common(Server, FileSystemEventHandler):
             self._new_whitelist = None
             changed["whitelist"] = {"old": old, "new": self.whitelist_json}
         if self._new_webhooks is not None:
-            old = self.webhooks_json # type: ignore
+            old = self.webhooks_json  # type: ignore
             self.general_logger.info(f"New webhooks: {self._new_webhooks}")
             self.webhooks_json = self._new_webhooks
             self._new_webhooks = None
             changed["webhooks"] = {"old": old, "new": self.webhooks_json}
         if self._new_config is not None:
-            old = self.config_json # type: ignore
+            old = self.config_json  # type: ignore
             self.general_logger.info(f"New config: {self._new_config}")
             self.config_json = self._new_config
             self._new_config = None
@@ -346,6 +346,14 @@ class Common(Server, FileSystemEventHandler):
 
     async def main(self):
         pass
+
+    def check_shoe(self, shoe: Shoe):
+        """Searches the database for the given, updating it if found or adding it if not found. Also updates the last_seen timestamp.
+
+        Args:
+            shoe (Shoe): Shoe to check
+        """
+        return
 
     def start(self):
         """Call this to start the loop."""

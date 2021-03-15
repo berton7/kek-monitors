@@ -115,8 +115,10 @@ name =\n\
 \n\
 [Options]\n\
 add_stream_handler = True\n\
-disable_config_watcher = False\n\
+enable_config_watcher = True\n\
+enable_webhooks = True\n\
 loop_delay = 5\n\
+max_last_seen = 2592000\n\
 "
         get_file_if_exist_else_create(config_path, self.default_config_str)
         parser = configparser.RawConfigParser()

@@ -16,8 +16,8 @@ from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
 import kekmonitors.utils.tools
 from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
-from kekmonitors.utils.server.msg import Cmd, Response, badResponse, okResponse
-from kekmonitors.utils.server.server import Server
+from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.comms.server import Server
 
 
 def get_parent_directory(src: str) -> str:

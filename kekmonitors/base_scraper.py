@@ -1,21 +1,18 @@
 import asyncio
-import copy
+from datetime import datetime
 import json
 import traceback
-from typing import List
 
 import discord
-import pymongo
 
 from kekmonitors.base_common import Common
 from kekmonitors.config import COMMANDS, Config
-from kekmonitors.utils import discord_embeds
+from kekmonitors import discord_embeds
 from kekmonitors.utils.network_utils import NetworkUtils
-from kekmonitors.utils.server.msg import Cmd, Response, okResponse
-from kekmonitors.utils.server.server import Server
-from kekmonitors.utils.shoe_stuff import Shoe
-from kekmonitors.utils.tools import dump_error
-from kekmonitors.utils.webhook_manager import WebhookManager
+from kekmonitors.comms.msg import Cmd, Response, okResponse
+from kekmonitors.comms.server import Server
+from kekmonitors.shoe_stuff import Shoe
+from kekmonitors.webhook_manager import WebhookManager
 
 
 class BaseScraper(Common, NetworkUtils):
@@ -27,13 +24,7 @@ class BaseScraper(Common, NetworkUtils):
 
         self.cmd_to_callback[COMMANDS.PING] = self._on_ping
         self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
-        self.links = []  # type: List[str]
-        self.shoes = []  # type: List[Shoe]
-        self._previous_shoes = []  # type: List[Shoe]
         self.crash_webhook = config["WebhookConfig"]["crash_webhook"]
-        self.shoes_db = pymongo.MongoClient(config["GlobalConfig"]["db_path"])[
-            config["GlobalConfig"]["db_name"]
-        ]["links"][self.class_name]
         self.webhook_manager = WebhookManager(config)
 
     def get_embed(self, shoe: Shoe) -> discord.Embed:
@@ -61,8 +52,6 @@ class BaseScraper(Common, NetworkUtils):
                     await self.on_config_change(changed)
                 try:
                     await self.loop()
-                    if self.shoes != self._previous_shoes:
-                        await self.update_links()
                 except:
                     self.general_logger.exception("")
                     if self.crash_webhook:
@@ -81,59 +70,19 @@ class BaseScraper(Common, NetworkUtils):
 
     async def loop(self):
         """User-defined loop. Replace this with a function that will be run every `delay` seconds"""
-        """Modify self.links in order to force a link update on the corresponding monitor."""
         await asyncio.sleep(1)
 
-    async def update_links(self):
-        """This is called just after self.loop. Sends the shoes to the corresponding monitor."""
-        for shoe in self.shoes:
-            if not self.shoe_manager.find_shoe({"link": shoe.link}):
-                self.shoe_manager.add_shoe(shoe)
-                if self.config["Options"]["enable_webhooks"] == "True":
-                    self.webhook_manager.add_to_queue(
-                        self.get_embed(shoe), self.webhooks_json
-                    )
-        await self._add_new_shoes()
-        self._previous_shoes = copy.copy(self.shoes)  # allows to perform ==
+    def check_shoe(self, shoe: Shoe):
+        """Searches the database for the given, updating it if found or adding it if not found. Also updates the last_seen timestamp.
+
+        Args:
+            shoe (Shoe): Shoe to check
+        """
+        shoe.last_seen = datetime.utcnow().timestamp()
+        if self.shoe_manager.find_shoe({"link": shoe.link}):
+            self.shoe_manager.update_shoe(shoe)
+        else:
+            self.shoe_manager.add_shoe(shoe)
 
     async def _on_ping(self, cmd: Cmd) -> Response:
         return okResponse()
-
-    async def _set_shoes(self):
-        """Connect to the corresponding monitor, if available, and tell it to set the new links."""
-        socket_path = (
-            f"{self.config['GlobalConfig']['socket_path']}/Monitor.{self.class_name}"
-        )
-        cmd = Cmd()
-        cmd.cmd = COMMANDS.SET_SHOES
-        cmd.payload = [shoe.__dict__ for shoe in self.shoes]
-        response = await self.make_request(socket_path, cmd)
-        if response.error.value:
-            dump_error(self.client_logger, response)
-
-    async def _add_shoes(self):
-        """Connect to the corresponding monitor, if available, and send it the new links."""
-        socket_path = (
-            f"{self.config['GlobalConfig']['socket_path']}/Monitor.{self.class_name}"
-        )
-        cmd = Cmd()
-        cmd.cmd = COMMANDS.ADD_SHOES
-        cmd.payload = [shoe.__dict__ for shoe in self.shoes]
-        response = await self.make_request(socket_path, cmd)
-        if response.error.value:
-            dump_error(self.client_logger, response)
-
-    async def _add_new_shoes(self):
-        """Connect to the corresponding monitor, if available, and send it only the new shoes."""
-        socket_path = (
-            f"{self.config['GlobalConfig']['socket_path']}/Monitor.{self.class_name}"
-        )
-        cmd = Cmd()
-        cmd.cmd = COMMANDS.ADD_SHOES
-        cmd.payload = [
-            shoe.__dict__ for shoe in self.shoes if shoe not in self._previous_shoes
-        ]
-        if cmd.payload:
-            response = await self.make_request(socket_path, cmd)
-            if response.error.value:
-                dump_error(self.client_logger, response)

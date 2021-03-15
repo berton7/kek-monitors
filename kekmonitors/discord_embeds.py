@@ -1,8 +1,8 @@
 from datetime import datetime
 
 from discord import Embed
-from kekmonitors.utils import shoe_stuff
-from kekmonitors.utils.shoe_stuff import Shoe
+from kekmonitors import shoe_stuff
+from kekmonitors.shoe_stuff import Shoe
 
 
 def get_empty_embed() -> Embed:
