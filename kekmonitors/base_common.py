@@ -127,7 +127,7 @@ class Common(Server, FileSystemEventHandler):
             common_blacklist_json_filepath, []
         )  # type: List[str]
         self.common_webhooks_json = self.load_config(
-            specific_webhooks_json_filepath, {}
+            common_webhooks_json_filepath, {}
         )  # type: Dict[str, Any]
         self.common_config_json = self.load_config(
             common_config_json_filepath, {}
