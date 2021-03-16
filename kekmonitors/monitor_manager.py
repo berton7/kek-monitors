@@ -32,8 +32,8 @@ class MonitorManager(Server, FileSystemEventHandler):
 
     def __init__(self, config: Config = Config()):
         # set default name if not already set in config
-        if not config["OtherConfig"]["name"]:
-            config["OtherConfig"]["name"] = f"Executable.MonitorManager"
+        if not config["OtherConfig"]["socket_name"]:
+            config["OtherConfig"]["socket_name"] = f"Executable.MonitorManager"
 
         self.config = config
 
@@ -44,7 +44,7 @@ class MonitorManager(Server, FileSystemEventHandler):
 
         # create logger
         logconfig = LogConfig(config)
-        logconfig["OtherConfig"]["name"] += ".General"
+        logconfig["OtherConfig"]["socket_name"] += ".General"
         self.general_logger = kekmonitors.utils.tools.get_logger(logconfig)
 
         # initialize callbacks

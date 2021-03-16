@@ -38,12 +38,13 @@ class Common(Server, FileSystemEventHandler):
 
         self.config = config
         self.kwargs = kwargs
+        config["OtherConfig"]["class_name"] = self.class_name
         log_config = LogConfig(config)
 
-        log_config["OtherConfig"]["name"] += ".General"
+        log_config["OtherConfig"]["socket_name"] += ".General"
         self.general_logger = get_logger(log_config)
-        log_config["OtherConfig"]["name"] = (
-            self.config["OtherConfig"]["name"] + ".Client"
+        log_config["OtherConfig"]["socket_name"] = (
+            config["OtherConfig"]["socket_name"] + ".Client"
         )
         self.client_logger = get_logger(log_config)
 
@@ -54,7 +55,7 @@ class Common(Server, FileSystemEventHandler):
             os.path.sep.join(
                 [
                     self.config["GlobalConfig"]["socket_path"],
-                    config["OtherConfig"]["name"],
+                    config["OtherConfig"]["socket_name"],
                 ]
             ),
         )
@@ -78,7 +79,7 @@ class Common(Server, FileSystemEventHandler):
         self.cmd_to_callback[COMMANDS.SET_COMMON_WEBHOOKS] = self.on_set_common_webhooks
         self.cmd_to_callback[COMMANDS.SET_COMMON_CONFIG] = self.on_set_common_config
 
-        is_monitor = config["OtherConfig"]["name"].startswith("Monitor.")
+        is_monitor = config["OtherConfig"]["socket_name"].startswith("Monitor.")
         self.is_monitor = is_monitor
         pre_conf_path = self.config["GlobalConfig"]["config_path"]
         specific_whitelist_json_filepath = os.path.sep.join(

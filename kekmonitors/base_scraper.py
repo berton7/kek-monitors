@@ -17,10 +17,10 @@ from kekmonitors.webhook_manager import WebhookManager
 
 class BaseScraper(Common, NetworkUtils):
     def __init__(self, config: Config = Config(), **kwargs):
-        config["OtherConfig"]["name"] = f"Scraper.{self.get_class_name()}"
+        config["OtherConfig"]["socket_name"] = f"Scraper.{self.get_class_name()}"
 
         super().__init__(config, **kwargs)
-        super(Server, self).__init__(config["OtherConfig"]["name"])
+        super(Server, self).__init__(config["OtherConfig"]["socket_name"])
 
         self.cmd_to_callback[COMMANDS.PING] = self._on_ping
         self.cmd_to_callback[COMMANDS.STOP] = self._stop_serving
@@ -47,7 +47,7 @@ class BaseScraper(Common, NetworkUtils):
         await self.async_init()
         while True:
             async with self._loop_lock:
-                changed = self.update_local_config()
+                changed = self.update_config()
                 if changed:
                     await self.on_config_change(changed)
                 try:

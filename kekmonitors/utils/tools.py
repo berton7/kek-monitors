@@ -61,7 +61,7 @@ def get_logger(config: LogConfig):
     """
     Get preconfigured logger.
     """
-    logger = logging.getLogger(config["OtherConfig"]["name"])
+    logger = logging.getLogger(config["OtherConfig"]["socket_name"])
     logger.propagate = False
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s")
@@ -69,7 +69,7 @@ def get_logger(config: LogConfig):
     while logger.handlers:
         logger.handlers.pop()
 
-    splitted_name = config["OtherConfig"]["name"].split(".")
+    splitted_name = config["OtherConfig"]["socket_name"].split(".")
     log_path = Config()["GlobalConfig"]["log_path"]
     os.makedirs(os.path.sep.join([log_path, *splitted_name[:2]]), exist_ok=True)
     file_handler = logging.handlers.TimedRotatingFileHandler(

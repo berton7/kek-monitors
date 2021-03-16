@@ -119,7 +119,8 @@ timestamp_format = %d %b %Y, %H:%M:%S.%f\n\
 embed_color = 255\n\
 \n\
 [OtherConfig]\n\
-name =\n\
+class_name =\n\
+socket_name =\n\
 \n\
 [Options]\n\
 add_stream_handler = True\n\
@@ -133,7 +134,8 @@ max_last_seen = 2592000\n\
         self.parser = parser
         parser.read(config_path)
         self["GlobalConfig"]["config_path"] = path
-        self["OtherConfig"]["name"] = ""
+        self["OtherConfig"]["class_name"] = ""
+        self["OtherConfig"]["socket_name"] = ""
 
     def __getitem__(self, key: str) -> configparser.SectionProxy:
         return self.parser[key]

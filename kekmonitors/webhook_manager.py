@@ -119,7 +119,7 @@ class WebhookManager:
     def __init__(self, config: Config):
         logconfig = LogConfig(config)
         self.config = logconfig
-        logconfig["OtherConfig"]["name"] += ".WebhookManager"
+        logconfig["OtherConfig"]["socket_name"] += ".WebhookManager"
         self.logger = get_logger(logconfig)
         self.webhook_senders = {}  # type: Dict[str, WebhookSender]
         self.add_event = Event()

@@ -44,7 +44,7 @@ class ShoeManager(object):
         self.db_name = config["GlobalConfig"]["db_name"]
         self.db_path = config["GlobalConfig"]["db_path"]
 
-        self._db = pymongo.MongoClient(self.db_path)[self.db_name]["items"]
+        self._db = pymongo.MongoClient(self.db_path)[self.db_name]["items"][config["OtherConfig"]["class_name"]]
 
     def add_shoe(self, shoe: Shoe):
         """Add this shoe to the database"""
