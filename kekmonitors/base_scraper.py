@@ -83,6 +83,7 @@ class BaseScraper(Common, NetworkUtils):
             self.shoe_manager.update_shoe(shoe)
         else:
             self.shoe_manager.add_shoe(shoe)
+            self.webhook_manager.add_to_queue(self.get_embed(shoe), self.webhooks_json)
 
     async def _on_ping(self, cmd: Cmd) -> Response:
         return okResponse()
