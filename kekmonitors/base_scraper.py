@@ -72,15 +72,16 @@ class BaseScraper(Common, NetworkUtils):
         """User-defined loop. Replace this with a function that will be run every `delay` seconds"""
         await asyncio.sleep(1)
 
-    def check_shoe(self, shoe: Shoe):
+    def check_shoe(self, shoe: Shoe, update_ts = True):
         """Searches the database for the given, updating it if found or adding it if not found. Also updates the last_seen timestamp.
 
         Args:
             shoe (Shoe): Shoe to check
         """
-        shoe.last_seen = datetime.utcnow().timestamp()
+        if update_ts:
+            shoe.last_seen = datetime.utcnow().timestamp()
         if self.shoe_manager.find_shoe({"link": shoe.link}):
-            self.shoe_manager.update_shoe(shoe)
+            self.shoe_manager._db.find_one_and_update({"_Shoe__link": shoe.link}, {"_Shoe__last_seen": shoe.last_seen})
         else:
             self.shoe_manager.add_shoe(shoe)
             self.webhook_manager.add_to_queue(self.get_embed(shoe), self.webhooks_json)

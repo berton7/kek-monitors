@@ -83,7 +83,9 @@ class BaseMonitor(Common, NetworkUtils):
         """User-defined loop. Replace this with a function that will be run every `delay` seconds"""
         await asyncio.sleep(1)
 
-    def shoe_check(self, shoe: Shoe):
+    def shoe_check(self, shoe: Shoe, update_ts = True):
+        if update_ts:
+            shoe.last_seen = datetime.utcnow().timestamp()
         returned = self.set_reason_and_update_shoe(shoe)
         if returned and self.config["Options"]["enable_webhooks"] == "True":
             embed = self.get_embed(returned)
@@ -94,7 +96,6 @@ class BaseMonitor(Common, NetworkUtils):
         if so, set reason to restock, update the db and return a shoe with only the restocked sizes;\n
         else update the shoe and return None. If not in the db return a copy of the shoe."""
         self.general_logger.debug(f"Checking {shoe.name} - {shoe.link} in db...")
-        shoe.last_seen = datetime.utcnow().timestamp()
         new_or_restocked = True
         db_shoe = self.shoe_manager.find_shoe({"link": shoe.link})
         return_shoe = copy.deepcopy(shoe)
