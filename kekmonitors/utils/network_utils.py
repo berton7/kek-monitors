@@ -108,6 +108,7 @@ class NetworkUtils(object):
                         continue
                 elif response.code == 404:
                     if retry_on_404:
+                        await asyncio.sleep(delay)
                         continue
                     # usually this is what we want to do
                     self.network_logger.debug("Not retrying on 404.")
