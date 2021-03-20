@@ -57,7 +57,9 @@ class Common(Server, FileSystemEventHandler):
         if sys.version_info[1] > 6:
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         else:
-            self.general_logger.warning(f"You're currently running python {sys.version_info[0]}.{sys.version_info[1]}, which does not support uvloop. Please consider upgrading to at least 3.7, since uvloop brings many enhancements to the asyncio loop.")
+            self.general_logger.warning(
+                f"You're currently running python {sys.version_info[0]}.{sys.version_info[1]}, which does not support uvloop. Please consider upgrading to at least 3.7, since uvloop brings many enhancements to the asyncio loop."
+            )
 
         super().__init__(
             config,
@@ -79,12 +81,22 @@ class Common(Server, FileSystemEventHandler):
         self.cmd_to_callback[COMMANDS.GET_BLACKLIST] = self.on_get_blacklist
         self.cmd_to_callback[COMMANDS.GET_WEBHOOKS] = self.on_get_webhooks
         self.cmd_to_callback[COMMANDS.GET_CONFIG] = self.on_get_config
-        self.cmd_to_callback[COMMANDS.SET_SPECIFIC_BLACKLIST] = self.on_set_specific_blacklist
-        self.cmd_to_callback[COMMANDS.SET_SPECIFIC_WHITELIST] = self.on_set_specific_whitelist
-        self.cmd_to_callback[COMMANDS.SET_SPECIFIC_WEBHOOKS] = self.on_set_specific_webhooks
+        self.cmd_to_callback[
+            COMMANDS.SET_SPECIFIC_BLACKLIST
+        ] = self.on_set_specific_blacklist
+        self.cmd_to_callback[
+            COMMANDS.SET_SPECIFIC_WHITELIST
+        ] = self.on_set_specific_whitelist
+        self.cmd_to_callback[
+            COMMANDS.SET_SPECIFIC_WEBHOOKS
+        ] = self.on_set_specific_webhooks
         self.cmd_to_callback[COMMANDS.SET_SPECIFIC_CONFIG] = self.on_set_specific_config
-        self.cmd_to_callback[COMMANDS.SET_COMMON_BLACKLIST] = self.on_set_common_blacklist
-        self.cmd_to_callback[COMMANDS.SET_COMMON_WHITELIST] = self.on_set_common_whitelist
+        self.cmd_to_callback[
+            COMMANDS.SET_COMMON_BLACKLIST
+        ] = self.on_set_common_blacklist
+        self.cmd_to_callback[
+            COMMANDS.SET_COMMON_WHITELIST
+        ] = self.on_set_common_whitelist
         self.cmd_to_callback[COMMANDS.SET_COMMON_WEBHOOKS] = self.on_set_common_webhooks
         self.cmd_to_callback[COMMANDS.SET_COMMON_CONFIG] = self.on_set_common_config
 
@@ -217,7 +229,9 @@ class Common(Server, FileSystemEventHandler):
         # if a config file is updated:
         if not filepath.endswith(".json"):
             return
-        if filepath.startswith(os.path.sep.join((self.config["GlobalConfig"]["config_path"], "common"))):
+        if filepath.startswith(
+            os.path.sep.join((self.config["GlobalConfig"]["config_path"], "common"))
+        ):
             asyncio.run_coroutine_threadsafe(
                 self.update_common_configs(filepath), self._asyncio_loop
             )
@@ -309,26 +323,45 @@ class Common(Server, FileSystemEventHandler):
             return j[self.class_name]
 
     def update_config(self) -> Dict[str, Union[Dict[str, Any], List[str]]]:
-        changed = {} # type: Dict[str, Union[Dict[str, Any], List[str]]]
-        if self._new_common_blacklist is not None or self._new_specific_blacklist is not None:
+        changed = {}  # type: Dict[str, Union[Dict[str, Any], List[str]]]
+        if (
+            self._new_common_blacklist is not None
+            or self._new_specific_blacklist is not None
+        ):
             if self._new_common_blacklist is not None:
                 self.common_blacklist_json = self._new_common_blacklist
             if self._new_specific_blacklist is not None:
                 self.specific_blacklist_json = self._new_specific_blacklist
-            changed["blacklist"] = {"old": self.blacklist_json, "new": self.common_blacklist_json + self.specific_blacklist_json}
-            self.blacklist_json = self.common_blacklist_json + self.specific_blacklist_json
+            changed["blacklist"] = {
+                "old": self.blacklist_json,
+                "new": self.common_blacklist_json + self.specific_blacklist_json,
+            }
+            self.blacklist_json = (
+                self.common_blacklist_json + self.specific_blacklist_json
+            )
             self.general_logger.info(f"New blacklist: {self.blacklist_json}")
             self._new_common_blacklist = self._new_specific_blacklist = None
-        if self._new_common_whitelist is not None or self._new_specific_whitelist is not None:
+        if (
+            self._new_common_whitelist is not None
+            or self._new_specific_whitelist is not None
+        ):
             if self._new_common_whitelist is not None:
                 self.common_whitelist_json = self._new_common_whitelist
             if self._new_specific_whitelist is not None:
                 self.specific_whitelist_json = self._new_specific_whitelist
-            changed["whitelist"] = {"old": self.whitelist_json, "new": self.common_whitelist_json + self.specific_whitelist_json}
-            self.whitelist_json = self.common_whitelist_json + self.specific_whitelist_json
+            changed["whitelist"] = {
+                "old": self.whitelist_json,
+                "new": self.common_whitelist_json + self.specific_whitelist_json,
+            }
+            self.whitelist_json = (
+                self.common_whitelist_json + self.specific_whitelist_json
+            )
             self.general_logger.info(f"New whitelist: {self.whitelist_json}")
             self._new_common_whitelist = self._new_specific_whitelist = None
-        if self._new_common_webhooks is not None or self._new_specific_webhooks is not None:
+        if (
+            self._new_common_webhooks is not None
+            or self._new_specific_webhooks is not None
+        ):
             if self._new_specific_webhooks == {}:
                 new_webhooks = {}
             else:
@@ -385,7 +418,9 @@ class Common(Server, FileSystemEventHandler):
             self._new_specific_whitelist = cmd.payload
             r = okResponse()
         else:
-            self.general_logger.warning(f"Received new whitelist but it was of type {type(cmd.payload)}")
+            self.general_logger.warning(
+                f"Received new whitelist but it was of type {type(cmd.payload)}"
+            )
             r.error = ERRORS.BAD_PAYLOAD
             r.info = f"Expected list, got {type(cmd.payload)}"
         return r
@@ -397,7 +432,9 @@ class Common(Server, FileSystemEventHandler):
             self._new_specific_blacklist = cmd.payload
             r = okResponse()
         else:
-            self.general_logger.warning(f"Received new blacklist but it was of type {type(cmd.payload)}")
+            self.general_logger.warning(
+                f"Received new blacklist but it was of type {type(cmd.payload)}"
+            )
             r.error = ERRORS.BAD_PAYLOAD
             r.info = f"Expected list, got {type(cmd.payload)}"
         return r
@@ -406,10 +443,12 @@ class Common(Server, FileSystemEventHandler):
         r = badResponse()
         if isinstance(cmd.payload, dict):
             self.general_logger.info("Received new webhooks")
-            self._new_specific_webhooks = cmd.payload # type: ignore
+            self._new_specific_webhooks = cmd.payload  # type: ignore
             r = okResponse()
         else:
-            self.general_logger.warning(f"Received new webhooks but it was of type {type(cmd.payload)}")
+            self.general_logger.warning(
+                f"Received new webhooks but it was of type {type(cmd.payload)}"
+            )
             r.error = ERRORS.BAD_PAYLOAD
             r.info = f"Expected dict, got {type(cmd.payload)}"
         return r
@@ -421,7 +460,9 @@ class Common(Server, FileSystemEventHandler):
             self._new_specific_config = cmd.payload
             r = okResponse()
         else:
-            self.general_logger.warning(f"Received new config but it was of type {type(cmd.payload)}")
+            self.general_logger.warning(
+                f"Received new config but it was of type {type(cmd.payload)}"
+            )
             r.error = ERRORS.BAD_PAYLOAD
             r.info = f"Expected dict, got {type(cmd.payload)}"
         return r
@@ -433,7 +474,9 @@ class Common(Server, FileSystemEventHandler):
             self._new_common_whitelist = cmd.payload
             r = okResponse()
         else:
-            self.general_logger.warning(f"Received new whitelist but it was of type {type(cmd.payload)}")
+            self.general_logger.warning(
+                f"Received new whitelist but it was of type {type(cmd.payload)}"
+            )
             r.error = ERRORS.BAD_PAYLOAD
             r.info = f"Expected list, got {type(cmd.payload)}"
         return r
@@ -445,7 +488,9 @@ class Common(Server, FileSystemEventHandler):
             self._new_common_blacklist = cmd.payload
             r = okResponse()
         else:
-            self.general_logger.warning(f"Received new blacklist but it was of type {type(cmd.payload)}")
+            self.general_logger.warning(
+                f"Received new blacklist but it was of type {type(cmd.payload)}"
+            )
             r.error = ERRORS.BAD_PAYLOAD
             r.info = f"Expected list, got {type(cmd.payload)}"
         return r
@@ -454,10 +499,12 @@ class Common(Server, FileSystemEventHandler):
         r = badResponse()
         if isinstance(cmd.payload, dict):
             self.general_logger.info("Received new webhooks")
-            self._new_common_webhooks = cmd.payload # type: ignore
+            self._new_common_webhooks = cmd.payload  # type: ignore
             r = okResponse()
         else:
-            self.general_logger.warning(f"Received new webhooks but it was of type {type(cmd.payload)}")
+            self.general_logger.warning(
+                f"Received new webhooks but it was of type {type(cmd.payload)}"
+            )
             r.error = ERRORS.BAD_PAYLOAD
             r.info = f"Expected dict, got {type(cmd.payload)}"
         return r
@@ -469,7 +516,9 @@ class Common(Server, FileSystemEventHandler):
             self._new_common_config = cmd.payload
             r = okResponse()
         else:
-            self.general_logger.warning(f"Received new config but it was of type {type(cmd.payload)}")
+            self.general_logger.warning(
+                f"Received new config but it was of type {type(cmd.payload)}"
+            )
             r.error = ERRORS.BAD_PAYLOAD
             r.info = f"Expected dict, got {type(cmd.payload)}"
         return r

@@ -161,5 +161,7 @@ def website_specific_embed(shoe: Shoe) -> Embed:
                 inline=False,
             )
     if "alternative_url" in shoe.other:
-        fd_embed.description = f"\n\n[Alternative link]({shoe.other['alternative_url']})"
+        fd_embed.description = (
+            f"\n\n[Alternative link]({shoe.other['alternative_url']})"
+        )
     return fd_embed

@@ -48,7 +48,9 @@ class MonitorManager(Server, FileSystemEventHandler):
         if sys.version_info[1] > 6:
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         else:
-            self.general_logger.warning(f"You're currently running python {sys.version_info[0]}.{sys.version_info[1]}, which does not support uvloop. Please consider upgrading to at least 3.7, since uvloop brings many enhancements to the asyncio loop.")
+            self.general_logger.warning(
+                f"You're currently running python {sys.version_info[0]}.{sys.version_info[1]}, which does not support uvloop. Please consider upgrading to at least 3.7, since uvloop brings many enhancements to the asyncio loop."
+            )
 
         super().__init__(
             config, f"{self.config['GlobalConfig']['socket_path']}/MonitorManager"

@@ -5,6 +5,7 @@ INCOMING = 3
 
 from datetime import datetime
 
+
 class Shoe:
     def __init__(self):
         self.link = ""
@@ -39,7 +40,7 @@ class Shoe:
         self.out_of_stock = False
         self.release_method = ""
         self.reason = OTHER
-        self.last_seen=0
+        self.last_seen = 0
         self.other = {}
 
     @property
@@ -202,7 +203,9 @@ class Shoe:
         if not isinstance(last_seen, int) and not isinstance(last_seen, float):
             raise Exception("Last seen is not a number")
         if last_seen > datetime.utcnow().timestamp():
-            raise Exception("Does your shoe come from the future!? Last seen is in the future.")
+            raise Exception(
+                "Does your shoe come from the future!? Last seen is in the future."
+            )
         self.__last_seen = last_seen
 
     @property

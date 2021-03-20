@@ -72,7 +72,7 @@ class BaseScraper(Common, NetworkUtils):
         """User-defined loop. Replace this with a function that will be run every `delay` seconds"""
         await asyncio.sleep(1)
 
-    def check_shoe(self, shoe: Shoe, update_ts = True):
+    def check_shoe(self, shoe: Shoe, update_ts=True):
         """Searches the database for the given, updating it if found or adding it if not found. Also updates the last_seen timestamp.
 
         Args:
@@ -81,11 +81,16 @@ class BaseScraper(Common, NetworkUtils):
         if update_ts:
             shoe.last_seen = datetime.utcnow().timestamp()
         if self.shoe_manager.find_shoe({"link": shoe.link}):
-            self.shoe_manager._db.find_one_and_update({"_Shoe__link": shoe.link}, {"$set": {"_Shoe__last_seen": shoe.last_seen}})
+            self.shoe_manager._db.find_one_and_update(
+                {"_Shoe__link": shoe.link},
+                {"$set": {"_Shoe__last_seen": shoe.last_seen}},
+            )
         else:
             self.shoe_manager.add_shoe(shoe)
             if self.config["Options"]["enable_webhooks"] == "True":
-                self.webhook_manager.add_to_queue(self.get_embed(shoe), self.webhooks_json)
+                self.webhook_manager.add_to_queue(
+                    self.get_embed(shoe), self.webhooks_json
+                )
 
     async def _on_ping(self, cmd: Cmd) -> Response:
         return okResponse()

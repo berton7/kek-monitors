@@ -83,7 +83,7 @@ class BaseMonitor(Common, NetworkUtils):
         """User-defined loop. Replace this with a function that will be run every `delay` seconds"""
         await asyncio.sleep(1)
 
-    def shoe_check(self, shoe: Shoe, update_ts = True):
+    def shoe_check(self, shoe: Shoe, update_ts=True):
         if update_ts:
             shoe.last_seen = datetime.utcnow().timestamp()
         returned = self.set_reason_and_update_shoe(shoe)
