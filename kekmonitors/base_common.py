@@ -18,6 +18,7 @@ from kekmonitors.comms.server import Server
 from kekmonitors.shoe_manager import ShoeManager
 from kekmonitors.shoe_stuff import Shoe
 from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
+import uvloop
 
 
 def register_as(_type: str, name: str, path: str, client: Collection):
@@ -49,6 +50,8 @@ class Common(Server, FileSystemEventHandler):
         self.client_logger = get_logger(log_config)
 
         self.delay = int(config["Options"]["loop_delay"])
+
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
         super().__init__(
             config,
