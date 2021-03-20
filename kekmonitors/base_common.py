@@ -18,7 +18,10 @@ from kekmonitors.comms.server import Server
 from kekmonitors.shoe_manager import ShoeManager
 from kekmonitors.shoe_stuff import Shoe
 from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
-import uvloop
+import sys
+
+if sys.version_info[1] > 6:
+    import uvloop
 
 
 def register_as(_type: str, name: str, path: str, client: Collection):
@@ -51,7 +54,10 @@ class Common(Server, FileSystemEventHandler):
 
         self.delay = int(config["Options"]["loop_delay"])
 
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        if sys.version_info[1] > 6:
+            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        else:
+            self.general_logger.warning(f"You're currently running python {sys.version_info[0]}.{sys.version_info[1]}, which does not support uvloop. Please consider upgrading to at least 3.7, since uvloop brings many enhancements to the asyncio loop.")
 
         super().__init__(
             config,

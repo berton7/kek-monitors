@@ -19,6 +19,9 @@ from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
 from kekmonitors.comms.server import Server
 
+if sys.version_info[1] > 6:
+    import uvloop
+
 
 def get_parent_directory(src: str) -> str:
     """
@@ -37,15 +40,20 @@ class MonitorManager(Server, FileSystemEventHandler):
 
         self.config = config
 
-        super().__init__(
-            config, f"{self.config['GlobalConfig']['socket_path']}/MonitorManager"
-        )  # Server init
-        super(Server).__init__()  # FileSystemEventHandler init
-
         # create logger
         logconfig = LogConfig(config)
         logconfig["OtherConfig"]["socket_name"] += ".General"
         self.general_logger = kekmonitors.utils.tools.get_logger(logconfig)
+
+        if sys.version_info[1] > 6:
+            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        else:
+            self.general_logger.warning(f"You're currently running python {sys.version_info[0]}.{sys.version_info[1]}, which does not support uvloop. Please consider upgrading to at least 3.7, since uvloop brings many enhancements to the asyncio loop.")
+
+        super().__init__(
+            config, f"{self.config['GlobalConfig']['socket_path']}/MonitorManager"
+        )  # Server init
+        super(Server).__init__()  # FileSystemEventHandler init
 
         # initialize callbacks
         self.cmd_to_callback[COMMANDS.MM_STOP_MONITOR_MANAGER] = self._stop_serving
