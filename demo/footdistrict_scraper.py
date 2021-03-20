@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from fake_headers import Headers
 from kekmonitors.base_scraper import BaseScraper
 from kekmonitors.config import Config
-from kekmonitors.utils.shoe_stuff import Shoe
+from kekmonitors.shoe_stuff import Shoe
 from kekmonitors.utils.tools import make_default_executable
 from pyppeteer import launch
 from pyppeteer.network_manager import Response
@@ -23,6 +23,7 @@ class Footdistrict(BaseScraper):
 
         # max links to be monitored
         self.max_links = 5
+        self.found_links = []  # type: List[str]
 
     async def async_init(self):
         self.browser = await launch()
@@ -105,19 +106,17 @@ class Footdistrict(BaseScraper):
                 count += 1
                 if count <= self.max_links:
                     link = prod.a.get("href")
-                    if link not in self.shoes:
+                    if link not in self.found_links:
                         shoe = Shoe()
                         shoe.link = link
-                        self.links.append(link)
-                        self.shoes.append(shoe)
                         self.general_logger.info(f"Found {link}")
+                        self.check_shoe(
+                            shoe
+                        )  # inserts/updates the shoe in the database, updating last_seen
                 else:
                     break
 
             await page.close()
-
-        pass
-        # at the end of each self.loop(), self.update_links() is called to send the links to the monitor, if they have changed since the previous loop
 
 
 if __name__ == "__main__":

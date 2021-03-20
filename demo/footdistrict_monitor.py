@@ -1,12 +1,13 @@
 import asyncio
 import json
+from datetime import datetime
 from typing import List
 
 from bs4 import BeautifulSoup
 from fake_headers import Headers
 from kekmonitors.base_monitor import BaseMonitor
 from kekmonitors.config import Config
-from kekmonitors.utils.shoe_stuff import Shoe
+from kekmonitors.shoe_stuff import Shoe
 from kekmonitors.utils.tools import make_default_executable
 from pyppeteer.launcher import launch
 from pyppeteer.network_manager import Response
@@ -65,19 +66,24 @@ class Footdistrict(BaseMonitor):
         return response
 
     async def loop(self):
-        # current links are contained in self.shoes
-        if not self.shoes:
+        # get timestamp for all shoes seen since max_last_seen
+        ts = datetime.utcnow().timestamp() - float(
+            self.config["Options"]["max_last_seen"]
+        )
+        # get those shoes
+        shoes = self.shoe_manager.find_shoes({"last_seen": {"$gte": ts}})
+        if not shoes:
             shoe = Shoe()
             shoe.link = (
                 "https://footdistrict.com/nike-air-max-95-ndstrkt-cz3591-001.html"
             )
-            self.shoes = [shoe]
+            shoes.append(shoe)
 
         # tasks will contain asynchronous tasks to be executed at once asynchronously
         # in this case, they will contain the requests to the links
         tasks = []
         pages = []  # type: List[Page]
-        for shoe in self.shoes:
+        for shoe in shoes:
             page = await self.context.newPage()
             pages.append(page)
             tasks.append(self.get_fd_page(shoe.link, page))
@@ -86,7 +92,7 @@ class Footdistrict(BaseMonitor):
         responses = await asyncio.gather(*tasks)  # type: List[Response]
         self.network_logger.debug("Got all links")
 
-        for shoe, page, response in zip(self.shoes, pages, responses):
+        for shoe, page, response in zip(shoes, pages, responses):
             if not response.ok:
                 self.general_logger.debug(
                     f"{shoe.link}: skipping parsing on code {response.code}"
@@ -134,9 +140,9 @@ class Footdistrict(BaseMonitor):
                     "Couldn't find name meta property -- skipping."
                 )
 
+            # self.shoe_check takes the shoe, updates last_seen, checks for restocks, updates database, sends webhooks if enabled
+            self.shoe_check(shoe)
             await page.close()
-
-            # append the shoe to self.shoes. ShoeManager will check for restocked sizes or new products just after this loop, in self.shoe_check()
 
 
 if __name__ == "__main__":
