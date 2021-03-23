@@ -72,7 +72,7 @@ class BaseScraper(Common, NetworkUtils):
         """User-defined loop. Replace this with a function that will be run every `delay` seconds"""
         await asyncio.sleep(1)
 
-    def check_shoe(self, shoe: Shoe, update_ts=True):
+    def shoe_check(self, shoe: Shoe, update_ts=True):
         """Searches the database for the given, updating it if found or adding it if not found. Also updates the last_seen timestamp.
 
         Args:
