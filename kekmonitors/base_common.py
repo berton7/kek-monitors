@@ -532,7 +532,7 @@ class Common(Server, FileSystemEventHandler):
     async def main(self):
         pass
 
-    def check_shoe(self, shoe: Shoe):
+    def shoe_check(self, shoe: Shoe):
         """Searches the database for the given, updating it if found or adding it if not found. Also updates the last_seen timestamp.
 
         Args:

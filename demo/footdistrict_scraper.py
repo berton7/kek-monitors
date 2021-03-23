@@ -110,7 +110,7 @@ class Footdistrict(BaseScraper):
                         shoe = Shoe()
                         shoe.link = link
                         self.general_logger.info(f"Found {link}")
-                        self.check_shoe(
+                        self.shoe_check(
                             shoe
                         )  # inserts/updates the shoe in the database, updating last_seen
                 else:
