@@ -68,7 +68,7 @@ Static configuration, like commands and global variables (```socket_path```), is
 
 ```json
 {
-	"Footdistrict": 
+	"Footdistrict":
 	[
 		"some term",
 		"another, term"
@@ -87,7 +87,7 @@ The `webhooks.json` file can be used to add webhooks configuration, with support
 
 ```json
 {
-	"Footdistrict": 
+	"Footdistrict":
 	{
 		"https://discordapp.com/api/webhooks/your-webhook-here": {
                         "name": "Human readable name, not used at all in the code",
