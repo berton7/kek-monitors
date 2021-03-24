@@ -15,9 +15,9 @@ from watchdog import observers
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
 import kekmonitors.utils.tools
-from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
 from kekmonitors.comms.server import Server
+from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 
 if sys.version_info[1] > 6:
     import uvloop

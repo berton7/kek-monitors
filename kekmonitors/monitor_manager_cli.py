@@ -2,8 +2,8 @@ import asyncio
 import sys
 from pprint import pprint
 
-from kekmonitors.config import COMMANDS, Config
 from kekmonitors.comms.msg import Cmd
+from kekmonitors.config import COMMANDS, Config
 from kekmonitors.utils.tools import make_request
 
 

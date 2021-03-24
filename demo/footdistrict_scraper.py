@@ -3,13 +3,14 @@ from typing import List
 
 from bs4 import BeautifulSoup
 from fake_headers import Headers
+from pyppeteer import launch
+from pyppeteer.network_manager import Response
+from pyppeteer.page import Page
+
 from kekmonitors.base_scraper import BaseScraper
 from kekmonitors.config import Config
 from kekmonitors.shoe_stuff import Shoe
 from kekmonitors.utils.tools import make_default_executable
-from pyppeteer import launch
-from pyppeteer.network_manager import Response
-from pyppeteer.page import Page
 
 
 class Footdistrict(BaseScraper):

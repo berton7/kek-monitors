@@ -4,9 +4,10 @@ from typing import Dict, Optional
 
 import pycurl
 import tornado.httpclient
+from tornado.curl_httpclient import CurlError
+
 from kekmonitors.config import LogConfig
 from kekmonitors.utils.tools import get_logger
-from tornado.curl_httpclient import CurlError
 
 
 class NetworkUtils(object):

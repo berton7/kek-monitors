@@ -3,8 +3,8 @@ import enum
 import os
 from typing import Callable, Dict
 
-from kekmonitors.config import ERRORS, Config, LogConfig
 from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.config import ERRORS, Config, LogConfig
 from kekmonitors.utils.tools import get_logger
 
 

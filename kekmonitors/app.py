@@ -5,8 +5,8 @@ import json
 import tornado.ioloop
 import tornado.web
 
-from kekmonitors.config import COMMANDS, Config
 from kekmonitors.comms.msg import Cmd
+from kekmonitors.config import COMMANDS, Config
 from kekmonitors.utils.tools import make_request
 
 

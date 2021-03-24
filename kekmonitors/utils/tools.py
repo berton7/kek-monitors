@@ -8,8 +8,8 @@ import sys
 from datetime import timezone
 from typing import Dict, List
 
-from kekmonitors.config import ERRORS, Config, LogConfig
 from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
+from kekmonitors.config import ERRORS, Config, LogConfig
 
 if sys.version_info[1] < 9:
 

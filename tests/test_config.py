@@ -1,11 +1,13 @@
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import pytest
-from kekmonitors.config import Config, LogConfig
 import os
+
+import pytest
+
+from kekmonitors.config import Config, LogConfig
 
 
 def _test_new_config(c):

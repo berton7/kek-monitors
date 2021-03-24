@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 
 import pymongo
+
 from kekmonitors.shoe_stuff import Shoe
 
 

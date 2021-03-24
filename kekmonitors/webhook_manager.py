@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Tuple
 
 import requests
 from discord import Embed
+
 from kekmonitors.config import Config, LogConfig
 from kekmonitors.utils.tools import get_logger
 

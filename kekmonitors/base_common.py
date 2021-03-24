@@ -2,6 +2,7 @@ import asyncio
 import copy
 import json
 import os
+import sys
 from json.decoder import JSONDecodeError
 from typing import Any, Dict, List, Optional, Union
 
@@ -12,13 +13,12 @@ from pymongo.collection import Collection
 from watchdog import observers
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
-from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
 from kekmonitors.comms.server import Server
+from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
 from kekmonitors.shoe_manager import ShoeManager
 from kekmonitors.shoe_stuff import Shoe
 from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
-import sys
 
 if sys.version_info[1] > 6:
     import uvloop
