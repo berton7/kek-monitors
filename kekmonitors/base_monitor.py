@@ -62,11 +62,16 @@ class BaseMonitor(Common, NetworkUtils):
                 except:
                     self.general_logger.exception("")
                     if self.crash_webhook:
+                        content = f"```{traceback.format_exc()}\n\nRestarting in {self.delay} seconds.```"
+                        if len(content) > 2000:
+                            content = f"```Stacktrace too long -- please view logs.\n\nRestarting in {self.delay} seconds.```"
                         data = json.dumps(
                             {
-                                "content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."[
-                                    :2000
-                                ]
+                                "content": content,
+                                "username": f"Monitor {self.class_name}",
+                                "avatar_url": self.config["WebhookConfig"][
+                                    "provider_icon"
+                                ],
                             }
                         )
                         await self.client.fetch(

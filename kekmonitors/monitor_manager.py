@@ -18,6 +18,7 @@ import kekmonitors.utils.tools
 from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
 from kekmonitors.comms.server import Server
 from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
+from kekmonitors.discord_embeds import get_mm_crash_embed
 
 if sys.version_info[1] > 6:
     import uvloop
@@ -495,11 +496,34 @@ class MonitorManager(Server, FileSystemEventHandler):
                         if monitor.returncode:
                             self.general_logger.warning(log)
                             if self.config["WebhookConfig"]["crash_webhook"]:
-                                data = {"content": log}
-                                await self.client.fetch(
+                                embed = get_mm_crash_embed(
+                                    "Monitor " + class_name,
+                                    monitor.returncode,
+                                    monitor.pid,
+                                )
+                                ts = datetime.now().strftime(
+                                    self.config["WebhookConfig"]["timestamp_format"]
+                                )
+
+                                embed.set_footer(
+                                    text=f"{self.config['WebhookConfig']['provider']} | {ts}",
+                                    icon_url=self.config["WebhookConfig"][
+                                        "provider_icon"
+                                    ],
+                                )
+                                data = json.dumps(
+                                    {
+                                        "embeds": [embed.to_dict()],
+                                        "username": "MonitorManager process watcher",
+                                        "avatar_url": self.config["WebhookConfig"][
+                                            "provider_icon"
+                                        ],
+                                    }
+                                )
+                                r = await self.client.fetch(
                                     self.config["WebhookConfig"]["crash_webhook"],
                                     method="POST",
-                                    body=json.dumps(data),
+                                    body=data,
                                     headers={"content-type": "application/json"},
                                     raise_error=False,
                                 )
@@ -519,11 +543,34 @@ class MonitorManager(Server, FileSystemEventHandler):
                         if scraper.returncode:
                             self.general_logger.warning(log)
                             if self.config["WebhookConfig"]["crash_webhook"]:
-                                data = {"content": log}
-                                await self.client.fetch(
+                                embed = get_mm_crash_embed(
+                                    "Scraper " + class_name,
+                                    scraper.returncode,
+                                    scraper.pid,
+                                )
+                                ts = datetime.now().strftime(
+                                    self.config["WebhookConfig"]["timestamp_format"]
+                                )
+
+                                embed.set_footer(
+                                    text=f"{self.config['WebhookConfig']['provider']} | {ts}",
+                                    icon_url=self.config["WebhookConfig"][
+                                        "provider_icon"
+                                    ],
+                                )
+                                data = json.dumps(
+                                    {
+                                        "embeds": [embed.to_dict()],
+                                        "username": "MonitorManager process watcher",
+                                        "avatar_url": self.config["WebhookConfig"][
+                                            "provider_icon"
+                                        ],
+                                    }
+                                )
+                                r = await self.client.fetch(
                                     self.config["WebhookConfig"]["crash_webhook"],
                                     method="POST",
-                                    body=json.dumps(data),
+                                    body=data,
                                     headers={"content-type": "application/json"},
                                     raise_error=False,
                                 )
@@ -662,7 +709,10 @@ class MonitorManager(Server, FileSystemEventHandler):
             start = self.monitor_processes[class_name]["start"].strftime(
                 "%m/%d/%Y, %H:%M:%S"
             )
-            process_status[class_name] = {"Started at": start}
+            process_status[class_name] = {
+                "Started at": start,
+                "PID": self.monitor_processes[class_name]["process"].pid,
+            }
         sockets_status = {}
         # for class_name in self.monitor_sockets:
         # sockets_status[class_name] = {class_name: self.monitor_sockets[class_name]}
@@ -680,7 +730,10 @@ class MonitorManager(Server, FileSystemEventHandler):
             start = self.scraper_processes[class_name]["start"].strftime(
                 "%m/%d/%Y, %H:%M:%S"
             )
-            process_status[class_name] = {"Started at": start}
+            process_status[class_name] = {
+                "Started at": start,
+                "PID": self.scraper_processes[class_name]["process"].pid,
+            }
         sockets_status = {}
         # for class_name in self.scraper_sockets:
         # sockets_status[class_name] = {class_name: self.scraper_sockets[class_name]}

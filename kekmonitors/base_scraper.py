@@ -55,13 +55,22 @@ class BaseScraper(Common, NetworkUtils):
                 except:
                     self.general_logger.exception("")
                     if self.crash_webhook:
-                        data = {
-                            "content": f"{self.class_name} has crashed:\n{traceback.format_exc()}\nRestarting in {self.delay} secs."
-                        }
+                        content = f"```{traceback.format_exc()}\n\nRestarting in {self.delay} seconds.```"
+                        if len(content) > 2000:
+                            content = f"```Stacktrace too long -- please view logs.\n\nRestarting in {self.delay} seconds.```"
+                        data = json.dumps(
+                            {
+                                "content": content,
+                                "username": f"Scraper {self.class_name}",
+                                "avatar_url": self.config["WebhookConfig"][
+                                    "provider_icon"
+                                ],
+                            }
+                        )
                         await self.client.fetch(
                             self.crash_webhook,
                             method="POST",
-                            body=json.dumps(data),
+                            body=data,
                             headers={"content-type": "application/json"},
                             raise_error=False,
                         )

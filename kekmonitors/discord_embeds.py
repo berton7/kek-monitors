@@ -3,6 +3,7 @@ from datetime import datetime
 from discord import Embed
 
 from kekmonitors import shoe_stuff
+from kekmonitors.config import Config
 from kekmonitors.shoe_stuff import Shoe
 
 
@@ -34,6 +35,16 @@ def get_scraper_embed(shoe: Shoe, friendly_website_name=""):
     if shoe.price != "Not available":
         embed.add_field(name="Price", value=shoe.price, inline=False)
 
+    return embed
+
+
+def get_mm_crash_embed(what: str, code: int, pid: int) -> Embed:
+    embed = get_empty_embed()
+    embed.title = "MonitorManager: something has crashed!"
+    embed.add_field(name="What: ", value=what, inline=True)
+    embed.add_field(name="PID: ", value=pid, inline=True)
+    embed.add_field(name="Exit code:  ", value=str(code), inline=True)
+    embed.timestamp = Embed.Empty
     return embed
 
 
