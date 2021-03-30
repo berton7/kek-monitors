@@ -52,7 +52,7 @@ class Common(Server, FileSystemEventHandler):
         )
         self.client_logger = get_logger(log_config)
 
-        self.delay = int(config["Options"]["loop_delay"])
+        self.delay = float(config["Options"]["loop_delay"])
 
         if sys.version_info[1] > 6:
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())

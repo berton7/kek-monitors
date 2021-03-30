@@ -157,7 +157,7 @@ def make_default_executable(_class, config: Config = Config()):
         "-d",
         "--delay",
         default=config["Options"]["loop_delay"],
-        type=int,
+        type=float,
         help=f"Specify a delay for the loop. (default: {config['Options']['loop_delay']})",
     )
     parser.add_argument(
