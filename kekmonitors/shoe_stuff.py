@@ -40,6 +40,7 @@ class Shoe:
         self.out_of_stock = False
         self.release_method = ""
         self.reason = OTHER
+        self.first_seen = 0
         self.last_seen = 0
         self.other = {}
 
@@ -206,7 +207,23 @@ class Shoe:
             raise Exception(
                 "Does your shoe come from the future!? Last seen is in the future."
             )
+        if last_seen < self.first_seen:
+            raise Exception("Last seen is less than first seen")
         self.__last_seen = last_seen
+
+    @property
+    def first_seen(self):
+        return self.__first_seen
+
+    @first_seen.setter
+    def first_seen(self, first_seen):
+        if not isinstance(first_seen, int) and not isinstance(first_seen, float):
+            raise Exception("Last seen is not a number")
+        if first_seen > datetime.utcnow().timestamp():
+            raise Exception(
+                "Does your shoe come from the future!? First seen is in the future."
+            )
+        self.__first_seen = first_seen
 
     @property
     def other(self):

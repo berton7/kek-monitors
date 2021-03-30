@@ -87,14 +87,16 @@ class BaseScraper(Common, NetworkUtils):
         Args:
             shoe (Shoe): Shoe to check
         """
+        now = datetime.utcnow().timestamp()
         if update_ts:
-            shoe.last_seen = datetime.utcnow().timestamp()
+            shoe.last_seen = now
         if self.shoe_manager.find_shoe({"link": shoe.link}):
             self.shoe_manager._db.find_one_and_update(
                 {"_Shoe__link": shoe.link},
                 {"$set": {"_Shoe__last_seen": shoe.last_seen}},
             )
         else:
+            shoe.first_seen = now
             self.shoe_manager.add_shoe(shoe)
             if self.config["Options"]["enable_webhooks"] == "True":
                 self.webhook_manager.add_to_queue(
