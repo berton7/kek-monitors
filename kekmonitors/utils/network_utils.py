@@ -118,10 +118,19 @@ class NetworkUtils(object):
                     if use_cache:
                         # if page was cached update it or just return it
                         if response.code < 400 and response.code != 304:
-                            self._cached_pages[url] = response.body.decode()
-                            self._last_modified_datetimes[url] = datetime.utcnow()
-                            if "etag" in response.headers:
-                                self._etags[url] = response.headers["etag"]
+                            try:
+                                self._cached_pages[url] = response.body.decode()
+                                self._last_modified_datetimes[url] = datetime.utcnow()
+                                if "etag" in response.headers:
+                                    self._etags[url] = response.headers["etag"]
+                            except UnicodeDecodeError:
+                                self.network_logger.exception(
+                                    "Got UnicodeDecodeError while trying to decode body, be careful:"
+                                )
+                            except:
+                                self.network_logger.exception(
+                                    "Got unhandled exception while trying to decode body:"
+                                )
                         return response
                     else:
                         return response
