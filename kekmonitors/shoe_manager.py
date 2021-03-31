@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, Generator, List
 
 import pymongo
 
@@ -76,7 +76,7 @@ class ShoeManager(object):
         else:
             return None
 
-    def find_shoes(self, query: Dict[str, Any]) -> List[Shoe]:
+    def find_shoes(self, query: Dict[str, Any]) -> Generator[Shoe, None, None]:
         """Find all shoes passing ```query``` to pymongo's find_one"""
         q = {}
         for k in query:
@@ -84,14 +84,12 @@ class ShoeManager(object):
                 q[f"_Shoe__{k}"] = query[k]
             else:
                 q[k] = query[k]
-        items = self._db.find(q, {"_id": 0})
-        shoes = []
-        for item in items:
+
+        for item in self._db.find(q, {"_id": 0}):
             if item:
                 shoe = Shoe()
-                shoe.__dict__ = unsanitize(item)
-                shoes.append(shoe)
-        return shoes
+                shoe.__dict__.update(unsanitize(item))
+                yield shoe
 
     def update_shoe(self, shoe: Shoe):
         """Update the shoe in the db matching the same link."""
