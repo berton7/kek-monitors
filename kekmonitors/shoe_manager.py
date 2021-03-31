@@ -71,7 +71,7 @@ class ShoeManager(object):
         item = self._db.find_one(q, {"_id": 0})
         if item:
             shoe = Shoe()
-            shoe.__dict__ = unsanitize(item)
+            shoe.__dict__.update(unsanitize(item))
             return shoe
         else:
             return None
