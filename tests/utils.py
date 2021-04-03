@@ -1,3 +1,6 @@
+from typing import Any, Generator
+
+
 def get_all_types():
     return (
         None,
@@ -18,7 +21,7 @@ def get_all_types():
     )
 
 
-def get_non_type(_type):
+def get_non_type(_type) -> Generator[Any, None, None]:
     types = get_all_types()
     for t in types:
         if type(t) != _type:

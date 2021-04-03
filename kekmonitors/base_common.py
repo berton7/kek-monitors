@@ -16,6 +16,7 @@ from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from kekmonitors.comms.msg import Cmd, Response, badResponse, okResponse
 from kekmonitors.comms.server import Server
 from kekmonitors.config import COMMANDS, ERRORS, Config, LogConfig
+from kekmonitors.exceptions import AlreadyRegisteredError
 from kekmonitors.shoe_manager import ShoeManager
 from kekmonitors.shoe_stuff import Shoe
 from kekmonitors.utils.tools import get_file_if_exist_else_create, get_logger
@@ -31,7 +32,7 @@ def register_as(_type: str, name: str, path: str, client: Collection):
         client[_type].insert_one({"name": name, "path": path})
     else:
         if existing["path"] != path:
-            raise Exception(
+            raise AlreadyRegisteredError(
                 f"Trying to register new {_type} ({name}) when it already exists in the database with a different path: {existing['path']}"
             )
 
