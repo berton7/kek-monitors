@@ -1,4 +1,5 @@
 import json
+from json.decoder import JSONDecodeError
 from typing import Any, Dict, List, Optional, Tuple
 
 from kekmonitors.config import COMMANDS, ERRORS
@@ -6,21 +7,8 @@ from kekmonitors.config import COMMANDS, ERRORS
 
 class Message(object):
     """
-    Represents a message to be sent. It can be initialized with bytes taken from msg.get_bytes().\n
-    It automatically sets the class (and sub-class) variables to the value set in provided msg.\n
+    Represents a message to be sent. Common class to derive from for communication.
     """
-
-    def __init__(self, msg: Optional[bytes] = None):
-        # update member variables by cycling through the first level of the json dict
-        if isinstance(msg, bytes):
-            try:
-                j = json.loads(msg)  # type: Dict[str, Any]
-                for key in self.__dict__:
-                    self.__dict__[key] = j.get(key, None)
-            except:
-                pass
-        else:
-            pass
 
     def get_json(self) -> Optional[Any]:
         """Return a json representation of the message"""
@@ -40,7 +28,22 @@ class Cmd(Message):
     def __init__(self, msg: Optional[bytes] = None):
         self.cmd = None  # type: Optional[int]
         self.payload = None  # type: Optional[Any]
-        super().__init__(msg)
+        if msg:
+            try:
+                jcmd = json.loads(msg)
+
+                try:
+                    self.cmd = jcmd["_Cmd__cmd"]
+                except KeyError:
+                    pass
+
+                try:
+                    self.payload = jcmd["_Cmd__payload"]
+                except KeyError:
+                    pass
+
+            except JSONDecodeError:
+                pass
 
     @property
     def cmd(self):
@@ -92,7 +95,27 @@ class Response(Message):
         self.error = None  # type: Optional[int]
         self.info = None  # type: Optional[str]
         self.payload = None  # type: Optional[Dict[str, Any]]
-        super().__init__(msg)
+        if msg:
+            try:
+                jresp = json.loads(msg)
+
+                try:
+                    self.error = jresp["_Response__error"]
+                except KeyError:
+                    pass
+
+                try:
+                    self.info = jresp["_Response__info"]
+                except KeyError:
+                    pass
+
+                try:
+                    self.payload = jresp["_Response__payload"]
+                except KeyError:
+                    pass
+
+            except JSONDecodeError:
+                pass
 
     @property
     def error(self):
