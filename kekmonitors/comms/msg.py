@@ -58,6 +58,14 @@ class Cmd(Message):
         else:
             raise Exception(f"Tried to set cmd to unsupported value ({type(cmd)})")
 
+    @property
+    def payload(self):
+        return self.__payload
+
+    @payload.setter
+    def payload(self, payload):
+        self.__payload = payload
+
     def has_valid_args(self, args: List[str]) -> Tuple[bool, Optional[List[str]]]:
         """Checks if the payload in the cmd has all the required arguments.\n
         Returns (success, missing_arguments)"""
@@ -112,6 +120,14 @@ class Response(Message):
             self.__info = info
         else:
             raise Exception(f"Tried to set info to unsupported value ({type(info)})")
+
+    @property
+    def payload(self):
+        return self.__payload
+
+    @payload.setter
+    def payload(self, payload):
+        self.__payload = payload
 
 
 def badResponse():
