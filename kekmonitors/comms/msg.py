@@ -59,7 +59,7 @@ class Cmd(Message):
         elif isinstance(cmd, int) or cmd is None:
             self.__cmd = cmd
         else:
-            raise Exception(f"Tried to set cmd to unsupported value ({type(cmd)})")
+            raise TypeError(f"Tried to set cmd to unsupported value ({type(cmd)})")
 
     @property
     def payload(self):
@@ -131,7 +131,7 @@ class Response(Message):
         elif isinstance(error, int) or error is None:
             self.__error = error
         else:
-            raise Exception(f"Tried to set error to unsupported value ({type(error)})")
+            raise TypeError(f"Tried to set error to unsupported value ({type(error)})")
 
     @property
     def info(self):
@@ -142,7 +142,7 @@ class Response(Message):
         if isinstance(info, str) or info is None:
             self.__info = info
         else:
-            raise Exception(f"Tried to set info to unsupported value ({type(info)})")
+            raise TypeError(f"Tried to set info to unsupported value ({type(info)})")
 
     @property
     def payload(self):
