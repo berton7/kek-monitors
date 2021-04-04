@@ -34,7 +34,9 @@ def get_parent_directory(src: str) -> str:
 class MonitorManager(Server, FileSystemEventHandler):
     """This can be used to manage monitors/scrapers with an external api."""
 
-    def __init__(self, config: Config = Config()):
+    def __init__(self, config: Config = None):
+        if not config:
+            config = Config()
         # set default name if not already set in config
         if not config["OtherConfig"]["socket_name"]:
             config["OtherConfig"]["socket_name"] = f"Executable.MonitorManager"

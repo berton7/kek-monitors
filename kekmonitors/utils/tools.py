@@ -141,11 +141,14 @@ def chunks(lst, n):
         yield lst[i : i + n]
 
 
-def make_default_executable(_class, config: Config = Config()):
+def make_default_executable(_class, config: Config = None):
     """
     Start the specified class with an optional config, adding support to default cli options
     (needed for the monitor manager). ***Needs to be inside `if __name__=="__main__":`***
     """
+    if not config:
+        config = Config()
+
     if sys.version_info[1] < 9:
         boolAction = BooleanOptionalAction  # type: ignore
     else:

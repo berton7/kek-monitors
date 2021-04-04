@@ -16,7 +16,9 @@ from kekmonitors.webhook_manager import WebhookManager
 
 
 class BaseScraper(Common, NetworkUtils):
-    def __init__(self, config: Config = Config(), **kwargs):
+    def __init__(self, config: Config = None, **kwargs):
+        if not config:
+            config = Config()
         config["OtherConfig"]["socket_name"] = f"Scraper.{self.get_class_name()}"
 
         super().__init__(config, **kwargs)
