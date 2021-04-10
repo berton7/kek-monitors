@@ -1,6 +1,7 @@
+import enum
 import json
 from json.decoder import JSONDecodeError
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from kekmonitors.config import COMMANDS, ERRORS
 
@@ -26,7 +27,7 @@ class Cmd(Message):
     """
 
     def __init__(self, msg: Optional[bytes] = None):
-        self.cmd = None  # type: Optional[int]
+        self.cmd = None  # type: Optional[Union[enum.Enum, int]]
         self.payload = None  # type: Optional[Any]
         if msg:
             try:
@@ -48,13 +49,16 @@ class Cmd(Message):
     @property
     def cmd(self):
         if self.__cmd is not None:
-            return COMMANDS(self.__cmd)
+            try:
+                return COMMANDS(self.__cmd)
+            except:
+                return self.__cmd
         else:
             return None
 
     @cmd.setter
     def cmd(self, cmd):
-        if isinstance(cmd, COMMANDS):
+        if isinstance(cmd, enum.Enum):
             self.__cmd = cmd.value
         elif isinstance(cmd, int) or cmd is None:
             self.__cmd = cmd

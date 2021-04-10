@@ -13,7 +13,7 @@ def send(cmd: Cmd):
     print("Executing request...")
     response = asyncio.run(
         make_request(
-            f"{Config()['GlobalConfig']['socket_path']}/MonitorManager", cmd, True
+            f"{Config()['GlobalConfig']['socket_path']}/Monitor.PidScraper", cmd, True
         )
     )
 
@@ -40,9 +40,12 @@ if __name__ == "__main__":
                 pass
         exit(0)
     cmd = COMMANDS.__dict__.get(args[1], None)
-    if not cmd:
-        print("Inserted cmd does not exist!")
-        exit(2)
+    if cmd is None:
+        try:
+            cmd = int(args[1])
+        except:
+            print("cmd is not a valid COMMANDS nor an int.")
+            exit(1)
     string_cmd = args[1]
     payload = {}
     if len(args) > 2:
