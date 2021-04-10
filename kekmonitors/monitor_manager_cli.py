@@ -13,7 +13,7 @@ def send(cmd: Cmd):
     print("Executing request...")
     response = asyncio.run(
         make_request(
-            f"{Config()['GlobalConfig']['socket_path']}/Monitor.PidScraper", cmd, True
+            f"{Config()['GlobalConfig']['socket_path']}/MonitorManager", cmd, True
         )
     )
 
