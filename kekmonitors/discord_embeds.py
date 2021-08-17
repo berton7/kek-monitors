@@ -3,7 +3,6 @@ from datetime import datetime
 from discord import Embed
 
 from kekmonitors import shoe_stuff
-from kekmonitors.config import Config
 from kekmonitors.shoe_stuff import Shoe
 
 
@@ -128,6 +127,29 @@ def get_default_embed(shoe: Shoe, allow_unavailable_sizes=False, show_website=Fa
             embed.add_field(name="Sizes", value=value, inline=inline)
         else:
             embed.add_field(name="\u200b", value=value, inline=True)
+
+    return embed
+
+
+def get_price_embed(shoe: Shoe, show_website=False):
+    embed = get_empty_embed()
+
+    embed.title = f"{shoe.name} -- {shoe.price}"
+    embed.url = shoe.link
+    embed.set_thumbnail(url=shoe.img_link)
+
+    if show_website:
+        if not isinstance(embed.description, str):
+            embed.description = ""
+        embed.description += (
+            "\n" + shoe.link[shoe.link.find("/") + 2 : shoe.link.find("/", 8)]
+        )
+
+    embed.add_field(
+        name="Price",
+        value=f"~~*{shoe.other['original_price']}*~~ => {shoe.price}",
+        inline=False,
+    )
 
     return embed
 

@@ -11,7 +11,7 @@ from kekmonitors.base_common import Common
 from kekmonitors.comms.msg import Cmd, Response, okResponse
 from kekmonitors.comms.server import Server
 from kekmonitors.config import COMMANDS, Config
-from kekmonitors.shoe_stuff import Shoe
+from kekmonitors.shoe_stuff import NEW_RELEASE, PRICE_CHANGED, Shoe
 from kekmonitors.utils.network_utils import NetworkUtils
 from kekmonitors.webhook_manager import WebhookManager
 
@@ -34,7 +34,7 @@ class BasePriceMonitor(Common, NetworkUtils):
         self._cur_shoes = []  # type: List[Shoe]
 
     def get_embed(self, shoe: Shoe) -> discord.Embed:
-        return discord_embeds.get_default_embed(shoe)
+        return discord_embeds.get_price_embed(shoe)
 
     async def on_server_stop(self) -> Response:
         self.general_logger.debug("Waiting for loop to complete...")
@@ -104,9 +104,11 @@ class BasePriceMonitor(Common, NetworkUtils):
                 self.general_logger.debug(
                     f"Shoe {shoe.name} has different price from last time ({db_shoe.price} => {shoe.price})"
                 )
+                shoe.reason = PRICE_CHANGED
                 returned = shoe
         else:
             self.general_logger.debug(f"New shoe {shoe.name} with price {shoe.price}")
+            shoe.reason = NEW_RELEASE
             returned = shoe
 
         if returned and self.config["Options"]["enable_webhooks"] == "True":
