@@ -2,6 +2,7 @@ OTHER = 0
 NEW_RELEASE = 1
 RESTOCK = 2
 INCOMING = 3
+PRICE_CHANGED = 4
 
 from datetime import datetime
 
@@ -193,6 +194,7 @@ class Shoe:
             and reason != NEW_RELEASE
             and reason != RESTOCK
             and reason != INCOMING
+            and reason != PRICE_CHANGED
         ):
             raise ValueError("Invalid reason provided")
         self.__reason = reason

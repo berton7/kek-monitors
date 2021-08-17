@@ -136,7 +136,7 @@ def test_shoe_back_in_stock(shoe):
 
 
 def test_shoe_reason(shoe):
-    for reason in (OTHER, INCOMING, NEW_RELEASE, RESTOCK):
+    for reason in (OTHER, INCOMING, NEW_RELEASE, RESTOCK, PRICE_CHANGED):
         shoe.reason = reason
         assert shoe.reason == reason
 
