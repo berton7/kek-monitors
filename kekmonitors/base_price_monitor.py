@@ -31,7 +31,7 @@ class BasePriceMonitor(Common, NetworkUtils):
         self.crash_webhook = config["WebhookConfig"]["crash_webhook"]
         self.webhook_manager = WebhookManager(config)
 
-        self._cur_shoes = [] # type: List[Shoe]
+        self._cur_shoes = []  # type: List[Shoe]
 
     def get_embed(self, shoe: Shoe) -> discord.Embed:
         return discord_embeds.get_default_embed(shoe)
@@ -92,10 +92,8 @@ class BasePriceMonitor(Common, NetworkUtils):
         """User-defined loop. Replace this with a function that will be run every `delay` seconds"""
         await asyncio.sleep(1)
 
-    def store_shoe(self, shoe: Shoe):
-        self._cur_shoes.append(shoe)
-
     def shoe_check(self, shoe: Shoe, update_ts=True):
+        self._cur_shoes.append(shoe)
         if update_ts:
             shoe.last_seen = datetime.utcnow().timestamp()
 
@@ -103,7 +101,9 @@ class BasePriceMonitor(Common, NetworkUtils):
         db_shoe = self.shoe_manager.find_shoe({"_Shoe__link": shoe.link})
         if db_shoe:
             if db_shoe.price != shoe.price:
-                self.general_logger.debug(f"Shoe {shoe.name} has different price from last time ({db_shoe.price} => {shoe.price})")
+                self.general_logger.debug(
+                    f"Shoe {shoe.name} has different price from last time ({db_shoe.price} => {shoe.price})"
+                )
                 returned = shoe
         else:
             self.general_logger.debug(f"New shoe {shoe.name} with price {shoe.price}")
@@ -114,6 +114,6 @@ class BasePriceMonitor(Common, NetworkUtils):
             self.webhook_manager.add_to_queue(embed, self.webhooks_json)
 
     def _update_db(self):
-        self.shoe_manager._db.drop()
+        self.shoe_manager._db.remove({})
         if self._cur_shoes:
             self.shoe_manager.add_shoes(self._cur_shoes)
